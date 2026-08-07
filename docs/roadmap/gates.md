@@ -12,14 +12,16 @@ El agente y el desarrollo humano **se detienen** en cada gate. “Continúa con 
 
 ## Estado actual
 
-- **G-F0:** entregado — revisión humana pendiente (docs + 8 rules + commit local)
-- **G-F1:** entregado — revisión humana pendiente (contratos + inventario)
-- **Código (E0+):** bloqueado hasta autorización explícita post G-F1
-- **GitHub `origin`:** pendiente de `gh auth login` + `gh repo create` (ver github.md)
+- **G-F0 / G-F1:** aprobados (2026-08-06)
+- **Etapa 0:** shell + maqueta UI Revit LT en `apps/web` — **base de interfaz futura** documentada en `docs/ui/interface-base.md`
+- **G-E0:** **aprobado** (2026-08-06) — layout/compositor/cinta aceptados como base
+- **Etapa 1:** autorizada a iniciar tras este commit (primer muro usable)
+- **GitHub:** https://github.com/hfiguereo/axonbim-web
 
 ## Registro de aprobación
 
 | Gate | Fecha | Decisión | Notas |
 |------|-------|----------|-------|
-| G-F0 | _pendiente firma humana_ | | Fundación material lista en repo |
-| G-F1 | _pendiente firma humana_ | | Contratos en `docs/architecture/` + inventory |
+| G-F0 | 2026-08-06 | aprobado | Autorización Etapa 0 |
+| G-F1 | 2026-08-06 | aprobado | Autorización Etapa 0 |
+| G-E0 | 2026-08-06 | aprobado | Base UI: cinta, Modificar/Dibujar/Cadena, compositor L/R |

@@ -4,9 +4,9 @@ Checklist humana. Una fila no está hecha si no se puede ejercer **desde la inte
 
 | # | Criterio | Estado | Notas |
 |---|----------|--------|-------|
-| 1 | Abrir AxonBIM Web | pendiente | Etapa 0 |
-| 2 | Abrir proyecto vacío | pendiente | |
-| 3 | Abrir vivienda demo | pendiente | solo muros |
+| 1 | Abrir AxonBIM Web | parcial | Etapa 0 shell (`pnpm dev`) |
+| 2 | Abrir proyecto vacío | parcial | Nuevo crea documento vacío |
+| 3 | Abrir vivienda demo | parcial | Demo stub (sin muros aún) |
 | 4 | Elegir familia de muro | pendiente | 100/150/200 mm |
 | 5 | Dibujar varios muros encadenados | pendiente | |
 | 6 | Cerrar un espacio | pendiente | |

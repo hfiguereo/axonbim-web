@@ -7,8 +7,7 @@
 
 ## Estado
 
-- Commit de fundación en `main` (local): presente
-- Remoto `origin`: **pendiente** — requiere autenticación GitHub en esta máquina
+- Remoto `origin`: https://github.com/hfiguereo/axonbim-web
 - CLI local (si se instaló): `~/.local/bin/gh`
 
 ## Crear y publicar el remoto

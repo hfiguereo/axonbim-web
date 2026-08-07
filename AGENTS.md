@@ -7,7 +7,7 @@ Punto de entrada para agentes de IA. Lee esto antes de cualquier cambio material
 1. **Lee las reglas activas** en `.cursor/rules/` (mandatos cortos).
 2. **Lee la documentación de soporte** bajo `docs/` para el dominio que toques. El detalle vive en docs, no en las rules.
 3. **No copies ni traduzcas** el desktop Godot/Python. Portar = comportamiento → prueba → invariante → especificación → implementación nueva. Ver `docs/migration/migration-rules.md`.
-4. **No escribas código de aplicación** hasta que F1 esté aprobado y el usuario autorice Etapa 0. Hoy el repo es fundación documental.
+4. **Etapa 0 está autorizada e implementada.** No avances a Etapa 1 (muros) sin gate G-E0 y autorización explícita.
 
 ## Índice de lectura
 
@@ -21,6 +21,7 @@ Punto de entrada para agentes de IA. Lee esto antes de cualquier cambio material
 | Comandos / historial | `docs/architecture/commands-and-history.md` |
 | Legado desktop | `docs/migration/legacy-inventory.md`, `migration-rules.md` |
 | Validar MVP | `docs/validation/acceptance-matrix.md` |
+| UI / layout | `docs/ui/interface-base.md` (base aprobada), `revit-lt-baseline.md`, `axonbim-shell-v0.md` |
 | Saber en qué fase estamos | `docs/roadmap/work-phases.md`, `docs/roadmap/gates.md` |
 
 ## Prohibiciones
@@ -32,16 +33,15 @@ Punto de entrada para agentes de IA. Lee esto antes de cualquier cambio material
 - Expansión silenciosa: terminar la tarea, proponer mejoras aparte, esperar autorización.
 - Borrar o debilitar pruebas para hacer pasar CI.
 
-## Comandos futuros (cuando exista app)
+## Comandos
 
 ```bash
 pnpm install
-pnpm dev
+pnpm dev          # apps/web → http://localhost:5173
+pnpm build
 pnpm test
-pnpm lint
+pnpm typecheck
 ```
-
-Hasta Etapa 0 estos comandos no aplican.
 
 ## Paradas obligatorias
 

@@ -1,6 +1,6 @@
 # Fases de trabajo operativas
 
-Mapa del plan maestro a oleadas reales. **Sin código de aplicación en F0–F1.**
+Mapa del plan maestro a oleadas reales.
 
 ## F0 — Fundación (hecho en este repo)
 
@@ -21,16 +21,26 @@ Cerrado en documentación:
 
 **Gate:** aprobación humana antes de Etapa 0.
 
-## F2 — Etapa 0 visible (futuro, código)
+## F2 — Etapa 0 visible (hecho)
 
-Scaffold: pnpm, Vite, React, Three.js, Vitest, Playwright.  
-Entrega: app que abre, layout, nuevo/abrir/demo stub, visor, propiedades, panel de estado.
+Scaffold: pnpm workspace, Vite, React, Three.js, paquetes de dominio.  
+Entrega: app abrible (`pnpm dev`), maqueta UI Revit LT, compositor de paneles, cinta/Modificar/Cadena, visor, `.axon` stub.
 
-**Criterio:** evaluable visualmente sin modelar aún.
+**Criterio:** evaluable visualmente → **G-E0 aprobado** (2026-08-06). Base: `docs/ui/interface-base.md`.
 
-## F3 — Etapa 1 primer muro (futuro)
+## Estructura de paquetes (creada)
 
-Corte vertical: P1→P2→Wall→geometría→planta+3D→selección→propiedades→undo/redo desde UI.
+```
+apps/web/
+packages/{model,commands,geometry,tools,viewer,families,persistence,shared}/
+samples/demo-house/
+docs/
+```
+
+## F3 — Etapa 1 primer muro (siguiente)
+
+Corte vertical: P1→P2→Wall→geometría→planta+3D→selección→propiedades→undo/redo desde UI.  
+Cadena de muro on por defecto (estado UI ya en shell).
 
 ## F4 — Etapa 2 MVP estricto (futuro)
 
@@ -40,21 +50,3 @@ Luego **pausa obligatoria de producto**.
 ## F5+ — Post-MVP (solo con autorización)
 
 Puertas/ventanas y siguientes capacidades del maestro.
-
-## Estructura de paquetes prevista (no creada aún)
-
-```
-axonbim-web/
-├── apps/web/
-├── packages/
-│   ├── model/
-│   ├── commands/
-│   ├── geometry/
-│   ├── tools/
-│   ├── viewer/
-│   ├── families/
-│   ├── persistence/
-│   └── shared/
-├── samples/demo-house/
-└── docs/   (ya existe)
-```

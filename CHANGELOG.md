@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Etapa 1 (siguiente)
+
+- Corte vertical: dibujar muro encadenado → documento → geometría → planta/3D → selección → undo
+
+### Etapa 0 (hecho)
+
+- Monorepo pnpm: `apps/web` + packages de dominio
+- Base de interfaz futura aprobada (`docs/ui/interface-base.md`) — G-E0
+- Shell Revit LT: menú Archivo en logo, cinta de iconos, opciones de herramienta, Modificar/Dibujar/Cadena
+- Compositor de paneles izq./der./flotante (resize ancho/alto)
+- Visor Three: planta ortogonal / perspectiva; demo `.axon`
+- Persistencia `.axon` v1 (parse/serialize); muro aún stub de UI
+
 ### Licencia
 
 - Sustitución de GPL-3 por licencia propietaria (All Rights Reserved); ADR 0007
