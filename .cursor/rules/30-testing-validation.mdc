@@ -1,0 +1,13 @@
+---
+description: Pruebas — portar casos/oráculos, no archivos; no borrar tests para pasar.
+alwaysApply: false
+---
+
+# Testing y validación
+
+1. Portar **casos e invariantes**, no pytest/GDScript tal cual.
+2. Equivalencia geométrica = comportamiento + tolerancias (`geometry-policy.md`), no bytes idénticos al desktop.
+3. No eliminar ni debilitar pruebas para ocultar fallos.
+4. Aceptación de producto MVP: `docs/validation/acceptance-matrix.md`.
+
+Prohibido: marcar hecho un criterio de UI solo porque hay un unit test.

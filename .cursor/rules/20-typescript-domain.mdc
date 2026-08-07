@@ -1,0 +1,16 @@
+---
+description: TypeScript de dominio — tipado estricto; sin imports de UI/viewer.
+alwaysApply: false
+---
+
+# TypeScript — dominio
+
+Aplica al editar model, commands, geometry, persistence, shared.
+
+1. Tipado estricto; evita `any` sin justificación breve.
+2. **Sin imports** de React, Three.js, DOM, `window`, IndexedDB.
+3. Validación en el borde del comando/documento; errores explícitos.
+4. Unidades y tolerancias según `docs/architecture/coordinate-system.md`.
+5. Contratos de entidad según `docs/architecture/document-model.md`.
+
+Prohibido: acoplar dominio al viewer; mutar estado UI desde geometry.

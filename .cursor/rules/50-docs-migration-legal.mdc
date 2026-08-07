@@ -1,0 +1,15 @@
+---
+description: Docs, migración legado, licencia y secretos.
+alwaysApply: false
+---
+
+# Docs, migración y legal
+
+1. Contratos/comportamiento cambian → actualiza el doc en `docs/` en el mismo cambio.
+2. Legado: ficha en `legacy-inventory.md`; reglas en `migration-rules.md`. **No copiar código.**
+3. Licencia del proyecto: GPL-3.0 (archivo `LICENSE`). Respeta cabeceras cuando exista código.
+4. Sin secretos en repo ni logs. Normativa MIVED solo cuando el alcance lo abra (no MVP).
+
+Lee: `docs/migration/`, `AGENTS.md`.
+
+Prohibido: portar por “estaba en un markdown del desktop”; inventar valores normativos.

@@ -1,0 +1,17 @@
+---
+description: Arquitectura núcleo AxonBIM Web — documento SoT; React/Three adaptadores.
+alwaysApply: true
+---
+
+# Arquitectura
+
+1. **`AxonDocument` es la fuente de verdad.** Comandos mutan; vistas representan.
+2. **React no modifica el documento** directamente. Orquesta tools → commands.
+3. **Three.js no es SoT.** Solo adaptador de mallas/cámaras derivadas.
+4. **Sin JSON-RPC interno** entre UI y dominio. Un solo runtime TypeScript.
+5. **Dominio sin browser/UI:** model/commands/geometry no importan React, Three, DOM ni APIs de almacenamiento del navegador.
+6. **IFC y OpenCascade** fuera del MVP salvo autorización y ADR.
+
+Lee: `docs/architecture/overview.md`, `docs/product/non-negotiables.md`, `docs/decisions/`.
+
+Prohibido: portar Godot/Python/RPC; inventar segunda geometría divergente planta/3D.

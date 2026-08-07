@@ -1,0 +1,15 @@
+---
+description: React UI — orquesta tools/commands; no muta el documento.
+alwaysApply: false
+---
+
+# React UI
+
+1. La UI dispara **tools/commands**; no escribe `walls[]` ni el documento a mano.
+2. Zustand (u otro) solo para **sesión de UI**: herramienta, preview, cámara, paneles.
+3. Una función de usuario no está terminada sin poder usarse desde la interfaz.
+4. No añadas pantallas/features fuera del alcance de la fase autorizada.
+
+Lee: `docs/architecture/commands-and-history.md`, `docs/product/mvp-scope.md`.
+
+Prohibido: SoT en React state; saltarse historial para “ir más rápido”.

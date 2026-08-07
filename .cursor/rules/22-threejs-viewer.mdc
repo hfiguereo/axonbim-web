@@ -1,0 +1,15 @@
+---
+description: Three.js viewer — solo representación derivada del modelo.
+alwaysApply: false
+---
+
+# Three.js viewer
+
+1. Meshes/edges se **derivan** del documento vía geometry. No hay modelo paralelo editable en la escena.
+2. Input de picking → IDs de elemento → capa tools/commands.
+3. Cambiar cámara/vista **no** muta el documento.
+4. Preview de herramienta es efímero y fuera del historial.
+
+Lee: `docs/architecture/geometry-policy.md`, ADR 0002.
+
+Prohibido: guardar verdad del edificio en `Object3D.userData` como SoT.

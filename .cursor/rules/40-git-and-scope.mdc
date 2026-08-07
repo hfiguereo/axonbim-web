@@ -1,0 +1,14 @@
+---
+description: Git y alcance — commits claros; presupuesto de cambio; microtareas.
+alwaysApply: false
+---
+
+# Git y alcance
+
+1. Commits con mensaje que explique el **porqué**; un tema por commit cuando sea posible.
+2. Presupuesto orientativo: pocos archivos; no tocar no relacionados.
+3. Sin sync destructivo (`force` a main, hard reset) sin pedido explícito.
+4. No empujar secretos. Remoto principal: GitHub (`docs/roadmap/github.md`).
+5. Microtareas: terminar, reportar, esperar siguiente autorización en gates.
+
+Prohibido: mezclar historial del desktop; commits basura “WIP” con secretos.
