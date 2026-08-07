@@ -1,25 +1,22 @@
-# ADR 0008 — Esquinas de muro por extensión de eje (sin booleanas)
+# ADR 0008 — Esquinas de muro por inglete (miter), sin booleanas
 
 ## Estado
 
-Aceptado (MVP)
+Aceptado (MVP) — revisado 2026-08-06 (reemplaza extensión burda con solape)
 
 ## Contexto
 
-Con muros caja centrados en el eje, dos segmentos encadenados que comparten un vértice dejan un **hueco en la esquina exterior** (corte perpendicular al eje en cada extremo). Un kernel CAD / unión booleana está fuera del MVP ([ADR 0004](0004-no-cad-kernel-in-mvp.md)).
-
-La **cadena** solo controla el gesto (P2 → P1 del siguiente); no altera la malla.
+Con muros caja centrados en el eje, dos segmentos que comparten un vértice dejan un hueco exterior si el corte es perpendicular. Extender el eje `thickness/2` rellena el hueco pero **solapa** en la esquina (aspecto burdo). Uniones booleanas quedan fuera del MVP ([ADR 0004](0004-no-cad-kernel-in-mvp.md)).
 
 ## Decisión
 
-1. Los `p1`/`p2` paramétricos del documento **no se alargan**.
-2. En derivación de malla (`wallBoxMesh`), si dos o más muros comparten un extremo (clave XY a mm), cada extremo unido se **extiende** `thickness/2` a lo largo del eje.
-3. `computeWallJoinExtensions` calcula `extendStart` / `extendEnd` por muro; planta y 3D usan la misma derivación.
-4. Solapamiento en la esquina interior es aceptable en MVP (material opaco).
+1. `p1`/`p2` paramétricos **no** se mutan.
+2. En extremos con **exactamente dos** muros (unión L), la malla usa **inglete**: esquinas left/right = intersección de offset a `thickness/2` (`miterCorners` / `computeWallJoinDirs`).
+3. Valence ≠ 2 (T y peores): extremo cuadrado (sin inglete ambiguo).
+4. Misma derivación para planta y 3D.
 
 ## Consecuencias
 
-- Esquinas L rellenas sin booleanas.
-- Tests Vitest cubren extensión en L.
-- Uniones en T también extienden (posible solape mayor; OK en MVP).
-- Miters angulares finos y uniones por capa quedan post-MVP.
+- Esquina limpia en L (punta exterior compartida, sin losa de solape).
+- Ángulos muy agudos limitan la longitud de inglete (anti-spike).
+- T contra el lado de un muro largo (no extremo) sigue sin join automático — fuera de este ADR.

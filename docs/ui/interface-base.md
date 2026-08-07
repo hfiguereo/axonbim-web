@@ -22,10 +22,10 @@ Fuente viva del shell: `apps/web`. Referencia conceptual: [revit-lt-baseline.md]
 | Cinta | Pestañas por tarea; herramientas = iconos; tip flotante corto |
 | Opciones | Renglón bajo la cinta = parámetros de la herramienta activa |
 | Dock izq./der. | Propiedades + Navegador (stack vertical, ancho y alto redimensionables) |
-| Lienzo | Vistas en pestañas; planta = cámara ortogonal |
+| Lienzo | Vistas en pestañas; planta = cámara ortogonal; **zoom rueda** (planta/3D) |
 | Barra de vista | **Fit**, escala, estilo, detalle, render (stub) — bajo el lienzo |
 | Estado | Mensaje + switch **Snap** + meta (`tool` / `walls` / `snap:`) — Cadena solo en opciones de herramienta (sin redundancia) |
-| Gizmo 3D | Maqueta tipo Blender (esquina sup. der. en perspectiva) — orientación real = etapa futura |
+| Gizmo 3D | Widget Three.js animado (esquina sup. der. en perspectiva); texto solo al resaltar un extremo; orientación real = etapa futura |
 
 ## Snap y cadena (MVP)
 

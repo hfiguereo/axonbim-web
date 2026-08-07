@@ -42,11 +42,11 @@ docs/
 Corte vertical: P1→P2→`wall.create`→`wallBoxMesh`→planta+3D→selección→propiedades→undo/redo.  
 Cadena on por defecto; modo Línea; otros Draw modes aún no.
 
-## F4 — Etapa 2 MVP estricto (en curso)
+## F4 — Etapa 2 MVP estricto (hecho — G-MVP)
 
-Snap (feedback + switch), cadena (switch), joins de esquina por extensión, demo con muros, Fit, import/export `.axon`, pruebas geométricas.  
-ADR 0008 (esquinas), ADR 0009 (snap/UI). Luego **pausa** en **G-MVP**.
+Snap, inglete, demo, Fit, zoom rueda, gizmo maqueta, import/export `.axon`.  
+**Pausa de producto** hasta autorización post-MVP.
 
 ## F5+ — Post-MVP (solo con autorización)
 
-Puertas/ventanas y siguientes capacidades del maestro.
+Puertas/ventanas, orientación real del gizmo, y siguientes capacidades del maestro.

@@ -23,11 +23,14 @@ Checklist humana. Una fila no está hecha si no se puede ejercer **desde la inte
 | 17 | Vista planta coherente | hecho | misma `wallBoxMesh` + joins |
 | 18 | Vista perspectiva coherente | hecho | misma geom |
 | 19 | Ajustar modelo a vista | hecho | icon bar Fit + Vista → Ajustar |
+| 19b | Zoom rueda | hecho | planta (ortho) + 3D (dolly) |
 | 20 | Exportar `.axon` | hecho | Archivo → Exportar |
 | 21 | Importar `.axon` | hecho | Archivo → Abrir |
-| 22 | Pruebas geométricas muro caja | hecho | Vitest + joins |
-| 23 | Pruebas visuales mínimas | pendiente | Playwright u equiv. |
+| 22 | Pruebas geométricas muro caja | hecho | Vitest + inglete |
+| 23 | Pruebas visuales mínimas | pendiente | Playwright u equiv. (no bloquea G-MVP) |
 | 24 | Toggle Snap en UI | hecho | barra de estado (Cadena solo en opciones de muro) |
-| 25 | Gizmo orientación 3D | maqueta | stub Blender-like; función en etapa futura |
+| 25 | Gizmo orientación 3D | maqueta | 3D animado; texto al hover; cámara real = post-MVP |
+
+**Gate G-MVP:** aprobado 2026-08-06 (validación humana).
 
 **Exclusiones:** ver [mvp-scope.md](../product/mvp-scope.md). Añadir filas de puertas/IFC/etc. está prohibido hasta aprobación post-MVP.

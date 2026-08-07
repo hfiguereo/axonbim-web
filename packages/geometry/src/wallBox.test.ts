@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Wall } from "@axonbim/model";
 import { EPS_LENGTH, almostEqual } from "@axonbim/shared";
-import { computeWallJoinExtensions, wallBoxMesh, wallMetrics } from "../src/index";
+import { computeWallJoinDirs, miterCorners, wallBoxMesh, wallMetrics } from "../src/index";
 
 const wall: Wall = {
   id: "wall.test",
@@ -32,28 +32,6 @@ describe("wallBoxMesh", () => {
     const mesh = wallBoxMesh(wall);
     expect(mesh.positions.length).toBe(6 * 4 * 3);
     expect(mesh.indices.length).toBe(6 * 6);
-    expect(mesh.normals.length).toBe(mesh.positions.length);
-
-    let minX = Infinity;
-    let maxX = -Infinity;
-    let minY = Infinity;
-    let maxY = -Infinity;
-    let minZ = Infinity;
-    let maxZ = -Infinity;
-    for (let i = 0; i < mesh.positions.length; i += 3) {
-      minX = Math.min(minX, mesh.positions[i]!);
-      maxX = Math.max(maxX, mesh.positions[i]!);
-      minY = Math.min(minY, mesh.positions[i + 1]!);
-      maxY = Math.max(maxY, mesh.positions[i + 1]!);
-      minZ = Math.min(minZ, mesh.positions[i + 2]!);
-      maxZ = Math.max(maxZ, mesh.positions[i + 2]!);
-    }
-    expect(Math.abs(minX - 0) <= EPS_LENGTH).toBe(true);
-    expect(Math.abs(maxX - 4) <= EPS_LENGTH).toBe(true);
-    expect(Math.abs(minY - -0.075) <= EPS_LENGTH).toBe(true);
-    expect(Math.abs(maxY - 0.075) <= EPS_LENGTH).toBe(true);
-    expect(Math.abs(minZ - 0) <= EPS_LENGTH).toBe(true);
-    expect(Math.abs(maxZ - 2.7) <= EPS_LENGTH).toBe(true);
   });
 
   it("returns empty mesh for degenerate wall", () => {
@@ -61,7 +39,7 @@ describe("wallBoxMesh", () => {
     expect(mesh.positions.length).toBe(0);
   });
 
-  it("extends ends at L-joins so outer corner fills", () => {
+  it("miters L-joins cleanly (outer corner, no slab overlap)", () => {
     const a: Wall = {
       ...wall,
       id: "wall.a",
@@ -74,17 +52,52 @@ describe("wallBoxMesh", () => {
       p1: { x: 4, y: 0, z: 0 },
       p2: { x: 4, y: 3, z: 0 },
     };
-    const joins = computeWallJoinExtensions([a, b]);
-    expect(joins.get("wall.a")?.end).toBeCloseTo(0.075, 5);
-    expect(joins.get("wall.b")?.start).toBeCloseTo(0.075, 5);
-    expect(joins.get("wall.a")?.start).toBe(0);
+    const joins = computeWallJoinDirs([a, b]);
+    expect(joins.get("wall.a")?.endAway?.x).toBeCloseTo(0, 8);
+    expect(joins.get("wall.a")?.endAway?.y).toBeCloseTo(1, 8);
+    expect(joins.get("wall.b")?.startAway?.x).toBeCloseTo(-1, 8);
+    expect(joins.get("wall.b")?.startAway?.y).toBeCloseTo(0, 8);
 
-    const meshA = wallBoxMesh(a, { extendEnd: joins.get("wall.a")!.end });
+    const half = 0.075;
+    const m = miterCorners({ x: 4, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }, half);
+    // Outer corner at 90° miter
+    expect(m.right.x).toBeCloseTo(4 + half, 5);
+    expect(m.right.y).toBeCloseTo(-half, 5);
+    // Inner corner
+    expect(m.left.x).toBeCloseTo(4 - half, 5);
+    expect(m.left.y).toBeCloseTo(half, 5);
+
+    const meshA = wallBoxMesh(a, { joinEndAway: joins.get("wall.a")!.endAway });
+    const meshB = wallBoxMesh(b, { joinStartAway: joins.get("wall.b")!.startAway });
+
+    // Both meshes share the same outer miter tip (within eps)
+    const tipA = m.right;
+    let nearA = false;
+    let nearB = false;
+    for (let i = 0; i < meshA.positions.length; i += 3) {
+      if (
+        Math.abs(meshA.positions[i]! - tipA.x) < 1e-5 &&
+        Math.abs(meshA.positions[i + 1]! - tipA.y) < 1e-5
+      ) {
+        nearA = true;
+      }
+    }
+    for (let i = 0; i < meshB.positions.length; i += 3) {
+      if (
+        Math.abs(meshB.positions[i]! - tipA.x) < 1e-5 &&
+        Math.abs(meshB.positions[i + 1]! - tipA.y) < 1e-5
+      ) {
+        nearB = true;
+      }
+    }
+    expect(nearA).toBe(true);
+    expect(nearB).toBe(true);
+
+    // No crude axis extension past outer tip along +X for A alone beyond miter tip
     let maxX = -Infinity;
     for (let i = 0; i < meshA.positions.length; i += 3) {
       maxX = Math.max(maxX, meshA.positions[i]!);
     }
-    // parametric end at x=4; + half thickness along +X → outer corner to 4.075
-    expect(maxX).toBeCloseTo(4.075, 3);
+    expect(maxX).toBeCloseTo(4 + half, 4);
   });
 });

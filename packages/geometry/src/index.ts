@@ -3,6 +3,7 @@ export {
   emptyMesh,
   wallBoxMesh,
   wallMetrics,
-  computeWallJoinExtensions,
+  computeWallJoinDirs,
+  miterCorners,
 } from "./wallBox";
-export type { WallMetrics, WallMeshOptions, WallJoinExt } from "./wallBox";
+export type { WallMetrics, WallMeshOptions, WallJoinDirs, Vec2 } from "./wallBox";

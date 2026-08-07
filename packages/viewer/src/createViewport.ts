@@ -1,4 +1,4 @@
-import { computeWallJoinExtensions, wallBoxMesh, type MeshBuffer } from "@axonbim/geometry";
+import { computeWallJoinDirs, wallBoxMesh, type MeshBuffer } from "@axonbim/geometry";
 import type { Wall } from "@axonbim/model";
 import {
   AmbientLight,
@@ -87,10 +87,13 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
 
   const ortho = new OrthographicCamera(-10, 10, 10, -10, 0.05, 500);
   ortho.up.set(0, 1, 0);
+  let orthoHalfH = 10;
+  let perspTarget = new Vector3(0, 0, 0);
 
   const applyPerspPose = () => {
     persp.position.set(8, -10, 7);
-    persp.lookAt(0, 0, 0);
+    perspTarget.set(0, 0, 0);
+    persp.lookAt(perspTarget);
   };
 
   const applyPlanPose = () => {
@@ -171,7 +174,8 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
 
   const activeCamera = () => (mode === "plan" ? ortho : persp);
 
-  const updateOrthoFrustum = (halfH = 10) => {
+  const updateOrthoFrustum = (halfH = orthoHalfH) => {
+    orthoHalfH = halfH;
     const aspect = width / Math.max(height, 1);
     const halfW = halfH * aspect;
     ortho.left = -halfW;
@@ -192,6 +196,23 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
     ndc.x = ((clientX - rect.left) / Math.max(rect.width, 1)) * 2 - 1;
     ndc.y = -(((clientY - rect.top) / Math.max(rect.height, 1)) * 2 - 1);
   };
+
+  const onWheel = (e: WheelEvent) => {
+    e.preventDefault();
+    const direction = Math.sign(e.deltaY);
+    const factor = direction > 0 ? 1.12 : 1 / 1.12;
+    if (mode === "plan") {
+      updateOrthoFrustum(Math.min(80, Math.max(1.5, orthoHalfH * factor)));
+    } else {
+      const offset = persp.position.clone().sub(perspTarget);
+      const dist = offset.length();
+      const nextDist = Math.min(120, Math.max(2, dist * factor));
+      offset.setLength(nextDist);
+      persp.position.copy(perspTarget).add(offset);
+      persp.lookAt(perspTarget);
+    }
+  };
+  canvas.addEventListener("wheel", onWheel, { passive: false });
 
   let raf = 0;
   const render = () => {
@@ -239,15 +260,16 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
         ortho.lookAt(cx, cy, 0);
         updateOrthoFrustum(span);
       } else {
+        perspTarget.set(cx, cy, 1);
         persp.position.set(cx + span, cy - span * 1.2, span * 0.9);
-        persp.lookAt(cx, cy, 1);
+        persp.lookAt(perspTarget);
       }
     },
     setProjection(next: ViewProjection) {
       mode = next;
       if (mode === "plan") applyPlanPose();
       else applyPerspPose();
-      updateOrthoFrustum();
+      updateOrthoFrustum(orthoHalfH);
       syncSceneForMode();
     },
     syncWalls(walls, selectedId) {
@@ -258,12 +280,12 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
           child.geometry.dispose();
         }
       }
-      const joins = computeWallJoinExtensions(walls);
+      const joins = computeWallJoinDirs(walls);
       for (const wall of walls) {
-        const ext = joins.get(wall.id);
+        const j = joins.get(wall.id);
         const buffer = wallBoxMesh(wall, {
-          extendStart: ext?.start ?? 0,
-          extendEnd: ext?.end ?? 0,
+          joinStartAway: j?.startAway ?? null,
+          joinEndAway: j?.endAway ?? null,
         });
         if (buffer.positions.length === 0) continue;
         const mesh = new Mesh(
@@ -350,6 +372,7 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
     },
     dispose() {
       cancelAnimationFrame(raf);
+      canvas.removeEventListener("wheel", onWheel);
       grid.geometry.dispose();
       const gridMat = grid.material;
       if (Array.isArray(gridMat)) gridMat.forEach((m) => m.dispose());
