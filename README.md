@@ -3,7 +3,7 @@
 Software BIM **web, local-first**, orientado a una experiencia de modelado pequeña, visible y convincente antes de añadir complejidad.
 
 **Autor:** Arq. Hector Nathanael Figuereo  
-**Licencia:** [GNU GPL v3](LICENSE)  
+**Licencia:** [Propietaria — All Rights Reserved](LICENSE) ([ADR 0007](docs/decisions/0007-proprietary-license.md))  
 **Estado:** Fundación documental (sin aplicación aún)
 
 ## Qué es

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Licencia
+
+- Sustitución de GPL-3 por licencia propietaria (All Rights Reserved); ADR 0007
+
 ### Fundación (F0 + contratos F1 documentales)
 
 - Repositorio independiente `axonbim-web` (sin código de aplicación)

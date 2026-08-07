@@ -8,3 +8,4 @@
 | [0004](0004-no-cad-kernel-in-mvp.md) | Sin kernel CAD en MVP |
 | [0005](0005-visible-progress-and-vertical-slices.md) | Progreso visible / cortes verticales |
 | [0006](0006-controlled-agent-changes.md) | Cambios de agente controlados |
+| [0007](0007-proprietary-license.md) | Licencia propietaria |
