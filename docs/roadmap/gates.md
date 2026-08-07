@@ -15,7 +15,9 @@ El agente y el desarrollo humano **se detienen** en cada gate. “Continúa con 
 - **G-F0 / G-F1:** aprobados (2026-08-06)
 - **Etapa 0:** shell + maqueta UI Revit LT en `apps/web` — **base de interfaz futura** documentada en `docs/ui/interface-base.md`
 - **G-E0:** **aprobado** (2026-08-06) — layout/compositor/cinta aceptados como base
-- **Etapa 1:** autorizada a iniciar tras este commit (primer muro usable)
+- **Etapa 1:** corte vertical muro usable (draw → comando → mesh → planta/3D → props → undo)
+- **G-E1:** **aprobado** (2026-08-06) — corte usable confirmado
+- **MVP estricto:** pendiente de autorización explícita
 - **GitHub:** https://github.com/hfiguereo/axonbim-web
 
 ## Registro de aprobación
@@ -25,3 +27,4 @@ El agente y el desarrollo humano **se detienen** en cada gate. “Continúa con 
 | G-F0 | 2026-08-06 | aprobado | Autorización Etapa 0 |
 | G-F1 | 2026-08-06 | aprobado | Autorización Etapa 0 |
 | G-E0 | 2026-08-06 | aprobado | Base UI: cinta, Modificar/Dibujar/Cadena, compositor L/R |
+| G-E1 | 2026-08-06 | aprobado | Primer muro usable; no autoriza MVP aún |

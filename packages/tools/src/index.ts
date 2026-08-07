@@ -1,4 +1,4 @@
-/** Interaction tools — wall draw arrives in Etapa 1. */
+/** Interaction tools — wall draw (Etapa 1). */
 
 export type ToolId = "select" | "wall" | "none";
 
@@ -6,8 +6,8 @@ export type ToolId = "select" | "wall" | "none";
 export type DrawMode =
   | "line"
   | "rectangle"
-  | "arcSER" // start-end-radius
-  | "arcCE" // center-ends
+  | "arcSER"
+  | "arcCE"
   | "pickLines"
   | "pickFace";
 
@@ -20,3 +20,11 @@ export type ToolSession = {
 export function isSketchTool(tool: ToolId): boolean {
   return tool === "wall";
 }
+
+export type Point2 = { x: number; y: number; z: number };
+
+/** First click of a wall segment, or null. */
+export type WallDrawState = {
+  pending: Point2 | null;
+  hover: Point2 | null;
+};

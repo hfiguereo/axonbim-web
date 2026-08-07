@@ -4,7 +4,7 @@ Software BIM **web, local-first**, orientado a una experiencia de modelado peque
 
 **Autor:** Arq. Hector Nathanael Figuereo  
 **Licencia:** [Propietaria — All Rights Reserved](LICENSE) ([ADR 0007](docs/decisions/0007-proprietary-license.md))  
-**Estado:** Etapa 0 cerrada (G-E0) — base UI aprobada; siguiente = Etapa 1 (muro)  
+**Estado:** Etapa 1 cerrada (G-E1) — primer muro usable; MVP estricto pendiente de tu OK  
 **Remoto:** https://github.com/hfiguereo/axonbim-web
 
 ## Qué es
@@ -21,7 +21,7 @@ No es un port del desktop Godot/Python ni una traducción automática de ese có
 ## Etapa 0 (hecho)
 
 Shell inspirado en **Revit LT** (base de interfaz futura): menú Archivo, cinta de iconos, opciones de herramienta, Modificar/Dibujar/Cadena, compositor de paneles izq./der., navegador, propiedades, vistas, barra de vista.  
-Nuevo / Abrir / Demo / Exportar `.axon`. Visor con planta ortogonal / perspectiva. El dibujo real de muros es **Etapa 1**.
+Nuevo / Abrir / Demo / Exportar `.axon`. Visor planta/3D. **Etapa 1:** Muro → trazar en planta (cadena), selección, propiedades, undo/redo.
 
 UI de referencia: [docs/ui/interface-base.md](docs/ui/interface-base.md).
 

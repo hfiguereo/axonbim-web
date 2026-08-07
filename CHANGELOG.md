@@ -2,9 +2,12 @@
 
 ## Unreleased
 
-### Etapa 1 (siguiente)
+### Etapa 1 (hecho — G-E1)
 
-- Corte vertical: dibujar muro encadenado → documento → geometría → planta/3D → selección → undo
+- `wallBoxMesh` + métricas/tests en `@axonbim/geometry`
+- Comandos `wall.create` / delete / set height|thickness|family + `HistoryStack`
+- Dibujo encadenado en planta (P1→P2, preview), sync meshes, pick/selección
+- Propiedades editables del muro seleccionado; QAT undo/redo (Ctrl+Z/Y)
 
 ### Etapa 0 (hecho)
 

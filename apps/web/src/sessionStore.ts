@@ -1,10 +1,22 @@
-import { HistoryStack } from "@axonbim/commands";
+import {
+  CreateWallCommand,
+  DeleteWallCommand,
+  HistoryStack,
+  SetWallFamilyCommand,
+  SetWallHeightCommand,
+  SetWallThicknessCommand,
+  createWallId,
+  type Command,
+} from "@axonbim/commands";
+import { familyById } from "@axonbim/families";
 import {
   createDemoDocument,
   createEmptyDocument,
   type AxonDocument,
+  type Wall,
 } from "@axonbim/model";
 import { parseDocument, serializeDocument } from "@axonbim/persistence";
+import { MIN_WALL_LENGTH } from "@axonbim/shared";
 import type { DrawMode, ToolId } from "@axonbim/tools";
 import { isSketchTool } from "@axonbim/tools";
 import { create } from "zustand";
@@ -48,6 +60,18 @@ type SessionState = {
   drawMode: DrawMode;
   /** Wall placement: chain consecutive segments (Revit default on). */
   wallChain: boolean;
+  /** Active wall family for new walls. */
+  activeFamilyId: string;
+  /** Default wall height for new walls (m). */
+  wallHeight: number;
+  /** Selection (UI-only, not persisted in .axon). */
+  selectedWallId: string | null;
+  /** First click of current wall segment (preview). */
+  wallPending: { x: number; y: number; z: number } | null;
+  /** Cursor hover while drawing (preview). */
+  wallHover: { x: number; y: number; z: number } | null;
+  /** Bumps when document mutates so views re-sync. */
+  documentRev: number;
   status: string;
   visualStyle: VisualStyle;
   detailLevel: DetailLevel;
@@ -84,6 +108,19 @@ type SessionState = {
   splitWallChain: () => void;
   /** Turn chain off (place one segment at a time). */
   releaseWallChain: () => void;
+  setActiveFamilyId: (id: string) => void;
+  setWallHeight: (height: number) => void;
+  setSelectedWallId: (id: string | null) => void;
+  setWallHover: (p: { x: number; y: number; z: number } | null) => void;
+  /** Pointer click in viewport while wall tool is active. */
+  wallClick: (p: { x: number; y: number; z: number }) => void;
+  cancelWallDraw: () => void;
+  runUndo: () => void;
+  runRedo: () => void;
+  deleteSelectedWall: () => void;
+  setSelectedWallHeight: (height: number) => void;
+  setSelectedWallThickness: (thickness: number) => void;
+  setSelectedWallFamily: (familyId: string) => void;
   setActiveView: (id: string) => void;
   ensureViewOpen: (id: string) => void;
   addView: (kind: ViewKind) => void;
@@ -119,16 +156,48 @@ const SCALES = ["1:20", "1:50", "1:100", "1:200"] as const;
 const STYLES: VisualStyle[] = ["wireframe", "hiddenLine", "shaded"];
 const DETAILS: DetailLevel[] = ["coarse", "medium", "fine"];
 
+function touchDoc(doc: AxonDocument): AxonDocument {
+  return {
+    ...doc,
+    walls: [...doc.walls],
+    storeys: [...doc.storeys],
+    families: [...doc.families],
+    meta: { ...doc.meta },
+  };
+}
+
+function applyCommand(
+  get: () => SessionState,
+  set: (partial: Partial<SessionState>) => void,
+  cmd: Command,
+  status: string,
+): void {
+  const { document, history } = get();
+  history.push(cmd, document);
+  set({
+    document: touchDoc(document),
+    history,
+    documentRev: get().documentRev + 1,
+    status,
+  });
+}
+
 export const useSessionStore = create<SessionState>((set, get) => ({
   document: createEmptyDocument(),
   history: new HistoryStack(),
   views: defaultViews(),
-  activeViewId: "view.3d.perspective",
+  activeViewId: "view.plan.level1",
   ribbonTab: "architecture",
   activeTool: "none",
   drawMode: "line",
   wallChain: true,
-  status: "Arrastra paneles o usa ◧ ▢ ◨ en el título — acople izq./der./flotante",
+  activeFamilyId: "family.block-150",
+  wallHeight: 2.7,
+  selectedWallId: null,
+  wallPending: null,
+  wallHover: null,
+  documentRev: 0,
+  status: "Etapa 1 — elige Muro y traza en planta (cadena activa)",
   visualStyle: "shaded",
   detailLevel: "medium",
   graphicScale: "1:50",
@@ -154,9 +223,13 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       document: createEmptyDocument(),
       history: new HistoryStack(),
       views: defaultViews(),
-      activeViewId: "view.3d.perspective",
+      activeViewId: "view.plan.level1",
       activeTool: "none",
       ribbonTab: "architecture",
+      selectedWallId: null,
+      wallPending: null,
+      wallHover: null,
+      documentRev: get().documentRev + 1,
       status: "Nuevo proyecto",
     });
   },
@@ -168,8 +241,12 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       views: defaultViews(),
       activeViewId: "view.plan.level1",
       activeTool: "none",
-      ribbonTab: "view",
-      status: "Demo — planta ortogonal activa",
+      ribbonTab: "architecture",
+      selectedWallId: null,
+      wallPending: null,
+      wallHover: null,
+      documentRev: get().documentRev + 1,
+      status: "Demo — traza muros en planta",
     });
   },
 
@@ -180,6 +257,10 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         document,
         history: new HistoryStack(),
         activeTool: "none",
+        selectedWallId: null,
+        wallPending: null,
+        wallHover: null,
+        documentRev: get().documentRev + 1,
         status: fileName ? `Abierto: ${fileName}` : "Proyecto importado",
       });
     } catch (err) {
@@ -198,6 +279,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         activeTool,
         drawMode: "line",
         ribbonTab: "modify",
+        wallPending: null,
+        wallHover: null,
         status: "Herramienta: ninguna",
       });
       return;
@@ -208,9 +291,12 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         drawMode: "line",
         wallChain: true,
         ribbonTab: "modify",
+        selectedWallId: null,
+        wallPending: null,
+        wallHover: null,
         status:
           activeTool === "wall"
-            ? "Colocar muro — cadena activa (Modificar → Cadena)"
+            ? "Colocar muro — clic P1, clic P2 (cadena activa)"
             : `Trazar: ${activeTool}`,
       });
       return;
@@ -218,6 +304,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     set({
       activeTool,
       ribbonTab: "modify",
+      wallPending: null,
+      wallHover: null,
       status: `Herramienta: ${activeTool}`,
     });
   },
@@ -241,18 +329,155 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     }),
 
   splitWallChain: () => {
-    // Etapa 1 will end the current polyline and start a new chained run.
     set({
       wallChain: true,
-      status: "Cadena dividida — siguiente clic inicia un nuevo tramo encadenado",
+      wallPending: null,
+      wallHover: null,
+      status: "Cadena dividida — siguiente clic inicia un nuevo tramo",
     });
   },
 
   releaseWallChain: () => {
     set({
       wallChain: false,
+      wallPending: null,
+      wallHover: null,
       status: "Cadena soltada — coloca segmentos sueltos",
     });
+  },
+
+  setActiveFamilyId: (activeFamilyId) => {
+    const fam = familyById(activeFamilyId);
+    set({
+      activeFamilyId,
+      status: fam ? `Familia: ${fam.label}` : `Familia: ${activeFamilyId}`,
+    });
+  },
+
+  setWallHeight: (wallHeight) => set({ wallHeight }),
+
+  setSelectedWallId: (selectedWallId) =>
+    set({
+      selectedWallId,
+      status: selectedWallId ? `Seleccionado: ${selectedWallId}` : "Sin selección",
+    }),
+
+  setWallHover: (wallHover) => set({ wallHover }),
+
+  wallClick: (p) => {
+    const s = get();
+    if (s.activeTool !== "wall") return;
+    if (s.drawMode !== "line") {
+      set({ status: "Solo modo Línea está activo en Etapa 1" });
+      return;
+    }
+
+    if (!s.wallPending) {
+      set({
+        wallPending: p,
+        wallHover: p,
+        status: "P1 fijado — clic para P2 (Esc cancela)",
+      });
+      return;
+    }
+
+    const p1 = s.wallPending;
+    const len = Math.hypot(p.x - p1.x, p.y - p1.y);
+    if (len < MIN_WALL_LENGTH) {
+      set({ status: "Segmento demasiado corto" });
+      return;
+    }
+
+    const fam = familyById(s.activeFamilyId);
+    const thickness = fam?.thickness ?? 0.15;
+    const storey = s.document.storeys[0];
+    const wall: Wall = {
+      id: createWallId(),
+      storeyId: storey?.id ?? "storey.default",
+      familyId: s.activeFamilyId,
+      p1: { x: p1.x, y: p1.y, z: storey?.elevation ?? 0 },
+      p2: { x: p.x, y: p.y, z: storey?.elevation ?? 0 },
+      height: s.wallHeight,
+      thickness,
+    };
+
+    applyCommand(get, set, new CreateWallCommand(wall), `Muro creado (${len.toFixed(2)} m)`);
+
+    if (s.wallChain) {
+      set({
+        wallPending: { x: p.x, y: p.y, z: storey?.elevation ?? 0 },
+        wallHover: { x: p.x, y: p.y, z: storey?.elevation ?? 0 },
+        status: "Cadena — clic para siguiente segmento (Esc / Dividir corta)",
+      });
+    } else {
+      set({ wallPending: null, wallHover: null });
+    }
+  },
+
+  cancelWallDraw: () => {
+    if (get().activeTool !== "wall") return;
+    set({
+      wallPending: null,
+      wallHover: null,
+      status: "Trazado cancelado — clic para nuevo P1",
+    });
+  },
+
+  runUndo: () => {
+    const { document, history } = get();
+    if (!history.canUndo) return;
+    history.undo(document);
+    set({
+      document: touchDoc(document),
+      history,
+      documentRev: get().documentRev + 1,
+      selectedWallId: null,
+      status: "Deshacer",
+    });
+  },
+
+  runRedo: () => {
+    const { document, history } = get();
+    if (!history.canRedo) return;
+    history.redo(document);
+    set({
+      document: touchDoc(document),
+      history,
+      documentRev: get().documentRev + 1,
+      selectedWallId: null,
+      status: "Rehacer",
+    });
+  },
+
+  deleteSelectedWall: () => {
+    const id = get().selectedWallId;
+    if (!id) return;
+    applyCommand(get, set, new DeleteWallCommand(id), `Eliminado ${id}`);
+    set({ selectedWallId: null });
+  },
+
+  setSelectedWallHeight: (height) => {
+    const id = get().selectedWallId;
+    if (!id) return;
+    applyCommand(get, set, new SetWallHeightCommand(id, height), `Altura → ${height} m`);
+  },
+
+  setSelectedWallThickness: (thickness) => {
+    const id = get().selectedWallId;
+    if (!id) return;
+    applyCommand(get, set, new SetWallThicknessCommand(id, thickness), `Espesor → ${thickness} m`);
+  },
+
+  setSelectedWallFamily: (familyId) => {
+    const id = get().selectedWallId;
+    const fam = familyById(familyId);
+    if (!id || !fam) return;
+    applyCommand(
+      get,
+      set,
+      new SetWallFamilyCommand(id, familyId, fam.thickness),
+      `Familia → ${fam.label}`,
+    );
   },
 
   setActiveView: (id) => {

@@ -15,6 +15,10 @@ export function AppChrome() {
   const exportText = useSessionStore((s) => s.exportText);
   const setStatus = useSessionStore((s) => s.setStatus);
   const projectName = useSessionStore((s) => s.document.meta.name);
+  const canUndo = useSessionStore((s) => s.history.canUndo);
+  const canRedo = useSessionStore((s) => s.history.canRedo);
+  const runUndo = useSessionStore((s) => s.runUndo);
+  const runRedo = useSessionStore((s) => s.runRedo);
 
   useLayoutEffect(() => {
     if (!open || !btnRef.current) return;
@@ -200,10 +204,24 @@ export function AppChrome() {
               <path d="M3 3h10l2 2v10H3V3zM6 3v4h6V3M6 14v-4h6v4" />
             </svg>
           </button>
-          <button type="button" className="qat__btn" disabled title="Deshacer (Etapa 1)">
+          <button
+            type="button"
+            className="qat__btn"
+            disabled={!canUndo}
+            title="Deshacer (Ctrl+Z)"
+            aria-label="Deshacer"
+            onClick={() => runUndo()}
+          >
             ↩
           </button>
-          <button type="button" className="qat__btn" disabled title="Rehacer (Etapa 1)">
+          <button
+            type="button"
+            className="qat__btn"
+            disabled={!canRedo}
+            title="Rehacer (Ctrl+Y)"
+            aria-label="Rehacer"
+            onClick={() => runRedo()}
+          >
             ↪
           </button>
         </div>

@@ -822,6 +822,23 @@ select {
   font-size: 0.8rem;
 }
 
+.props__input {
+  width: 100%;
+  max-width: 7rem;
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+  color: var(--ink);
+  padding: 0.2rem 0.35rem;
+  border-radius: 0.2rem;
+  font: inherit;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+
+.viewport--draw {
+  cursor: crosshair;
+}
+
 /* —— View tabs / viewport / icon bar —— */
 .view-tabs {
   display: flex;

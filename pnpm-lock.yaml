@@ -84,6 +84,9 @@ importers:
 
   packages/geometry:
     dependencies:
+      '@axonbim/model':
+        specifier: workspace:*
+        version: link:../model
       '@axonbim/shared':
         specifier: workspace:*
         version: link:../shared
@@ -91,6 +94,9 @@ importers:
       typescript:
         specifier: ^5.8.3
         version: 5.9.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.7
 
   packages/model:
     dependencies:
@@ -135,6 +141,12 @@ importers:
 
   packages/viewer:
     dependencies:
+      '@axonbim/geometry':
+        specifier: workspace:*
+        version: link:../geometry
+      '@axonbim/model':
+        specifier: workspace:*
+        version: link:../model
       three:
         specifier: ^0.177.0
         version: 0.177.0

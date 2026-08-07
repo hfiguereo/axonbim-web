@@ -37,10 +37,10 @@ samples/demo-house/
 docs/
 ```
 
-## F3 — Etapa 1 primer muro (siguiente)
+## F3 — Etapa 1 primer muro (hecho — G-E1)
 
-Corte vertical: P1→P2→Wall→geometría→planta+3D→selección→propiedades→undo/redo desde UI.  
-Cadena de muro on por defecto (estado UI ya en shell).
+Corte vertical: P1→P2→`wall.create`→`wallBoxMesh`→planta+3D→selección→propiedades→undo/redo.  
+Cadena on por defecto; modo Línea; otros Draw modes aún no.
 
 ## F4 — Etapa 2 MVP estricto (futuro)
 
