@@ -4,7 +4,7 @@ Software BIM **web, local-first**, orientado a una experiencia de modelado peque
 
 **Autor:** Arq. Hector Nathanael Figuereo  
 **Licencia:** [Propietaria — All Rights Reserved](LICENSE) ([ADR 0007](docs/decisions/0007-proprietary-license.md))  
-**Estado:** MVP cerrado (**G-MVP**) — post-MVP pendiente de tu OK  
+**Estado:** Post-MVP **puertas** en curso (ADR 0010) — G-MVP cerrado  
 **Remoto:** https://github.com/hfiguereo/axonbim-web
 
 ## Qué es

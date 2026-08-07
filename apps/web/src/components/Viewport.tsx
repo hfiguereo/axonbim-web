@@ -16,7 +16,9 @@ export function Viewport() {
   const visualStyle = useSessionStore((s) => s.visualStyle);
   const documentRev = useSessionStore((s) => s.documentRev);
   const walls = useSessionStore((s) => s.document.walls);
+  const doors = useSessionStore((s) => s.document.doors);
   const selectedWallId = useSessionStore((s) => s.selectedWallId);
+  const selectedDoorId = useSessionStore((s) => s.selectedDoorId);
   const activeTool = useSessionStore((s) => s.activeTool);
   const wallPending = useSessionStore((s) => s.wallPending);
   const wallHover = useSessionStore((s) => s.wallHover);
@@ -60,8 +62,8 @@ export function Viewport() {
   }, [fitViewRequest, activeViewId, activeViewKind]);
 
   useEffect(() => {
-    handleRef.current?.syncWalls(walls, selectedWallId);
-  }, [documentRev, walls, selectedWallId]);
+    handleRef.current?.syncWalls(walls, doors, selectedWallId, selectedDoorId);
+  }, [documentRev, walls, doors, selectedWallId, selectedDoorId]);
 
   useEffect(() => {
     handleRef.current?.setPreviewSegment(wallPending, wallHover);
@@ -96,6 +98,30 @@ export function Viewport() {
         return;
       }
 
+      if (s.activeTool === "door") {
+        const wallId = vp.pickWallId(e.clientX, e.clientY);
+        if (!wallId) {
+          s.setStatus("Clic en un muro para colocar la puerta");
+          return;
+        }
+        const p = vp.pickGround(e.clientX, e.clientY, elevation);
+        if (p) s.placeDoorOnWall(wallId, p);
+        return;
+      }
+
+      const flip = vp.pickFlipControl(e.clientX, e.clientY);
+      if (flip?.entityType === "door") {
+        s.setSelectedDoorId(flip.entityId);
+        if (flip.kind === "swing") s.flipSelectedDoorSwing();
+        else s.flipSelectedDoorHinge();
+        return;
+      }
+
+      const doorId = vp.pickDoorId(e.clientX, e.clientY);
+      if (doorId) {
+        s.setSelectedDoorId(doorId);
+        return;
+      }
       const id = vp.pickWallId(e.clientX, e.clientY);
       s.setSelectedWallId(id);
     };
@@ -120,6 +146,11 @@ export function Viewport() {
         return;
       }
       if (e.key === "Delete" || e.key === "Backspace") {
+        if (s.selectedDoorId) {
+          e.preventDefault();
+          s.deleteSelectedDoor();
+          return;
+        }
         if (s.selectedWallId) {
           e.preventDefault();
           s.deleteSelectedWall();
@@ -139,7 +170,7 @@ export function Viewport() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const drawing = activeTool === "wall";
+  const drawing = activeTool === "wall" || activeTool === "door";
   const snapLabel =
     lastSnapKind === "endpoint"
       ? "snap extremo"
@@ -147,17 +178,21 @@ export function Viewport() {
         ? "snap orto"
         : lastSnapKind === "close"
           ? "snap cierre"
-          : drawing
+          : activeTool === "wall"
             ? "sin snap"
-            : "";
+            : activeTool === "door"
+              ? "clic en muro"
+              : "";
 
   return (
     <div className={drawing ? "viewport viewport--draw" : "viewport"} ref={hostRef}>
       <canvas ref={canvasRef} className="viewport__canvas" />
       <ViewOrientationGizmo visible={activeViewKind === "perspective"} />
       <div className="viewport__hint" aria-hidden>
-        {activeViewKind === "plan" ? "planta ortogonal" : "perspectiva"} · {visualStyle}
-        {drawing ? ` · muro · ${snapLabel}` : ""}
+        {activeViewKind === "plan" ? "planta · rueda zoom · clic medio pan · grips puerta" : "3D · rueda zoom · clic medio/der orbitar"}
+        {" · "}
+        {visualStyle}
+        {drawing ? ` · muro · ${snapLabel}` : snapLabel ? ` · ${snapLabel}` : ""}
       </div>
     </div>
   );

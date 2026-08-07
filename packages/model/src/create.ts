@@ -1,4 +1,4 @@
-import { BUILTIN_WALL_FAMILIES } from "@axonbim/families";
+import { BUILTIN_DOOR_FAMILIES, BUILTIN_WALL_FAMILIES } from "@axonbim/families";
 import type { AxonDocument, Wall } from "./types.js";
 
 function isoNow(): string {
@@ -17,7 +17,9 @@ export function createEmptyDocument(name = "Sin título"): AxonDocument {
     },
     storeys: [{ id: "storey.default", name: "Nivel 1", elevation: 0 }],
     families: [...BUILTIN_WALL_FAMILIES],
+    doorFamilies: [...BUILTIN_DOOR_FAMILIES],
     walls: [],
+    doors: [],
   };
 }
 
@@ -37,7 +39,7 @@ export function createDemoDocument(): AxonDocument {
     [8, 0, 8, 6],
     [8, 6, 0, 6],
     [0, 6, 0, 0],
-    [4, 0, 4, 6], // partition
+    [4, 0, 4, 6],
   ];
 
   doc.walls = segs.map(([x1, y1, x2, y2], i): Wall => ({

@@ -1,4 +1,4 @@
-import type { WallFamily } from "@axonbim/families";
+import type { DoorFamily, WallFamily } from "@axonbim/families";
 import type { Vec3 } from "@axonbim/shared";
 
 export type ProjectMeta = {
@@ -25,9 +25,43 @@ export type Wall = {
   thickness: number;
 };
 
+/** Door hosted on a wall — center along wall axis from p1. */
+export type Door = {
+  id: string;
+  wallId: string;
+  familyId: string;
+  /** Meters along wall axis from p1 to door center. */
+  centerOffset: number;
+  width: number;
+  height: number;
+  /** Height of sill above wall base (usually 0). */
+  sill: number;
+  /** Hinge toward wall p1 ("start") or p2 ("end"). */
+  hinge: "start" | "end";
+  /**
+   * Swing side relative to wall normal (+n = positive).
+   * Flip in plan with the mid-arc grip.
+   */
+  swing: DoorSwing;
+  /** Leaf representation in plan/3D. Default open = 90°. */
+  leafState: DoorLeafState;
+};
+
+export type DoorSwing = "positive" | "negative";
+
+export type DoorLeafState = "closed" | "ajar" | "open";
+
+export const DOOR_LEAF_ANGLE_RAD: Record<DoorLeafState, number> = {
+  closed: 0,
+  ajar: Math.PI / 4, // 45°
+  open: Math.PI / 2, // 90°
+};
+
 export type AxonDocument = {
   meta: ProjectMeta;
   storeys: Storey[];
   families: WallFamily[];
+  doorFamilies: DoorFamily[];
   walls: Wall[];
+  doors: Door[];
 };

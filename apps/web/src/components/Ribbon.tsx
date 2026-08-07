@@ -144,11 +144,13 @@ export function Ribbon() {
 
   const sketching = isSketchTool(activeTool);
   const modifyTabLabel =
-    sketching && activeTool === "wall"
-      ? "Modificar | Colocar muro"
-      : sketching
-        ? "Modificar | Trazar"
-        : "Modificar";
+    activeTool === "door"
+      ? "Modificar | Colocar puerta"
+      : sketching && activeTool === "wall"
+        ? "Modificar | Colocar muro"
+        : sketching
+          ? "Modificar | Trazar"
+          : "Modificar";
 
   return (
     <div className="ribbon">
@@ -174,7 +176,7 @@ export function Ribbon() {
           <>
             <Group title="Construir">
               <Tool tips={tips} icon="wall" label="Muro" tip="Muro" active={activeTool === "wall"} onClick={() => setTool("wall")} />
-              <Stub tips={tips} icon="door" label="Puerta" tip="Puerta" />
+              <Tool tips={tips} icon="door" label="Puerta" tip="Puerta" active={activeTool === "door"} onClick={() => setTool("door")} />
               <Stub tips={tips} icon="window" label="Ventana" tip="Ventana" />
               <Stub tips={tips} icon="component" label="Componente" tip="Componente" />
               <Stub tips={tips} icon="column" label="Columna" tip="Columna" />
@@ -484,11 +486,18 @@ export function Ribbon() {
             <span className="ribbon__options-title">
               {activeTool === "wall"
                 ? "Colocar muro"
-                : activeTool === "select"
-                  ? "Seleccionar"
-                  : activeTool}
+                : activeTool === "door"
+                  ? "Colocar puerta"
+                  : activeTool === "select"
+                    ? "Seleccionar"
+                    : activeTool}
             </span>
             <div className="ribbon__options-list">
+              {activeTool === "door" && (
+                <span className="ribbon__options-hint">
+                  Clic en un muro · familia en Propiedades
+                </span>
+              )}
               {activeTool === "wall" && (
                 <>
                   <span className="ribbon__options-hint">

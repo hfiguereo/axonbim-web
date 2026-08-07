@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Wall } from "@axonbim/model";
-import { EPS_LENGTH, almostEqual } from "@axonbim/shared";
+import { almostEqual } from "@axonbim/shared";
 import { computeWallJoinDirs, miterCorners, wallBoxMesh, wallMetrics } from "../src/index";
 
 const wall: Wall = {

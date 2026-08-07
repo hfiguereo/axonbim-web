@@ -7,7 +7,7 @@ Punto de entrada para agentes de IA. Lee esto antes de cualquier cambio material
 1. **Lee las reglas activas** en `.cursor/rules/` (mandatos cortos).
 2. **Lee la documentación de soporte** bajo `docs/` para el dominio que toques. El detalle vive en docs, no en las rules.
 3. **No copies ni traduzcas** el desktop Godot/Python. Portar = comportamiento → prueba → invariante → especificación → implementación nueva. Ver `docs/migration/migration-rules.md`.
-4. **G-MVP está aprobado.** No avances a post-MVP (puertas/ventanas, gizmo→cámaras, etc.) sin autorización explícita.
+4. **Post-MVP puertas autorizado** (corte vertical puerta — ADR 0010). No abras ventanas/IFC u otras capacidades sin autorización explícita.
 5. **No dupliques controles UI** (cinta vs status vs opciones) salvo petición explícita. Ver `docs/ui/interface-base.md` (anti-redundancia).
 
 ## Índice de lectura

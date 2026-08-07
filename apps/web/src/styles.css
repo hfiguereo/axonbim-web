@@ -804,6 +804,13 @@ select {
   gap: 0.55rem;
 }
 
+.props-hint {
+  margin: 0 0.65rem 0.5rem;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--ink-mute);
+}
+
 .props > div {
   display: grid;
   grid-template-columns: 5.2rem 1fr;

@@ -9,3 +9,13 @@ export {
   createWallId,
   resetWallIdSeq,
 } from "./walls";
+export {
+  CreateDoorCommand,
+  DeleteDoorCommand,
+  SetDoorLeafStateCommand,
+  SetDoorSwingCommand,
+  SetDoorHingeCommand,
+  SetDoorFamilyCommand,
+  createDoorId,
+  resetDoorIdSeq,
+} from "./doors";

@@ -47,6 +47,11 @@ Cadena on por defecto; modo Línea; otros Draw modes aún no.
 Snap, inglete, demo, Fit, zoom rueda, gizmo maqueta, import/export `.axon`.  
 **Pausa de producto** hasta autorización post-MVP.
 
-## F5+ — Post-MVP (solo con autorización)
+## F5 — Puertas (slice entregado — ADR 0010)
 
-Puertas/ventanas, orientación real del gizmo, y siguientes capacidades del maestro.
+Colocar puerta en muro + hueco + marco/hoja/herrajes + planta (arco/grips) + familia en caliente.  
+Pendiente: validación humana del corte. Ventanas / IFC / gizmo→cámaras: aún no.
+
+## F5+ — Más post-MVP (solo con autorización)
+
+Ventanas y siguientes capacidades del maestro.

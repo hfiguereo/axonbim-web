@@ -2,7 +2,12 @@
 
 ## Unreleased
 
-_(vacío tras release MVP)_
+### Post-MVP — puertas (ADR 0010)
+
+- Entidad `Door`, familias 80/90/100; `door.create` / delete / familia / swing / hinge / hoja
+- Hueco en muro (slabs); marco = forro interior (jambas + dintel, **sin umbral**)
+- Hoja con paneles, bisagras, manilla horizontal; planta: arco + grips sentido/bisagra
+- Familia editable en caliente; navegación: zoom, orbit 3D, pan planta
 
 ## 2026-08-06 — MVP estricto (G-MVP)
 

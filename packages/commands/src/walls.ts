@@ -52,6 +52,7 @@ export class DeleteWallCommand implements Command {
       p2: { ...found.p2 },
     };
     doc.walls = doc.walls.filter((w) => w.id !== this.wallId);
+    doc.doors = doc.doors.filter((d) => d.wallId !== this.wallId);
     doc.meta.updatedAt = new Date().toISOString();
   }
 

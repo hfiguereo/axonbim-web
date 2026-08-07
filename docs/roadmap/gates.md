@@ -12,10 +12,9 @@ El agente y el desarrollo humano **se detienen** en cada gate. “Continúa con 
 
 ## Estado actual
 
-- **G-F0 / G-F1 / G-E0 / G-E1 / G-MVP:** **aprobados** (2026-08-06)
-- **MVP estricto:** cerrado — muro dibujable, snap, inglete, demo, zoom, Fit, gizmo maqueta
-- **Post-MVP:** **bloqueado** hasta autorización explícita (puertas/ventanas, gizmo→cámaras reales, etc.)
-- **Opcional pendiente:** pruebas visuales Playwright (no bloquean G-MVP)
+- **G-MVP:** **aprobado** (2026-08-06)
+- **Post-MVP:** **puertas** autorizadas (ADR 0010) — slice implementado; pendiente validación humana; ventanas/IFC/etc. siguen bloqueadas
+- **Opcional:** Playwright
 - **GitHub:** https://github.com/hfiguereo/axonbim-web
 
 ## Registro de aprobación
@@ -26,4 +25,5 @@ El agente y el desarrollo humano **se detienen** en cada gate. “Continúa con 
 | G-F1 | 2026-08-06 | aprobado | Autorización Etapa 0 |
 | G-E0 | 2026-08-06 | aprobado | Base UI: cinta, Modificar/Dibujar/Cadena, compositor L/R |
 | G-E1 | 2026-08-06 | aprobado | Primer muro usable; autoriza MVP estricto |
-| G-MVP | 2026-08-06 | aprobado | Validación humana: dibujo claro y útil; no autoriza post-MVP aún |
+| G-MVP | 2026-08-06 | aprobado | Validación humana: dibujo claro y útil |
+| Post-MVP puertas | 2026-08-06 | autorizado | Primer corte: colocar puerta en muro + hueco |

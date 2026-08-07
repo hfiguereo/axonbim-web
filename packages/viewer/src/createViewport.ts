@@ -1,5 +1,13 @@
-import { computeWallJoinDirs, wallBoxMesh, type MeshBuffer } from "@axonbim/geometry";
-import type { Wall } from "@axonbim/model";
+import {
+  computeWallJoinDirs,
+  doorAssemblyMeshes,
+  doorPlanSymbol,
+  openingsFromDoors,
+  wallMeshWithOpenings,
+  type MeshBuffer,
+  type PlanFlipControl,
+} from "@axonbim/geometry";
+import type { Door, Wall } from "@axonbim/model";
 import {
   AmbientLight,
   AxesHelper,
@@ -19,12 +27,20 @@ import {
   Plane,
   Raycaster,
   Scene,
+  SphereGeometry,
+  Spherical,
   Vector2,
   Vector3,
   WebGLRenderer,
 } from "three";
 
 export type ViewProjection = "perspective" | "plan";
+
+export type FlipPick = {
+  entityType: "door";
+  entityId: string;
+  kind: PlanFlipControl["kind"];
+};
 
 export type ViewportHandle = {
   canvas: HTMLCanvasElement;
@@ -33,7 +49,12 @@ export type ViewportHandle = {
   fitEmpty: () => void;
   fitWalls: (walls: Wall[]) => void;
   setProjection: (mode: ViewProjection) => void;
-  syncWalls: (walls: Wall[], selectedId: string | null) => void;
+  syncWalls: (
+    walls: Wall[],
+    doors: Door[],
+    selectedWallId: string | null,
+    selectedDoorId: string | null,
+  ) => void;
   setPreviewSegment: (
     p1: { x: number; y: number; z: number } | null,
     p2: { x: number; y: number; z: number } | null,
@@ -51,6 +72,9 @@ export type ViewportHandle = {
     elevation?: number,
   ) => { x: number; y: number; z: number } | null;
   pickWallId: (clientX: number, clientY: number) => string | null;
+  pickDoorId: (clientX: number, clientY: number) => string | null;
+  /** Plan orientation grips (swing / hinge) — reusable for future hosted elements. */
+  pickFlipControl: (clientX: number, clientY: number) => FlipPick | null;
 };
 
 export type CreateViewportOptions = {
@@ -128,6 +152,51 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
     side: DoubleSide,
     emissive: 0x3a2a10,
   });
+  const doorMat = new MeshLambertMaterial({
+    color: 0x8b5a2b,
+    side: DoubleSide,
+  });
+  const doorSelectedMat = new MeshLambertMaterial({
+    color: 0xc4783a,
+    side: DoubleSide,
+    emissive: 0x3a2010,
+  });
+  const doorFrameMat = new MeshLambertMaterial({
+    color: 0x5c4030,
+    side: DoubleSide,
+  });
+  const doorFrameSelectedMat = new MeshLambertMaterial({
+    color: 0x7a5538,
+    side: DoubleSide,
+    emissive: 0x2a1808,
+  });
+  const doorHardwareMat = new MeshLambertMaterial({
+    color: 0xb0b8c0,
+    side: DoubleSide,
+  });
+  const doorHardwareSelectedMat = new MeshLambertMaterial({
+    color: 0xd0d8e0,
+    side: DoubleSide,
+    emissive: 0x202428,
+  });
+  const doorsGroup = new Group();
+  scene.add(doorsGroup);
+
+  const planDoorsGroup = new Group();
+  scene.add(planDoorsGroup);
+  const planDoorLineMat = new LineBasicMaterial({ color: 0x2a3340 });
+  const planDoorLineSelectedMat = new LineBasicMaterial({ color: 0xd4a15a });
+  const flipSwingMat = new MeshLambertMaterial({
+    color: 0x3d8bfd,
+    emissive: 0x1a3a6a,
+  });
+  const flipHingeMat = new MeshLambertMaterial({
+    color: 0x7dd87d,
+    emissive: 0x1a4a1a,
+  });
+  const flipSphereGeom = new SphereGeometry(1, 12, 10);
+  const flipControlsGroup = new Group();
+  scene.add(flipControlsGroup);
 
   const previewGeom = new BufferGeometry();
   previewGeom.setAttribute(
@@ -188,6 +257,10 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
   const syncSceneForMode = () => {
     axes.visible = mode !== "plan";
     sun.visible = mode !== "plan";
+    planDoorsGroup.visible = mode === "plan";
+    flipControlsGroup.visible = mode === "plan";
+    // In plan, keep 3D door solids subtle under the symbol
+    doorsGroup.visible = true;
   };
   syncSceneForMode();
 
@@ -213,6 +286,69 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
     }
   };
   canvas.addEventListener("wheel", onWheel, { passive: false });
+
+  // Orbit (3D) / pan (plan): middle or right button — left stays for tools
+  let navActive = false;
+  let navButton = -1;
+  let lastX = 0;
+  let lastY = 0;
+  const spherical = new Spherical();
+  const offsetVec = new Vector3();
+
+  const onPointerDown = (e: PointerEvent) => {
+    if (e.button !== 1 && e.button !== 2) return;
+    e.preventDefault();
+    navActive = true;
+    navButton = e.button;
+    lastX = e.clientX;
+    lastY = e.clientY;
+    canvas.setPointerCapture(e.pointerId);
+  };
+
+  const onPointerMove = (e: PointerEvent) => {
+    if (!navActive) return;
+    const dx = e.clientX - lastX;
+    const dy = e.clientY - lastY;
+    lastX = e.clientX;
+    lastY = e.clientY;
+
+    if (mode === "plan") {
+      const scale = (orthoHalfH * 2) / Math.max(height, 1);
+      ortho.position.x -= dx * scale;
+      ortho.position.y += dy * scale;
+      ortho.lookAt(ortho.position.x, ortho.position.y, 0);
+    } else {
+      offsetVec.copy(persp.position).sub(perspTarget);
+      spherical.setFromVector3(offsetVec);
+      spherical.theta -= dx * 0.005;
+      spherical.phi -= dy * 0.005;
+      spherical.phi = Math.max(0.08, Math.min(Math.PI - 0.08, spherical.phi));
+      offsetVec.setFromSpherical(spherical);
+      persp.position.copy(perspTarget).add(offsetVec);
+      persp.up.set(0, 0, 1);
+      persp.lookAt(perspTarget);
+    }
+  };
+
+  const onPointerUp = (e: PointerEvent) => {
+    if (!navActive) return;
+    if (e.button !== navButton && e.type !== "pointercancel") return;
+    navActive = false;
+    navButton = -1;
+    try {
+      canvas.releasePointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const onContextMenu = (e: Event) => e.preventDefault();
+
+  canvas.addEventListener("pointerdown", onPointerDown);
+  canvas.addEventListener("pointermove", onPointerMove);
+  canvas.addEventListener("pointerup", onPointerUp);
+  canvas.addEventListener("pointercancel", onPointerUp);
+  canvas.addEventListener("contextmenu", onContextMenu);
 
   let raf = 0;
   const render = () => {
@@ -272,28 +408,91 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
       updateOrthoFrustum(orthoHalfH);
       syncSceneForMode();
     },
-    syncWalls(walls, selectedId) {
+    syncWalls(walls, doors, selectedWallId, selectedDoorId) {
       while (wallsGroup.children.length) {
         const child = wallsGroup.children[0]!;
         wallsGroup.remove(child);
-        if (child instanceof Mesh) {
-          child.geometry.dispose();
-        }
+        if (child instanceof Mesh) child.geometry.dispose();
+      }
+      while (doorsGroup.children.length) {
+        const child = doorsGroup.children[0]!;
+        doorsGroup.remove(child);
+        if (child instanceof Mesh) child.geometry.dispose();
+      }
+      while (planDoorsGroup.children.length) {
+        const child = planDoorsGroup.children[0]!;
+        planDoorsGroup.remove(child);
+        if (child instanceof LineSegments) child.geometry.dispose();
+      }
+      while (flipControlsGroup.children.length) {
+        const child = flipControlsGroup.children[0]!;
+        flipControlsGroup.remove(child);
+        // shared sphere geom — do not dispose
       }
       const joins = computeWallJoinDirs(walls);
       for (const wall of walls) {
         const j = joins.get(wall.id);
-        const buffer = wallBoxMesh(wall, {
-          joinStartAway: j?.startAway ?? null,
-          joinEndAway: j?.endAway ?? null,
-        });
+        const openings = openingsFromDoors(wall.id, doors);
+        const buffer = wallMeshWithOpenings(
+          wall,
+          openings,
+          openings.length
+            ? undefined
+            : {
+                joinStartAway: j?.startAway ?? null,
+                joinEndAway: j?.endAway ?? null,
+              },
+        );
         if (buffer.positions.length === 0) continue;
         const mesh = new Mesh(
           meshFromBuffer(buffer),
-          wall.id === selectedId ? wallSelectedMat : wallMat,
+          wall.id === selectedWallId ? wallSelectedMat : wallMat,
         );
         mesh.userData.wallId = wall.id;
         wallsGroup.add(mesh);
+      }
+      for (const door of doors) {
+        const host = walls.find((w) => w.id === door.wallId);
+        if (!host) continue;
+        const selected = door.id === selectedDoorId;
+        const parts = doorAssemblyMeshes(host, door);
+        const addPart = (buffer: MeshBuffer, mat: MeshLambertMaterial) => {
+          if (buffer.positions.length === 0) return;
+          const mesh = new Mesh(meshFromBuffer(buffer), mat);
+          mesh.userData.doorId = door.id;
+          doorsGroup.add(mesh);
+        };
+        addPart(parts.frame, selected ? doorFrameSelectedMat : doorFrameMat);
+        addPart(parts.leaf, selected ? doorSelectedMat : doorMat);
+        addPart(parts.hardware, selected ? doorHardwareSelectedMat : doorHardwareMat);
+
+        const symbol = doorPlanSymbol(host, door);
+        if (symbol) {
+          const geom = new BufferGeometry();
+          geom.setAttribute("position", new BufferAttribute(symbol.lines, 3));
+          const lines = new LineSegments(
+            geom,
+            selected ? planDoorLineSelectedMat : planDoorLineMat,
+          );
+          lines.userData.doorId = door.id;
+          planDoorsGroup.add(lines);
+
+          if (selected) {
+            for (const ctrl of symbol.flipControls) {
+              const grip = new Mesh(
+                flipSphereGeom,
+                ctrl.kind === "swing" ? flipSwingMat : flipHingeMat,
+              );
+              grip.position.set(ctrl.x, ctrl.y, ctrl.z);
+              grip.scale.setScalar(ctrl.hitRadius);
+              grip.userData.flipControl = true;
+              grip.userData.entityType = ctrl.entityType;
+              grip.userData.entityId = ctrl.entityId;
+              grip.userData.kind = ctrl.kind;
+              flipControlsGroup.add(grip);
+            }
+          }
+        }
       }
     },
     setPreviewSegment(p1, p2) {
@@ -370,15 +569,52 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
       const id = first?.userData?.wallId;
       return typeof id === "string" ? id : null;
     },
+    pickDoorId(clientX, clientY) {
+      toNdc(clientX, clientY);
+      raycaster.setFromCamera(ndc, activeCamera());
+      const hits = raycaster.intersectObjects(doorsGroup.children, false);
+      const first = hits[0]?.object;
+      const id = first?.userData?.doorId;
+      return typeof id === "string" ? id : null;
+    },
+    pickFlipControl(clientX, clientY) {
+      if (mode !== "plan" || !flipControlsGroup.visible) return null;
+      toNdc(clientX, clientY);
+      raycaster.setFromCamera(ndc, activeCamera());
+      const hits = raycaster.intersectObjects(flipControlsGroup.children, false);
+      const obj = hits[0]?.object;
+      if (!obj?.userData?.flipControl) return null;
+      const entityId = obj.userData.entityId;
+      const kind = obj.userData.kind;
+      if (typeof entityId !== "string") return null;
+      if (kind !== "swing" && kind !== "hinge") return null;
+      return { entityType: "door" as const, entityId, kind };
+    },
     dispose() {
       cancelAnimationFrame(raf);
       canvas.removeEventListener("wheel", onWheel);
+      canvas.removeEventListener("pointerdown", onPointerDown);
+      canvas.removeEventListener("pointermove", onPointerMove);
+      canvas.removeEventListener("pointerup", onPointerUp);
+      canvas.removeEventListener("pointercancel", onPointerUp);
+      canvas.removeEventListener("contextmenu", onContextMenu);
       grid.geometry.dispose();
       const gridMat = grid.material;
       if (Array.isArray(gridMat)) gridMat.forEach((m) => m.dispose());
       else gridMat.dispose();
       wallMat.dispose();
       wallSelectedMat.dispose();
+      doorMat.dispose();
+      doorSelectedMat.dispose();
+      doorFrameMat.dispose();
+      doorFrameSelectedMat.dispose();
+      doorHardwareMat.dispose();
+      doorHardwareSelectedMat.dispose();
+      planDoorLineMat.dispose();
+      planDoorLineSelectedMat.dispose();
+      flipSwingMat.dispose();
+      flipHingeMat.dispose();
+      flipSphereGeom.dispose();
       previewGeom.dispose();
       previewMat.dispose();
       snapMarkerGeom.dispose();
@@ -389,6 +625,19 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
         const child = wallsGroup.children[0]!;
         wallsGroup.remove(child);
         if (child instanceof Mesh) child.geometry.dispose();
+      }
+      while (doorsGroup.children.length) {
+        const child = doorsGroup.children[0]!;
+        doorsGroup.remove(child);
+        if (child instanceof Mesh) child.geometry.dispose();
+      }
+      while (planDoorsGroup.children.length) {
+        const child = planDoorsGroup.children[0]!;
+        planDoorsGroup.remove(child);
+        if (child instanceof LineSegments) child.geometry.dispose();
+      }
+      while (flipControlsGroup.children.length) {
+        flipControlsGroup.remove(flipControlsGroup.children[0]!);
       }
       renderer.dispose();
     },

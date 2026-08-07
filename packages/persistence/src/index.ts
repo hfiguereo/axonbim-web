@@ -1,4 +1,10 @@
-import type { AxonDocument } from "@axonbim/model";
+import type { AxonDocument, Door } from "@axonbim/model";
+
+const DEFAULT_DOOR_FAMILIES: AxonDocument["doorFamilies"] = [
+  { id: "family.door-80", label: "Puerta 80", width: 0.8, height: 2.1 },
+  { id: "family.door-90", label: "Puerta 90", width: 0.9, height: 2.1 },
+  { id: "family.door-100", label: "Puerta 100", width: 1.0, height: 2.1 },
+];
 
 export type AxonFileV1 = {
   format: "axon";
@@ -10,7 +16,9 @@ export type AxonFileV1 = {
   };
   storeys: AxonDocument["storeys"];
   families: AxonDocument["families"];
+  doorFamilies?: AxonDocument["doorFamilies"];
   walls: AxonDocument["walls"];
+  doors?: Door[];
 };
 
 export function serializeDocument(doc: AxonDocument): string {
@@ -24,7 +32,9 @@ export function serializeDocument(doc: AxonDocument): string {
     },
     storeys: doc.storeys,
     families: doc.families,
+    doorFamilies: doc.doorFamilies,
     walls: doc.walls,
+    doors: doc.doors,
   };
   return `${JSON.stringify(file, null, 2)}\n`;
 }
@@ -50,6 +60,13 @@ export function parseDocument(text: string): AxonDocument {
     },
     storeys: data.storeys,
     families: data.families ?? [],
+    doorFamilies: data.doorFamilies?.length ? data.doorFamilies : [...DEFAULT_DOOR_FAMILIES],
     walls: data.walls ?? [],
+    doors: (data.doors ?? []).map((d) => ({
+      ...d,
+      leafState: d.leafState ?? "open",
+      swing: d.swing ?? "positive",
+      hinge: d.hinge ?? "start",
+    })),
   };
 }
