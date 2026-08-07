@@ -5,12 +5,18 @@
 - Copia de trabajo: este directorio (`~/Documentos/axonbim-web`)
 - Remoto principal: `origin` → GitHub repo `axonbim-web`
 
-## Si el remoto aún no existe
+## Estado
 
-Con [GitHub CLI](https://cli.github.com/) autenticado:
+- Commit de fundación en `main` (local): presente
+- Remoto `origin`: **pendiente** — requiere autenticación GitHub en esta máquina
+- CLI local (si se instaló): `~/.local/bin/gh`
+
+## Crear y publicar el remoto
 
 ```bash
+export PATH="$HOME/.local/bin:$PATH"
 cd ~/Documentos/axonbim-web
+gh auth login
 gh repo create axonbim-web --private --source=. --remote=origin --push
 ```
 

@@ -12,13 +12,14 @@ El agente y el desarrollo humano **se detienen** en cada gate. “Continúa con 
 
 ## Estado actual
 
-- **G-F0:** listo para revisión humana (fundación en repo)
-- **G-F1:** contratos documentados — listo para revisión humana
+- **G-F0:** entregado — revisión humana pendiente (docs + 8 rules + commit local)
+- **G-F1:** entregado — revisión humana pendiente (contratos + inventario)
 - **Código (E0+):** bloqueado hasta autorización explícita post G-F1
+- **GitHub `origin`:** pendiente de `gh auth login` + `gh repo create` (ver github.md)
 
 ## Registro de aprobación
 
 | Gate | Fecha | Decisión | Notas |
 |------|-------|----------|-------|
-| G-F0 | _pendiente_ | | |
-| G-F1 | _pendiente_ | | |
+| G-F0 | _pendiente firma humana_ | | Fundación material lista en repo |
+| G-F1 | _pendiente firma humana_ | | Contratos en `docs/architecture/` + inventory |
