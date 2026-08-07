@@ -1,4 +1,4 @@
-import { wallBoxMesh, type MeshBuffer } from "@axonbim/geometry";
+import { computeWallJoinExtensions, wallBoxMesh, type MeshBuffer } from "@axonbim/geometry";
 import type { Wall } from "@axonbim/model";
 import {
   AmbientLight,
@@ -37,6 +37,12 @@ export type ViewportHandle = {
   setPreviewSegment: (
     p1: { x: number; y: number; z: number } | null,
     p2: { x: number; y: number; z: number } | null,
+  ) => void;
+  /** Snap marker + optional ortho guides while drawing. */
+  setSnapCue: (
+    point: { x: number; y: number; z: number } | null,
+    kind: "none" | "endpoint" | "ortho" | "close",
+    pending?: { x: number; y: number; z: number } | null,
   ) => void;
   /** NDC from canvas client coords → world point on storey plane z=elevation */
   pickGround: (
@@ -125,12 +131,38 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
     "position",
     new BufferAttribute(new Float32Array(6), 3),
   );
-  const previewLine = new LineSegments(
-    previewGeom,
-    new LineBasicMaterial({ color: 0xd4a15a }),
-  );
+  const previewMat = new LineBasicMaterial({ color: 0xd4a15a });
+  const previewLine = new LineSegments(previewGeom, previewMat);
   previewLine.visible = false;
   scene.add(previewLine);
+
+  // Snap cross (two segments) + ortho guide (axis from pending → snap)
+  const snapMarkerGeom = new BufferGeometry();
+  snapMarkerGeom.setAttribute(
+    "position",
+    new BufferAttribute(new Float32Array(12), 3),
+  );
+  const snapMarkerMat = new LineBasicMaterial({ color: 0x5ec8ff });
+  const snapMarker = new LineSegments(snapMarkerGeom, snapMarkerMat);
+  snapMarker.visible = false;
+  scene.add(snapMarker);
+
+  const snapGuideGeom = new BufferGeometry();
+  snapGuideGeom.setAttribute(
+    "position",
+    new BufferAttribute(new Float32Array(6), 3),
+  );
+  const snapGuideMat = new LineBasicMaterial({ color: 0x5ec8ff });
+  const snapGuide = new LineSegments(snapGuideGeom, snapGuideMat);
+  snapGuide.visible = false;
+  scene.add(snapGuide);
+
+  const snapColors: Record<"none" | "endpoint" | "ortho" | "close", number> = {
+    none: 0xb0b8c0,
+    endpoint: 0x5ec8ff,
+    ortho: 0x7dd87d,
+    close: 0xe8b84a,
+  };
 
   const raycaster = new Raycaster();
   const ndc = new Vector2();
@@ -226,8 +258,13 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
           child.geometry.dispose();
         }
       }
+      const joins = computeWallJoinExtensions(walls);
       for (const wall of walls) {
-        const buffer = wallBoxMesh(wall);
+        const ext = joins.get(wall.id);
+        const buffer = wallBoxMesh(wall, {
+          extendStart: ext?.start ?? 0,
+          extendEnd: ext?.end ?? 0,
+        });
         if (buffer.positions.length === 0) continue;
         const mesh = new Mesh(
           meshFromBuffer(buffer),
@@ -247,6 +284,53 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
       arr.setXYZ(1, p2.x, p2.y, p2.z + 0.05);
       arr.needsUpdate = true;
       previewLine.visible = true;
+    },
+    setSnapCue(point, kind, pending = null) {
+      if (!point || kind === "none") {
+        // Still show a faint cursor mark when free-drawing with pending
+        if (point && pending) {
+          const s = 0.12;
+          const z = point.z + 0.08;
+          const arr = snapMarkerGeom.getAttribute("position") as BufferAttribute;
+          arr.setXYZ(0, point.x - s, point.y, z);
+          arr.setXYZ(1, point.x + s, point.y, z);
+          arr.setXYZ(2, point.x, point.y - s, z);
+          arr.setXYZ(3, point.x, point.y + s, z);
+          arr.needsUpdate = true;
+          snapMarkerMat.color.setHex(snapColors.none);
+          snapMarker.visible = true;
+          snapGuide.visible = false;
+          previewMat.color.setHex(0xb0b8c0);
+          return;
+        }
+        snapMarker.visible = false;
+        snapGuide.visible = false;
+        previewMat.color.setHex(0xd4a15a);
+        return;
+      }
+
+      const s = kind === "close" || kind === "endpoint" ? 0.22 : 0.16;
+      const z = point.z + 0.08;
+      const arr = snapMarkerGeom.getAttribute("position") as BufferAttribute;
+      arr.setXYZ(0, point.x - s, point.y, z);
+      arr.setXYZ(1, point.x + s, point.y, z);
+      arr.setXYZ(2, point.x, point.y - s, z);
+      arr.setXYZ(3, point.x, point.y + s, z);
+      arr.needsUpdate = true;
+      snapMarkerMat.color.setHex(snapColors[kind]);
+      snapMarker.visible = true;
+      previewMat.color.setHex(snapColors[kind]);
+
+      if (pending && (kind === "ortho" || kind === "close")) {
+        const g = snapGuideGeom.getAttribute("position") as BufferAttribute;
+        g.setXYZ(0, pending.x, pending.y, pending.z + 0.04);
+        g.setXYZ(1, point.x, point.y, point.z + 0.04);
+        g.needsUpdate = true;
+        snapGuideMat.color.setHex(snapColors[kind]);
+        snapGuide.visible = true;
+      } else {
+        snapGuide.visible = false;
+      }
     },
     pickGround(clientX, clientY, elevation = 0) {
       toNdc(clientX, clientY);
@@ -273,7 +357,11 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
       wallMat.dispose();
       wallSelectedMat.dispose();
       previewGeom.dispose();
-      (previewLine.material as LineBasicMaterial).dispose();
+      previewMat.dispose();
+      snapMarkerGeom.dispose();
+      snapMarkerMat.dispose();
+      snapGuideGeom.dispose();
+      snapGuideMat.dispose();
       while (wallsGroup.children.length) {
         const child = wallsGroup.children[0]!;
         wallsGroup.remove(child);

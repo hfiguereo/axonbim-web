@@ -42,10 +42,10 @@ docs/
 Corte vertical: P1→P2→`wall.create`→`wallBoxMesh`→planta+3D→selección→propiedades→undo/redo.  
 Cadena on por defecto; modo Línea; otros Draw modes aún no.
 
-## F4 — Etapa 2 MVP estricto (futuro)
+## F4 — Etapa 2 MVP estricto (en curso)
 
-Encadenado, snapping, familias, demo, import/export, pruebas.  
-Luego **pausa obligatoria de producto**.
+Snap (feedback + switch), cadena (switch), joins de esquina por extensión, demo con muros, Fit, import/export `.axon`, pruebas geométricas.  
+ADR 0008 (esquinas), ADR 0009 (snap/UI). Luego **pausa** en **G-MVP**.
 
 ## F5+ — Post-MVP (solo con autorización)
 

@@ -1,6 +1,7 @@
 import { createViewport, type ViewportHandle } from "@axonbim/viewer";
 import { useEffect, useRef } from "react";
 import { useSessionStore } from "../sessionStore";
+import { ViewOrientationGizmo } from "./ViewOrientationGizmo";
 
 export function Viewport() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -19,6 +20,7 @@ export function Viewport() {
   const activeTool = useSessionStore((s) => s.activeTool);
   const wallPending = useSessionStore((s) => s.wallPending);
   const wallHover = useSessionStore((s) => s.wallHover);
+  const lastSnapKind = useSessionStore((s) => s.lastSnapKind);
   const elevation = useSessionStore((s) => s.document.storeys[0]?.elevation ?? 0);
 
   useEffect(() => {
@@ -63,7 +65,12 @@ export function Viewport() {
 
   useEffect(() => {
     handleRef.current?.setPreviewSegment(wallPending, wallHover);
-  }, [wallPending, wallHover]);
+    if (activeTool === "wall" && wallHover) {
+      handleRef.current?.setSnapCue(wallHover, lastSnapKind, wallPending);
+    } else {
+      handleRef.current?.setSnapCue(null, "none", null);
+    }
+  }, [wallPending, wallHover, lastSnapKind, activeTool]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -72,9 +79,9 @@ export function Viewport() {
 
     const onPointerMove = (e: PointerEvent) => {
       const s = useSessionStore.getState();
-      if (s.activeTool !== "wall" || !s.wallPending) return;
+      if (s.activeTool !== "wall") return;
       const p = handleRef.current?.pickGround(e.clientX, e.clientY, elevation);
-      if (p) s.setWallHover(p);
+      if (p) s.setWallHover(p, e.shiftKey);
     };
 
     const onPointerDown = (e: PointerEvent) => {
@@ -85,7 +92,7 @@ export function Viewport() {
 
       if (s.activeTool === "wall") {
         const p = vp.pickGround(e.clientX, e.clientY, elevation);
-        if (p) s.wallClick(p);
+        if (p) s.wallClick(p, e.shiftKey);
         return;
       }
 
@@ -133,13 +140,24 @@ export function Viewport() {
   }, []);
 
   const drawing = activeTool === "wall";
+  const snapLabel =
+    lastSnapKind === "endpoint"
+      ? "snap extremo"
+      : lastSnapKind === "ortho"
+        ? "snap orto"
+        : lastSnapKind === "close"
+          ? "snap cierre"
+          : drawing
+            ? "sin snap"
+            : "";
 
   return (
     <div className={drawing ? "viewport viewport--draw" : "viewport"} ref={hostRef}>
       <canvas ref={canvasRef} className="viewport__canvas" />
+      <ViewOrientationGizmo visible={activeViewKind === "perspective"} />
       <div className="viewport__hint" aria-hidden>
         {activeViewKind === "plan" ? "planta ortogonal" : "perspectiva"} · {visualStyle}
-        {drawing ? " · trazar muro" : ""}
+        {drawing ? ` · muro · ${snapLabel}` : ""}
       </div>
     </div>
   );

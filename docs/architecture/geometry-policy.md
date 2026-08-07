@@ -23,6 +23,11 @@ Oráculo de comportamiento (legado `wall_box_mesh`, reimplementar en TS):
 4. Extrusión en +Z de altura `height` desde `z0 = min(p1.z, p2.z)`.
 5. Malla: prisma cerrado (vértices + índices de triángulos + normales).
 
+### Uniones en esquina (MVP)
+
+Si dos o más muros comparten un extremo, la malla de cada extremo unido se **extiende** `thickness/2` a lo largo del eje (`computeWallJoinExtensions` → `wallBoxMesh` con `extendStart`/`extendEnd`). Los `p1`/`p2` del documento no cambian. Ver [ADR 0008](../decisions/0008-wall-corner-join-extension.md).
+
+Sin booleanas / OpenCascade.
 ## Equivalencia geométrica vs desktop
 
 No se exige:

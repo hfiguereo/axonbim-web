@@ -1,4 +1,4 @@
-/** Interaction tools — wall draw (Etapa 1). */
+/** Interaction tools — wall draw, snapping (MVP). */
 
 export type ToolId = "select" | "wall" | "none";
 
@@ -28,3 +28,13 @@ export type WallDrawState = {
   pending: Point2 | null;
   hover: Point2 | null;
 };
+
+export {
+  collectEndpoints,
+  orthoFrom,
+  snapWallPoint,
+  ORTHO_ANGLE_DEG,
+  type SnapContext,
+  type SnapKind,
+  type SnapResult,
+} from "./snap";

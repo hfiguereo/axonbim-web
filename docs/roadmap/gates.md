@@ -15,10 +15,12 @@ El agente y el desarrollo humano **se detienen** en cada gate. “Continúa con 
 - **G-F0 / G-F1:** aprobados (2026-08-06)
 - **Etapa 0:** shell + maqueta UI Revit LT en `apps/web` — **base de interfaz futura** documentada en `docs/ui/interface-base.md`
 - **G-E0:** **aprobado** (2026-08-06) — layout/compositor/cinta aceptados como base
-- **Etapa 1:** corte vertical muro usable (draw → comando → mesh → planta/3D → props → undo)
-- **G-E1:** **aprobado** (2026-08-06) — corte usable confirmado
-- **MVP estricto:** pendiente de autorización explícita
+- **Etapa 1:** hecha — corte vertical muro (G-E1)
+- **MVP estricto:** **autorizado** (2026-08-06) — en curso (snap UI, joins, demo, Fit)
+- **G-MVP:** pendiente (checklist casi completa; falta Playwright / tu OK de producto)
+- **Docs vivas:** `CHANGELOG.md`, ADR 0008–0009, `acceptance-matrix.md`, `geometry-policy.md`
 - **GitHub:** https://github.com/hfiguereo/axonbim-web
+  - `main` en remoto: hasta Etapa 1 (`bc0ef5b`); cambios MVP aún locales hasta commit/push
 
 ## Registro de aprobación
 
@@ -27,4 +29,4 @@ El agente y el desarrollo humano **se detienen** en cada gate. “Continúa con 
 | G-F0 | 2026-08-06 | aprobado | Autorización Etapa 0 |
 | G-F1 | 2026-08-06 | aprobado | Autorización Etapa 0 |
 | G-E0 | 2026-08-06 | aprobado | Base UI: cinta, Modificar/Dibujar/Cadena, compositor L/R |
-| G-E1 | 2026-08-06 | aprobado | Primer muro usable; no autoriza MVP aún |
+| G-E1 | 2026-08-06 | aprobado | Primer muro usable; autoriza MVP estricto |

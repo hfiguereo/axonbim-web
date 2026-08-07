@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Wall } from "@axonbim/model";
 import { EPS_LENGTH, almostEqual } from "@axonbim/shared";
-import { wallBoxMesh, wallMetrics } from "../src/index";
+import { computeWallJoinExtensions, wallBoxMesh, wallMetrics } from "../src/index";
 
 const wall: Wall = {
   id: "wall.test",
@@ -59,5 +59,32 @@ describe("wallBoxMesh", () => {
   it("returns empty mesh for degenerate wall", () => {
     const mesh = wallBoxMesh({ ...wall, p2: { ...wall.p1 } });
     expect(mesh.positions.length).toBe(0);
+  });
+
+  it("extends ends at L-joins so outer corner fills", () => {
+    const a: Wall = {
+      ...wall,
+      id: "wall.a",
+      p1: { x: 0, y: 0, z: 0 },
+      p2: { x: 4, y: 0, z: 0 },
+    };
+    const b: Wall = {
+      ...wall,
+      id: "wall.b",
+      p1: { x: 4, y: 0, z: 0 },
+      p2: { x: 4, y: 3, z: 0 },
+    };
+    const joins = computeWallJoinExtensions([a, b]);
+    expect(joins.get("wall.a")?.end).toBeCloseTo(0.075, 5);
+    expect(joins.get("wall.b")?.start).toBeCloseTo(0.075, 5);
+    expect(joins.get("wall.a")?.start).toBe(0);
+
+    const meshA = wallBoxMesh(a, { extendEnd: joins.get("wall.a")!.end });
+    let maxX = -Infinity;
+    for (let i = 0; i < meshA.positions.length; i += 3) {
+      maxX = Math.max(maxX, meshA.positions[i]!);
+    }
+    // parametric end at x=4; + half thickness along +X → outer corner to 4.075
+    expect(maxX).toBeCloseTo(4.075, 3);
   });
 });

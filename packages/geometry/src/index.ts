@@ -1,3 +1,8 @@
 export type { MeshBuffer } from "./types";
-export { emptyMesh, wallBoxMesh, wallMetrics } from "./wallBox";
-export type { WallMetrics } from "./wallBox";
+export {
+  emptyMesh,
+  wallBoxMesh,
+  wallMetrics,
+  computeWallJoinExtensions,
+} from "./wallBox";
+export type { WallMetrics, WallMeshOptions, WallJoinExt } from "./wallBox";

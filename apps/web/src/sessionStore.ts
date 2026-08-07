@@ -17,8 +17,8 @@ import {
 } from "@axonbim/model";
 import { parseDocument, serializeDocument } from "@axonbim/persistence";
 import { MIN_WALL_LENGTH } from "@axonbim/shared";
-import type { DrawMode, ToolId } from "@axonbim/tools";
-import { isSketchTool } from "@axonbim/tools";
+import type { DrawMode, SnapKind, ToolId } from "@axonbim/tools";
+import { collectEndpoints, isSketchTool, snapWallPoint } from "@axonbim/tools";
 import { create } from "zustand";
 
 export type RibbonTab =
@@ -68,8 +68,14 @@ type SessionState = {
   selectedWallId: string | null;
   /** First click of current wall segment (preview). */
   wallPending: { x: number; y: number; z: number } | null;
+  /** Start of current chained run (for close snap). */
+  wallChainOrigin: { x: number; y: number; z: number } | null;
   /** Cursor hover while drawing (preview). */
   wallHover: { x: number; y: number; z: number } | null;
+  /** Last snap kind (status / UI). */
+  lastSnapKind: SnapKind;
+  /** Master snap on/off (status bar switch). */
+  snapEnabled: boolean;
   /** Bumps when document mutates so views re-sync. */
   documentRev: number;
   status: string;
@@ -104,6 +110,7 @@ type SessionState = {
   setTool: (tool: ToolId) => void;
   setDrawMode: (mode: DrawMode) => void;
   setWallChain: (chained: boolean) => void;
+  setSnapEnabled: (enabled: boolean) => void;
   /** Keep chain mode on, but end current run (next click starts a new chain). */
   splitWallChain: () => void;
   /** Turn chain off (place one segment at a time). */
@@ -111,9 +118,9 @@ type SessionState = {
   setActiveFamilyId: (id: string) => void;
   setWallHeight: (height: number) => void;
   setSelectedWallId: (id: string | null) => void;
-  setWallHover: (p: { x: number; y: number; z: number } | null) => void;
+  setWallHover: (p: { x: number; y: number; z: number } | null, forceOrtho?: boolean) => void;
   /** Pointer click in viewport while wall tool is active. */
-  wallClick: (p: { x: number; y: number; z: number }) => void;
+  wallClick: (p: { x: number; y: number; z: number }, forceOrtho?: boolean) => void;
   cancelWallDraw: () => void;
   runUndo: () => void;
   runRedo: () => void;
@@ -195,9 +202,12 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   wallHeight: 2.7,
   selectedWallId: null,
   wallPending: null,
+  wallChainOrigin: null,
   wallHover: null,
+  lastSnapKind: "none",
+  snapEnabled: true,
   documentRev: 0,
-  status: "Etapa 1 — elige Muro y traza en planta (cadena activa)",
+  status: "MVP — Muro: snap orto/extremos/cierre · Shift = orto forzado",
   visualStyle: "shaded",
   detailLevel: "medium",
   graphicScale: "1:50",
@@ -228,7 +238,9 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       ribbonTab: "architecture",
       selectedWallId: null,
       wallPending: null,
+      wallChainOrigin: null,
       wallHover: null,
+      lastSnapKind: "none",
       documentRev: get().documentRev + 1,
       status: "Nuevo proyecto",
     });
@@ -244,9 +256,12 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       ribbonTab: "architecture",
       selectedWallId: null,
       wallPending: null,
+      wallChainOrigin: null,
       wallHover: null,
+      lastSnapKind: "none",
       documentRev: get().documentRev + 1,
-      status: "Demo — traza muros en planta",
+      fitViewRequest: get().fitViewRequest + 1,
+      status: "Demo — vivienda 8×6 m (Abrir demo)",
     });
   },
 
@@ -259,8 +274,11 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         activeTool: "none",
         selectedWallId: null,
         wallPending: null,
+        wallChainOrigin: null,
         wallHover: null,
+        lastSnapKind: "none",
         documentRev: get().documentRev + 1,
+        fitViewRequest: get().fitViewRequest + 1,
         status: fileName ? `Abierto: ${fileName}` : "Proyecto importado",
       });
     } catch (err) {
@@ -280,7 +298,9 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         drawMode: "line",
         ribbonTab: "modify",
         wallPending: null,
+        wallChainOrigin: null,
         wallHover: null,
+        lastSnapKind: "none",
         status: "Herramienta: ninguna",
       });
       return;
@@ -293,10 +313,12 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         ribbonTab: "modify",
         selectedWallId: null,
         wallPending: null,
+        wallChainOrigin: null,
         wallHover: null,
+        lastSnapKind: "none",
         status:
           activeTool === "wall"
-            ? "Colocar muro — clic P1, clic P2 (cadena activa)"
+            ? "Colocar muro — snap extremos/orto/cierre (Shift = orto)"
             : `Trazar: ${activeTool}`,
       });
       return;
@@ -305,7 +327,9 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       activeTool,
       ribbonTab: "modify",
       wallPending: null,
+      wallChainOrigin: null,
       wallHover: null,
+      lastSnapKind: "none",
       status: `Herramienta: ${activeTool}`,
     });
   },
@@ -328,11 +352,22 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         : "Cadena desactivada — un segmento por trazo",
     }),
 
+  setSnapEnabled: (snapEnabled) =>
+    set({
+      snapEnabled,
+      lastSnapKind: "none",
+      status: snapEnabled
+        ? "Snap activo — extremos / orto / cierre"
+        : "Snap desactivado",
+    }),
+
   splitWallChain: () => {
     set({
       wallChain: true,
       wallPending: null,
+      wallChainOrigin: null,
       wallHover: null,
+      lastSnapKind: "none",
       status: "Cadena dividida — siguiente clic inicia un nuevo tramo",
     });
   },
@@ -341,7 +376,9 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     set({
       wallChain: false,
       wallPending: null,
+      wallChainOrigin: null,
       wallHover: null,
+      lastSnapKind: "none",
       status: "Cadena soltada — coloca segmentos sueltos",
     });
   },
@@ -362,21 +399,55 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       status: selectedWallId ? `Seleccionado: ${selectedWallId}` : "Sin selección",
     }),
 
-  setWallHover: (wallHover) => set({ wallHover }),
+  setWallHover: (raw, forceOrtho = false) => {
+    if (!raw) {
+      set({ wallHover: null, lastSnapKind: "none" });
+      return;
+    }
+    const s = get();
+    if (!s.snapEnabled) {
+      set({ wallHover: raw, lastSnapKind: "none" });
+      return;
+    }
+    const snap = snapWallPoint({
+      raw,
+      pending: s.wallPending,
+      chainOrigin: s.wallChainOrigin,
+      endpoints: collectEndpoints(s.document.walls),
+      forceOrtho,
+    });
+    set({ wallHover: snap.point, lastSnapKind: snap.kind });
+  },
 
-  wallClick: (p) => {
+  wallClick: (raw, forceOrtho = false) => {
     const s = get();
     if (s.activeTool !== "wall") return;
     if (s.drawMode !== "line") {
-      set({ status: "Solo modo Línea está activo en Etapa 1" });
+      set({ status: "Solo modo Línea está activo en el MVP" });
       return;
     }
+
+    const snap = s.snapEnabled
+      ? snapWallPoint({
+          raw,
+          pending: s.wallPending,
+          chainOrigin: s.wallChainOrigin,
+          endpoints: collectEndpoints(s.document.walls),
+          forceOrtho,
+        })
+      : { point: raw, kind: "none" as const, closed: false };
+    const p = snap.point;
 
     if (!s.wallPending) {
       set({
         wallPending: p,
+        wallChainOrigin: s.wallChainOrigin ?? p,
         wallHover: p,
-        status: "P1 fijado — clic para P2 (Esc cancela)",
+        lastSnapKind: snap.kind,
+        status:
+          snap.kind === "endpoint"
+            ? "P1 en extremo — clic P2 (Esc cancela)"
+            : "P1 fijado — clic P2 · snap orto/extremos/cierre",
       });
       return;
     }
@@ -384,33 +455,56 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const p1 = s.wallPending;
     const len = Math.hypot(p.x - p1.x, p.y - p1.y);
     if (len < MIN_WALL_LENGTH) {
-      set({ status: "Segmento demasiado corto" });
+      set({ status: "Segmento demasiado corto", lastSnapKind: snap.kind });
       return;
     }
 
     const fam = familyById(s.activeFamilyId);
     const thickness = fam?.thickness ?? 0.15;
     const storey = s.document.storeys[0];
+    const elev = storey?.elevation ?? 0;
     const wall: Wall = {
       id: createWallId(),
       storeyId: storey?.id ?? "storey.default",
       familyId: s.activeFamilyId,
-      p1: { x: p1.x, y: p1.y, z: storey?.elevation ?? 0 },
-      p2: { x: p.x, y: p.y, z: storey?.elevation ?? 0 },
+      p1: { x: p1.x, y: p1.y, z: elev },
+      p2: { x: p.x, y: p.y, z: elev },
       height: s.wallHeight,
       thickness,
     };
 
-    applyCommand(get, set, new CreateWallCommand(wall), `Muro creado (${len.toFixed(2)} m)`);
+    const snapLabel =
+      snap.kind === "close"
+        ? "cierre"
+        : snap.kind === "endpoint"
+          ? "extremo"
+          : snap.kind === "ortho"
+            ? "orto"
+            : "libre";
+    applyCommand(
+      get,
+      set,
+      new CreateWallCommand(wall),
+      `Muro ${len.toFixed(2)} m (${snapLabel})`,
+    );
 
-    if (s.wallChain) {
+    if (snap.closed || !s.wallChain) {
       set({
-        wallPending: { x: p.x, y: p.y, z: storey?.elevation ?? 0 },
-        wallHover: { x: p.x, y: p.y, z: storey?.elevation ?? 0 },
-        status: "Cadena — clic para siguiente segmento (Esc / Dividir corta)",
+        wallPending: null,
+        wallChainOrigin: null,
+        wallHover: null,
+        lastSnapKind: "none",
+        status: snap.closed
+          ? "Espacio cerrado — clic para nuevo trazo"
+          : "Segmento colocado",
       });
     } else {
-      set({ wallPending: null, wallHover: null });
+      set({
+        wallPending: { x: p.x, y: p.y, z: elev },
+        wallHover: { x: p.x, y: p.y, z: elev },
+        lastSnapKind: snap.kind,
+        status: "Cadena — siguiente segmento (cierre cerca del origen)",
+      });
     }
   },
 
@@ -418,7 +512,9 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     if (get().activeTool !== "wall") return;
     set({
       wallPending: null,
+      wallChainOrigin: null,
       wallHover: null,
+      lastSnapKind: "none",
       status: "Trazado cancelado — clic para nuevo P1",
     });
   },

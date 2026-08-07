@@ -4,7 +4,7 @@ Software BIM **web, local-first**, orientado a una experiencia de modelado peque
 
 **Autor:** Arq. Hector Nathanael Figuereo  
 **Licencia:** [Propietaria — All Rights Reserved](LICENSE) ([ADR 0007](docs/decisions/0007-proprietary-license.md))  
-**Estado:** Etapa 1 cerrada (G-E1) — primer muro usable; MVP estricto pendiente de tu OK  
+**Estado:** MVP estricto en curso (local; Etapa 1 en `origin/main`) — docs ADR 0008–0009; **G-MVP** pendiente  
 **Remoto:** https://github.com/hfiguereo/axonbim-web
 
 ## Qué es

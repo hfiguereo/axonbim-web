@@ -134,10 +134,17 @@ importers:
         version: 5.9.3
 
   packages/tools:
+    dependencies:
+      '@axonbim/shared':
+        specifier: workspace:*
+        version: link:../shared
     devDependencies:
       typescript:
         specifier: ^5.8.3
         version: 5.9.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.7
 
   packages/viewer:
     dependencies:

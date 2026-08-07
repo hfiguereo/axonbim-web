@@ -23,9 +23,19 @@ Fuente viva del shell: `apps/web`. Referencia conceptual: [revit-lt-baseline.md]
 | Opciones | Renglón bajo la cinta = parámetros de la herramienta activa |
 | Dock izq./der. | Propiedades + Navegador (stack vertical, ancho y alto redimensionables) |
 | Lienzo | Vistas en pestañas; planta = cámara ortogonal |
-| Barra de vista | Escala, estilo, detalle, render (stub) |
-| Estado | Mensajes de modo / herramienta |
+| Barra de vista | **Fit**, escala, estilo, detalle, render (stub) — bajo el lienzo |
+| Estado | Mensaje + switch **Snap** + meta (`tool` / `walls` / `snap:`) — Cadena solo en opciones de herramienta (sin redundancia) |
+| Gizmo 3D | Maqueta tipo Blender (esquina sup. der. en perspectiva) — orientación real = etapa futura |
 
+## Snap y cadena (MVP)
+
+- **Cadena:** solo en Modificar / barra de opciones de muro (default on). No duplicar en status bar.
+- **Snap:** switch en barra de estado + feedback visual. Detalle: [ADR 0009](../decisions/0009-wall-snap-and-statusbar-toggles.md).
+- Esquinas de malla rellenas por extensión de eje: [ADR 0008](../decisions/0008-wall-corner-join-extension.md).
+
+## Anti-redundancia UI
+
+No duplicar el mismo control en cinta/opciones y barra de estado (u otras zonas) salvo petición explícita.
 ## Compositor de paneles
 
 - Botones en título: **◧** izquierda · **▢** flotar · **◨** derecha.

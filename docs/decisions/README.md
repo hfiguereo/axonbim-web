@@ -9,3 +9,5 @@
 | [0005](0005-visible-progress-and-vertical-slices.md) | Progreso visible / cortes verticales |
 | [0006](0006-controlled-agent-changes.md) | Cambios de agente controlados |
 | [0007](0007-proprietary-license.md) | Licencia propietaria |
+| [0008](0008-wall-corner-join-extension.md) | Esquinas de muro por extensión de eje |
+| [0009](0009-wall-snap-and-statusbar-toggles.md) | Snap de muro + switches en status bar |
