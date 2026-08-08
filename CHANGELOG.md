@@ -50,11 +50,20 @@
 - Política: 1 peel crítico / hasta 3 triviales; agente clasifica; Opus en críticos
 - ADR 0016: nota de producto — marcos de recorte cliqueables/editables (requisito, no extra)
 
+### Cobertura: fin del verde silencioso (2026-08-08)
+
+- `packages/model` tenía **0 tests** con `--passWithNoTests`, y `families` / `shared` no
+  tenían script de test: `pnpm test` los saltaba en silencio
+- Nuevos tests: `viewCrop` (19) e integridad del documento (7) en `model`, catálogos (6) en
+  `families`, tolerancias (7) en `shared` — de 60 a **99** tests; los 9 paquetes cubiertos
+- Invariantes fijados: índices de esquina del crop (SW/SE/NE/NW) coherentes con el arrastre
+  de grips, integridad referencial del demo, epsilons por debajo de las dimensiones mínimas
+
 ### CI: typecheck + tests unitarios verificados en Actions (2026-08-08)
 
 - Nuevo `.github/workflows/ci.yml`; antes el único workflow era Playwright, así que
   «typecheck y tests verdes» nunca se verificaba de forma independiente
-- Límites anotados en `docs/roadmap/github.md`: `lint` no ejecuta nada; `model`/`families`/`shared` sin tests
+- Límite anotado en `docs/roadmap/github.md`: `lint` no ejecuta nada
 
 ### Marco de recorte más fácil de agarrar (2026-08-08)
 

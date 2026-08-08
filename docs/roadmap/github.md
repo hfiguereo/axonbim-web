@@ -43,13 +43,13 @@ Ambos en `push` y `pull_request` sobre `main`. Actions con runtime Node 24
 Playwright, así que «typecheck y tests verdes» era siempre la palabra de quien lo hubiera
 corrido en local — nunca verificación independiente. Ahora cada push lo comprueba solo.
 
-Límites conocidos que **no** cubre este CI:
+Cobertura de `pnpm test`: los **9 paquetes** tienen script de test y al menos un test
+(2026-08-08). Ya no hay paquete que reporte verde sin ejecutar nada.
+
+Límite conocido que **no** cubre este CI:
 
 - `pnpm lint` no ejecuta nada: ningún paquete define script `lint`. No se añadió a CI
   para no dar una señal falsa de comodidad.
-- `packages/model` usa `--passWithNoTests` y tiene 0 tests; `families` y `shared` no tienen
-  script de test y `--if-present` los salta. «Verde» abarca menos de lo que parece.
-  Pendiente de autorización: cerrar ese hueco.
 
 ## Política
 

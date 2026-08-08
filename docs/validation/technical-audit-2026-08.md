@@ -33,6 +33,8 @@ Ninguno era visible con pruebas funcionales: el comportamiento observable era co
 | B3 | Código muerto en `pickCropGrip` (`const wpp = …; void wpp;`) | **cerrado** — corte 7b |
 | B4 | El invariante de historial de F5-S no tenía prueba en el camino que usa la UI (solo dentro de `@axonbim/commands`) | **cerrado** — corte 7c, `apps/web/src/session/documentMutation.test.ts` |
 | B5 | `sessionStore` (~1540 líneas) y `createViewport` (~1315) siguen siendo monolitos | **abierto** — los cortes 1–7c solo pelaron crop, tipos, clip, presets, fit, shell e historial |
+| B6 | CI solo ejecutaba Playwright: «typecheck y tests verdes» nunca se verificaba de forma independiente | **cerrado** — `.github/workflows/ci.yml` (2026-08-08) |
+| B7 | `packages/model` (matemática de crop del ADR 0016, SoT) tenía **0 tests** bajo `--passWithNoTests`; `families` y `shared` sin script de test | **cerrado** — 2026-08-08; 60 → 99 tests, 9/9 paquetes cubiertos |
 
 ## Hallazgos C (proceso)
 
