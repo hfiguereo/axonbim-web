@@ -31,11 +31,14 @@ para personalizar la presentación: no son decoración, son el control de encuad
 Esto refuerza el punto 5 (marco seleccionable + grips) como requisito, no como extra.
 
 Consecuencia técnica detectada en el corte 7b del refactor: la tolerancia de clic
-del **marco** es de 12 px, la **más estrecha** de la app (entidad 14, grip de crop 14,
+del **marco** era de 12 px, la **más estrecha** de la app (entidad 14, grip de crop 14,
 control de flip 16), y además el marco es geometría de **línea fina**. Es decir: lo que
-más se necesita agarrar es lo más difícil de acertar. Subirla es un cambio de
-comportamiento de selección → requiere autorización explícita, no refactor.
-Constantes en `packages/viewer/src/pickTolerance.ts`.
+más se necesita agarrar era lo más difícil de acertar.
+
+**Decisión del dueño (2026-08-08): subir el marco a 16 px**, igualando al control más
+generoso. Queda como invariante con prueba: la tolerancia del marco **no** puede ser más
+estrecha que la de selección de entidades. Constantes en
+`packages/viewer/src/pickTolerance.ts`; el resto de umbrales se dejan como están.
 
 ## Fuera de este corte
 

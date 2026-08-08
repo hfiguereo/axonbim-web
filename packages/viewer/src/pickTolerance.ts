@@ -17,7 +17,13 @@ export const MIN_PIVOT_DISTANCE = 0.5;
 /** Screen-proximity fallbacks when the ray misses thin geometry. */
 export const ENTITY_PROXIMITY_PX = 14;
 export const CROP_GRIP_PROXIMITY_PX = 14;
-export const CROP_FRAME_PROXIMITY_PX = 12;
+/**
+ * The crop frame is the control the user reaches for to compose a presentation
+ * (ADR 0016), and it is thin line geometry, so it gets the most generous
+ * tolerance rather than the tightest. Raised from 12 px by owner decision
+ * 2026-08-08.
+ */
+export const CROP_FRAME_PROXIMITY_PX = 16;
 export const FLIP_CONTROL_PROXIMITY_PX = 16;
 
 /** Plan grip sizes in pixels, with world-unit floors. */

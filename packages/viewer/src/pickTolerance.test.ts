@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  CROP_FRAME_PROXIMITY_PX,
+  ENTITY_PROXIMITY_PX,
   MIN_PICK_LINE_THRESHOLD,
   orthoWorldPerPixel,
   perspectiveWorldPerPixel,
@@ -38,5 +40,10 @@ describe("pickTolerance (corte 7b)", () => {
   it("screen-scaled radius honours the world floor", () => {
     expect(screenScaledRadius(0.05, 10, 0.12)).toBeCloseTo(0.5);
     expect(screenScaledRadius(0.001, 10, 0.12)).toBeCloseTo(0.12);
+  });
+
+  // ADR 0016: the crop frame must stay easy to grab for presentation framing.
+  it("crop frame tolerance is not tighter than entity picking", () => {
+    expect(CROP_FRAME_PROXIMITY_PX).toBeGreaterThanOrEqual(ENTITY_PROXIMITY_PX);
   });
 });

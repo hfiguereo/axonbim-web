@@ -50,6 +50,12 @@
 - Política: 1 peel crítico / hasta 3 triviales; agente clasifica; Opus en críticos
 - ADR 0016: nota de producto — marcos de recorte cliqueables/editables (requisito, no extra)
 
+### Marco de recorte más fácil de agarrar (2026-08-08)
+
+- Tolerancia de clic del **marco de crop**: 12 px → **16 px** (era la más estrecha de la app, sobre línea fina)
+- Invariante con prueba: el marco no puede ser más estrecho que la selección de entidades
+- Auditoría técnica **reverificada** contra el código: hallazgos A1–A4 cerrados; B1–B5 y C1 registrados
+
 
 ### F5-S — estabilización (IDs, historial, `.axon`) — **aprobado 2026-08-07**
 
