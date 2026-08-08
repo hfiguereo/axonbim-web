@@ -36,7 +36,7 @@ Ninguno era visible con pruebas funcionales: el comportamiento observable era co
 | B2 | Umbrales de proximidad de clic no uniformes (entidad 14 px, grip crop 14, marco crop 12, flip 16) sin criterio documentado | **nombrados** en 7b; marco subido a 16 px por decisión del dueño (2026-08-08); el resto sigue sin unificar a propósito |
 | B3 | Código muerto en `pickCropGrip` (`const wpp = …; void wpp;`) | **cerrado** — corte 7b |
 | B4 | El invariante de historial de F5-S no tenía prueba en el camino que usa la UI (solo dentro de `@axonbim/commands`) | **cerrado** — corte 7c, `apps/web/src/session/documentMutation.test.ts` |
-| B5 | `sessionStore` (~1540 líneas) y `createViewport` (~1315) siguen siendo monolitos | **abierto** — los cortes 1–7c solo pelaron crop, tipos, clip, presets, fit, shell e historial |
+| B5 | `sessionStore` (~1540 líneas) y `createViewport` (~1315) siguen siendo monolitos | **abierto, y medido 2026-08-08**: diez cortes los redujeron solo un **7 %** (1696→1541 y 1380→1316). Los cortes extraen funciones puras, no estado, así que **por esta vía B5 no se cierra**. Detalle en [`refactor-session-viewer.md`](../roadmap/refactor-session-viewer.md) |
 | B6 | CI solo ejecutaba Playwright: «typecheck y tests verdes» nunca se verificaba de forma independiente | **cerrado** — `.github/workflows/ci.yml` (2026-08-08) |
 | B7 | `packages/model` (matemática de crop del ADR 0016, SoT) tenía **0 tests** bajo `--passWithNoTests`; `families` y `shared` sin script de test | **cerrado** — 2026-08-08; 60 → 99 tests, 9/9 paquetes cubiertos |
 
@@ -79,8 +79,8 @@ en los 47 documentos; y ningún test con más tests que aserciones.
 | P2 | Comprobación automática del índice de `AGENTS.md` | D1 | **hecho** 2026-08-08 |
 | P3 | Comprobación automática de pureza del dominio | D2 | **hecho** 2026-08-08 |
 | P4 | `pnpm build` en CI | D4 | **hecho** 2026-08-08 |
-| P5 | ESLint real + `pnpm lint` en CI (hoy `lint` no ejecuta nada) | D-vecino | **abierto**, sin autorizar |
-| P6 | Seguir pelando `sessionStore` / `createViewport` (cortes 7d+) | B5 | **abierto**, sin autorizar |
+| P5 | ESLint real + `pnpm lint` en CI | D-vecino | **hecho** 2026-08-08 |
+| P6 | Descomponer `sessionStore` / `createViewport` — **es el hilo de los cortes, no de auditoría** | B5 | **pausado** por decisión del dueño; requiere elegir objetivo (ver refactor doc) |
 | P7 | Unificar umbrales de proximidad de clic con criterio documentado | B2 | **abierto**, requiere decisión de producto |
 | P8 | Protección de rama en GitHub | D5 | **abierto**, requiere plan Pro o repo público |
 | P9 | Bundle de producción en 834 kB (aviso de Vite por >500 kB); nadie ha decidido si importa | observado al añadir P4 | **abierto**, sin autorizar |

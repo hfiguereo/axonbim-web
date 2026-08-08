@@ -64,3 +64,5 @@ El agente y el desarrollo humano **se detienen** en cada gate. “Continúa con 
 | **Guardia de atajos** | **2026-08-08** | **hecho** | `check:shortcuts` en CI; verificado en negativo |
 | **Auditoría del control (serie D)** | **2026-08-08** | **hecho** | D1–D9; el plan maestro estaba fuera del índice desde el primer commit |
 | **Guardias P1–P4** | **2026-08-08** | **hecho** | `e2e` en typecheck, `check:docs`, `check:layers`, `build` en CI; los cuatro verificados en negativo |
+| **P5 lint real** | **2026-08-08** | **hecho** | `eslint .` en CI; react-hooks y promesas verificadas en negativo |
+| **Refactor cortes 7d+** | **2026-08-08** | **pausado** | decisión del dueño: cerrar auditoría primero. Requiere elegir objetivo (testabilidad vs descomposición) |

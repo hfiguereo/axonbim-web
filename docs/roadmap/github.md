@@ -33,7 +33,7 @@ se distingan de un vistazo:
 
 | Workflow | Corre | Desde |
 |----------|-------|-------|
-| `.github/workflows/ci.yml` | `check:shortcuts` → `check:docs` → `check:layers` → `typecheck` → `test` → `build` | 2026-08-08 |
+| `.github/workflows/ci.yml` | `check:shortcuts` → `check:docs` → `check:layers` → `typecheck` → `lint` → `test` → `build` | 2026-08-08 |
 | `.github/workflows/e2e.yml` | `pnpm test:e2e` (Playwright F8 o1 + o2) | 2026-08-08 (F8-CI) |
 
 Los tres `check:*` son guardias de reglas: convierten mandatos de `.cursor/rules/` en algo
@@ -75,13 +75,23 @@ corrido en local — nunca verificación independiente. Ahora cada push lo compr
 Cobertura de `pnpm test`: los **9 paquetes** tienen script de test y al menos un test
 (2026-08-08). Ya no hay paquete que reporte verde sin ejecutar nada.
 
-Límite conocido que **no** cubre este CI:
+### Lint (`pnpm lint`, desde 2026-08-08)
 
-- `pnpm lint` no ejecuta nada: ningún paquete define script `lint`. No se añadió a CI
-  para no dar una señal falsa de comodidad. Pendiente P5 en
-  [`technical-audit-2026-08.md`](../validation/technical-audit-2026-08.md).
-- `scripts/*.mjs` (los propios guardias) no pasan por `typecheck`: son JavaScript. Se
-  validan ejecutándolos en negativo, no por tipos.
+`eslint.config.mjs`. Alcance **estrecho a propósito**: no repite lo que ya cubren
+`tsconfig.base` (variables sin usar), `check:layers` (imports entre capas) ni
+`check:shortcuts`. Tampoco usa `recommendedTypeChecked`, que en un código con Three.js
+inunda de avisos `unsafe-*` y acaba silenciándose.
+
+Lo que sí vigila, porque ni los tipos ni los tests lo ven: `react-hooks/exhaustive-deps` y
+`rules-of-hooks` (hay 15 `useEffect`), promesas sin `await`, `async` usado donde se espera
+algo `void`, `any` explícito (regla 20 §1) y `eqeqeq`. Las tres reglas clave se validaron
+en negativo. El repo pasó con **0 errores** salvo una inicialización muerta.
+
+Límites conocidos que **no** cubre este CI:
+
+- `scripts/*.mjs` y `eslint.config.mjs` no pasan por `typecheck`: son JavaScript. Los
+  guardias se validan ejecutándolos en negativo, no por tipos.
+- Ningún control detecta un test que pasa sin comprobar lo que su nombre afirma.
 
 ## Política
 

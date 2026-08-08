@@ -50,6 +50,19 @@
 - Política: 1 peel crítico / hasta 3 triviales; agente clasifica; Opus en críticos
 - ADR 0016: nota de producto — marcos de recorte cliqueables/editables (requisito, no extra)
 
+### Lint real y cierre de la auditoría (2026-08-08)
+
+- **P5:** `pnpm lint` ejecutaba **nada**; ahora es `eslint .` con `eslint.config.mjs` y está
+  en CI. Alcance estrecho: sin reglas que dupliquen `tsconfig`, `check:layers` o
+  `check:shortcuts`, y sin `recommendedTypeChecked` (ruido `unsafe-*` con Three.js)
+- Reglas verificadas en negativo: `react-hooks/exhaustive-deps`, `rules-of-hooks` y
+  `@typescript-eslint/no-floating-promises`
+- El repo pasó con 0 errores salvo `viewCropDrag.ts`: `let baseline = null` que ambas ramas
+  sobrescribían (código muerto, no bug); ahora es `const` con ternario
+- CI queda en **siete pasos**; cortes del refactor **pausados** por decisión del dueño
+- **Medición al pausar:** diez cortes redujeron los monolitos solo un 7 % (1696→1541,
+  1380→1316). Compran testabilidad, no descomposición: B5 no se cierra por esta vía
+
 ### Reglas con respaldo mecánico: P1–P4 cerrados (2026-08-08)
 
 - **P1 / D3:** `tsconfig.e2e.json` mete `e2e/` y `playwright.config.ts` en `pnpm typecheck`;
