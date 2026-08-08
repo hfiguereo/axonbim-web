@@ -2,7 +2,7 @@
 
 ## Autorización
 
-**2026-08-08** — dueño: refactor controlado · cortes 1–7b.  
+**2026-08-08** — dueño: refactor controlado · cortes 1–7c.  
 Pruebas manuales adicionales del dueño (tras corte 4): sin problemas reportados.
 
 ## Principio
@@ -69,6 +69,7 @@ Modelo: Opus | Composer
 | 6 fitWallsFraming | **trivial\*** | framing de vista; no muta modelo (*borderline; tratado como peel único por seguridad*) |
 | 7a shell session | **trivial×3** | `defaultViews` + ciclos UI + `touchDoc` |
 | 7b pickTolerance | **crítico** | define qué entidad recibe el clic |
+| 7c documentMutation | **crítico** | SoT + undo/redo |
 
 \*A partir de ahora, peels como el 6 pueden ir en **lote trivial** si son helpers puros de framing/UI.
 
@@ -137,14 +138,25 @@ Hallazgos anotados (no cambiados — cambiarlos altera comportamiento):
   flip control 16. Ahora están nombrados en un solo archivo; unificarlos sería decisión de producto.
 - Se eliminó código muerto en `pickCropGrip` (`const wpp = …; void wpp;`), sin efecto en runtime.
 
+## Corte 7c (**hecho** 2026-08-08) — mutación de documento / historial (crítico×1)
+
+- `apps/web/src/session/documentMutation.ts`: `applyCommandToSession`, `undoInSession`,
+  `redoInSession` + `NO_MUTATION_STATUS`
+- `documentMutation.test.ts` (6) — incluye el invariante F5-S: un comando que **no** muta
+  no se registra, no incrementa `documentRev` y **no borra la pila de rehacer**
+- `sessionStore` solo aplica el patch devuelto; `runUndo`/`runRedo` añaden el reset de selección
+
+Antes no había ninguna prueba del contrato de historial a nivel de sesión: el invariante
+F5-S solo estaba cubierto en `@axonbim/commands`, no en el camino que usa la UI.
+
 ## Parada
 
-Cortes 1–7b cerrados. Siguiente **no** sin OK explícito.
+Cortes 1–7c cerrados. Siguiente **no** sin OK explícito.
 
 ## Siguiente (requiere OK)
 
 | # | Tipo | Idea |
 |---|------|------|
-| 7c | crítico×1 | session: `applyCommand` / historial → módulo con tests — **Opus** |
 | 7d | trivial×≤3 | viewer: materiales/escena (`clipMats`, grupos, dispose) a fábrica — **Composer** |
-| — | producto | ¿unificar umbrales de proximidad (14/14/12/16)? requiere decisión, no refactor |
+| — | producto | tolerancia del marco de crop: 12 px sobre línea fina vs requisito de marco editable (ADR 0016, nota 2026-08-08) |
+| — | proceso | ¿auditoría completa? propuesta pendiente de autorización |

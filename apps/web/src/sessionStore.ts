@@ -87,7 +87,11 @@ import {
   nextGraphicScale,
   nextVisualStyle,
 } from "./session/displayCycles";
-import { touchDoc } from "./session/touchDoc";
+import {
+  applyCommandToSession,
+  redoInSession,
+  undoInSession,
+} from "./session/documentMutation";
 
 export type {
   DetailLevel,
@@ -290,18 +294,9 @@ function applyCommand(
   cmd: Command,
   status: string,
 ): void {
-  const { document, history } = get();
-  const mutated = history.push(cmd, document);
-  if (!mutated) {
-    set({ status: "Sin cambios (operación no aplicada)" });
-    return;
-  }
-  set({
-    document: touchDoc(document),
-    history,
-    documentRev: get().documentRev + 1,
-    status,
-  });
+  const { document, history, documentRev } = get();
+  const outcome = applyCommandToSession({ document, history, documentRev }, cmd, status);
+  set(outcome.patch);
 }
 
 export const useSessionStore = create<SessionState>((set, get) => ({
@@ -936,32 +931,26 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   },
 
   runUndo: () => {
-    const { document, history } = get();
-    if (!history.canUndo) return;
-    history.undo(document);
+    const { document, history, documentRev } = get();
+    const patch = undoInSession({ document, history, documentRev }, "Deshacer");
+    if (!patch) return;
     set({
-      document: touchDoc(document),
-      history,
-      documentRev: get().documentRev + 1,
+      ...patch,
       selectedWallId: null,
       selectedDoorId: null,
       selectedWindowId: null,
-      status: "Deshacer",
     });
   },
 
   runRedo: () => {
-    const { document, history } = get();
-    if (!history.canRedo) return;
-    history.redo(document);
+    const { document, history, documentRev } = get();
+    const patch = redoInSession({ document, history, documentRev }, "Rehacer");
+    if (!patch) return;
     set({
-      document: touchDoc(document),
-      history,
-      documentRev: get().documentRev + 1,
+      ...patch,
       selectedWallId: null,
       selectedDoorId: null,
       selectedWindowId: null,
-      status: "Rehacer",
     });
   },
 

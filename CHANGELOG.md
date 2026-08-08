@@ -35,7 +35,7 @@
 - Config: no reutilizar Vite ajeno en 5173 (evita timeouts del menú Archivo)
 - Ver `docs/validation/playwright-f8.md`
 
-### Refactor controlado session/viewer — cortes 1–7b (2026-08-08)
+### Refactor controlado session/viewer — cortes 1–7c (2026-08-08)
 
 - Plan: `docs/roadmap/refactor-session-viewer.md`
 - Corte 1: `viewCropResolve.ts` — active/clipping crop + tests
@@ -46,7 +46,9 @@
 - Corte 6: `fitWallsFraming.ts` — AABB + framing planta/3D de `fitWalls` + tests
 - Corte 7a: lote trivial — `defaultViews` + `displayCycles` + `touchDoc` + tests
 - Corte 7b: `pickTolerance.ts` — umbral de raycaster + radios de grip en píxeles (contrato de selección) + tests
+- Corte 7c: `documentMutation.ts` — aplicar comando / undo / redo con tests del invariante F5-S en sesión
 - Política: 1 peel crítico / hasta 3 triviales; agente clasifica; Opus en críticos
+- ADR 0016: nota de producto — marcos de recorte cliqueables/editables (requisito, no extra)
 
 
 ### F5-S — estabilización (IDs, historial, `.axon`) — **aprobado 2026-08-07**

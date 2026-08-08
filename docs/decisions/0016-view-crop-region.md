@@ -24,6 +24,19 @@ Las cámaras geométricas (ADR 0015) y las vistas de sesión necesitan limitar l
 7. Vista cámara / 3D con crop: marco en pantalla + clip de la vista activa.
 8. UI: bloque Viewport sin selección; con cámara seleccionada edita `Camera.crop`.
 
+## Nota de producto — marcos editables (2026-08-08)
+
+El dueño **confirma** que los marcos de recorte deben ser **cliqueables y modificables**
+para personalizar la presentación: no son decoración, son el control de encuadre.
+Esto refuerza el punto 5 (marco seleccionable + grips) como requisito, no como extra.
+
+Consecuencia técnica detectada en el corte 7b del refactor: la tolerancia de clic
+del **marco** es de 12 px, la **más estrecha** de la app (entidad 14, grip de crop 14,
+control de flip 16), y además el marco es geometría de **línea fina**. Es decir: lo que
+más se necesita agarrar es lo más difícil de acertar. Subirla es un cambio de
+comportamiento de selección → requiere autorización explícita, no refactor.
+Constantes en `packages/viewer/src/pickTolerance.ts`.
+
 ## Fuera de este corte
 
 Crop rotado · annotation crop · caja de sección 3D · sync animado · path de cámara · grips NDC en la vista cámara.
