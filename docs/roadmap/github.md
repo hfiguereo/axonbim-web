@@ -28,6 +28,52 @@ git push -u origin main
 
 ## Política
 
-- Rama por defecto: `main`
+- Rama por defecto: **`main`**
 - No mezclar historial del desktop AxonBIM
-- Sin secretos en el repositorio
+- Sin secretos en el repositorio (tokens de GitHub viven en `gh` / `~/.config/gh`, no en el repo)
+
+### Protección frente a ramas accidentales (solo dueño)
+
+Trabajo habitual **solo en `main`**. El agente **no** crea ramas nuevas salvo autorización **explícita en el chat** (p. ej. «autorizo crear la rama X»).
+
+No cuentan como autorización de rama: aprobar un plan/ADR, «continúa», ni el botón de Cursor *create-branch-and-commit*. Ante esa acción de UI, el agente debe **rechazar crear la rama**, avisar, y operar en `main` si también se pidió commit/push.
+
+Regla operativa: `.cursor/rules/40-git-and-scope.mdc`. Primacía del producto sobre el impulso: ADR 0006.
+
+### Evento 2026-08-08 — merge de rama Cursor
+
+- Rama de trabajo `cursor/windows-and-gizmo-cameras` (creada por diff-tab el 2026-08-07) **fusionada en `main`** a petición del dueño.
+- Contenido principal: ventanas, gizmo/cámaras/crop (ADR 0014–0016), F5-S, Playwright F8 o1.
+- A partir de aquí: **no** abrir más ramas `cursor/…` sin frase explícita; commits y push van a `main`.
+- Refuerzo paralelo (sin reglas nuevas): ADR 0006 y gates — validación estricta de factores críticos aunque el dueño apresure.
+
+## Git vs PR (uso diario)
+
+### Solo tú, solo `main`
+
+Con **git** basta:
+
+1. Cambios locales → `commit`
+2. `git push` / `git pull` en `main`
+
+No hace falta Pull Request (PR).
+
+### Qué es un PR
+
+Un **PR** (Pull Request) es una petición en GitHub para **meter commits de una rama en otra** (casi siempre hacia `main`), con diff, comentarios y opción de revisión antes del merge.
+
+### Si hay colaborador (o quieres revisar antes de tocar `main`)
+
+1. Trabajar en **otra rama** (no directamente en `main`)
+2. `git push` de esa rama
+3. Abrir un **PR** hacia `main` (web de GitHub, o terminal con `gh pr create`)
+4. Revisar y fusionar (`merge`)
+
+Eso se puede hacer en la **web** o en **tu terminal** con `gh` (ya autenticado fuera del repo). El agente de Cursor puede usar `git` en el proyecto; `gh api` / `gh pr` desde el agente pueden estar limitados por la red del sandbox — en ese caso usar tu terminal o la web.
+
+### Resumen
+
+| Necesitas… | Herramienta |
+|------------|-------------|
+| Subir/bajar código | `git push` / `git pull` |
+| Revisar e integrar rama → `main` | PR (web o `gh`) |

@@ -1,4 +1,4 @@
-import type { Door, Wall } from "@axonbim/model";
+import type { Door, Wall, Window } from "@axonbim/model";
 import { MIN_WALL_LENGTH } from "@axonbim/shared";
 import type { MeshBuffer } from "./types";
 import { emptyMesh, type WallMeshOptions, wallBoxMesh } from "./wallBox";
@@ -130,6 +130,28 @@ export function openingsFromDoors(wallId: string, doors: Door[]): WallOpening[] 
       height: d.height,
       sill: d.sill,
     }));
+}
+
+export function openingsFromWindows(wallId: string, windows: Window[]): WallOpening[] {
+  return windows
+    .filter((w) => w.wallId === wallId)
+    .map((w) => ({
+      centerAlong: w.centerOffset,
+      width: w.width,
+      height: w.height,
+      sill: w.sill,
+    }));
+}
+
+/** Merge door + window openings for a wall (sorted by center). */
+export function openingsFromHosted(
+  wallId: string,
+  doors: Door[],
+  windows: Window[],
+): WallOpening[] {
+  return [...openingsFromDoors(wallId, doors), ...openingsFromWindows(wallId, windows)].sort(
+    (a, b) => a.centerAlong - b.centerAlong,
+  );
 }
 
 /** Project world XY point onto wall axis → offset from p1 (clamped). */

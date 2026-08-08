@@ -19,11 +19,12 @@ export class CreateDoorCommand implements Command {
     this.id = `cmd.door.create.${door.id}`;
   }
 
-  execute(doc: AxonDocument): void {
-    if (doc.doors.some((d) => d.id === this.door.id)) return;
-    if (!doc.walls.some((w) => w.id === this.door.wallId)) return;
+  execute(doc: AxonDocument): boolean {
+    if (doc.doors.some((d) => d.id === this.door.id)) return false;
+    if (!doc.walls.some((w) => w.id === this.door.wallId)) return false;
     doc.doors.push({ ...this.door });
     doc.meta.updatedAt = new Date().toISOString();
+    return true;
   }
 
   undo(doc: AxonDocument): void {
@@ -41,12 +42,13 @@ export class DeleteDoorCommand implements Command {
     this.id = `cmd.door.delete.${doorId}`;
   }
 
-  execute(doc: AxonDocument): void {
+  execute(doc: AxonDocument): boolean {
     const found = doc.doors.find((d) => d.id === this.doorId);
-    if (!found) return;
+    if (!found) return false;
     this.snapshot = { ...found };
     doc.doors = doc.doors.filter((d) => d.id !== this.doorId);
     doc.meta.updatedAt = new Date().toISOString();
+    return true;
   }
 
   undo(doc: AxonDocument): void {
@@ -68,12 +70,15 @@ export class SetDoorLeafStateCommand implements Command {
     this.id = `cmd.door.leaf.${doorId}.${leafState}`;
   }
 
-  execute(doc: AxonDocument): void {
+  execute(doc: AxonDocument): boolean {
     const d = doc.doors.find((x) => x.id === this.doorId);
-    if (!d) return;
-    this.prev = d.leafState ?? "open";
+    if (!d) return false;
+    const cur = d.leafState ?? "open";
+    if (cur === this.leafState) return false;
+    this.prev = cur;
     d.leafState = this.leafState;
     doc.meta.updatedAt = new Date().toISOString();
+    return true;
   }
 
   undo(doc: AxonDocument): void {
@@ -96,12 +101,15 @@ export class SetDoorSwingCommand implements Command {
     this.id = `cmd.door.swing.${doorId}.${swing}`;
   }
 
-  execute(doc: AxonDocument): void {
+  execute(doc: AxonDocument): boolean {
     const d = doc.doors.find((x) => x.id === this.doorId);
-    if (!d) return;
-    this.prev = d.swing ?? "positive";
+    if (!d) return false;
+    const cur = d.swing ?? "positive";
+    if (cur === this.swing) return false;
+    this.prev = cur;
     d.swing = this.swing;
     doc.meta.updatedAt = new Date().toISOString();
+    return true;
   }
 
   undo(doc: AxonDocument): void {
@@ -124,12 +132,14 @@ export class SetDoorHingeCommand implements Command {
     this.id = `cmd.door.hinge.${doorId}.${hinge}`;
   }
 
-  execute(doc: AxonDocument): void {
+  execute(doc: AxonDocument): boolean {
     const d = doc.doors.find((x) => x.id === this.doorId);
-    if (!d) return;
+    if (!d) return false;
+    if (d.hinge === this.hinge) return false;
     this.prev = d.hinge;
     d.hinge = this.hinge;
     doc.meta.updatedAt = new Date().toISOString();
+    return true;
   }
 
   undo(doc: AxonDocument): void {
@@ -156,9 +166,16 @@ export class SetDoorFamilyCommand implements Command {
     this.id = `cmd.door.family.${doorId}.${familyId}`;
   }
 
-  execute(doc: AxonDocument): void {
+  execute(doc: AxonDocument): boolean {
     const d = doc.doors.find((x) => x.id === this.doorId);
-    if (!d) return;
+    if (!d) return false;
+    if (
+      d.familyId === this.familyId &&
+      d.width === this.width &&
+      d.height === this.height
+    ) {
+      return false;
+    }
     this.prevFamily = d.familyId;
     this.prevWidth = d.width;
     this.prevHeight = d.height;
@@ -166,6 +183,7 @@ export class SetDoorFamilyCommand implements Command {
     d.width = this.width;
     d.height = this.height;
     doc.meta.updatedAt = new Date().toISOString();
+    return true;
   }
 
   undo(doc: AxonDocument): void {

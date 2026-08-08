@@ -29,6 +29,8 @@ Thumbs.db
 .vite/
 playwright-report/
 test-results/
+blob-report/
+e2e/.auth/
 
 # Local agent / tooling noise
 .cursor/tmp/

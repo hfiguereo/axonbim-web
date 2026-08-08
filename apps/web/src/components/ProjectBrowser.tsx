@@ -7,12 +7,14 @@ export function ProjectBrowser({ flexGrow = 1 }: { flexGrow?: number }) {
   const setActiveView = useSessionStore((s) => s.setActiveView);
   const storeys = useSessionStore((s) => s.document.storeys);
   const families = useSessionStore((s) => s.document.families);
+  const cameras = useSessionStore((s) => s.document.cameras);
   const dock = useSessionStore((s) => s.browserDock);
   const floatPos = useSessionStore((s) => s.browserFloat);
   const visible = useSessionStore((s) => s.browserVisible);
 
   const plans = views.filter((v) => v.kind === "plan");
   const threes = views.filter((v) => v.kind === "perspective");
+  const cameraViews = views.filter((v) => v.kind === "camera");
 
   return (
     <FloatingPanel
@@ -48,6 +50,24 @@ export function ProjectBrowser({ flexGrow = 1 }: { flexGrow?: number }) {
         ))}
         <div className="tree__node tree__node--branch tree__indent">▼ 3D Views</div>
         {threes.map((v) => (
+          <button
+            key={v.id}
+            type="button"
+            className={
+              v.id === activeViewId
+                ? "tree__item tree__indent-2 tree__item--active"
+                : "tree__item tree__indent-2"
+            }
+            onClick={() => setActiveView(v.id)}
+          >
+            {v.name}
+          </button>
+        ))}
+        <div className="tree__node tree__node--branch tree__indent">▼ Cámaras</div>
+        {cameraViews.length === 0 && cameras.length === 0 && (
+          <div className="tree__item tree__indent-2 tree__item--mute">Sin cámaras</div>
+        )}
+        {cameraViews.map((v) => (
           <button
             key={v.id}
             type="button"

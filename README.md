@@ -4,7 +4,7 @@ Software BIM **web, local-first**, orientado a una experiencia de modelado peque
 
 **Autor:** Arq. Hector Nathanael Figuereo  
 **Licencia:** [Propietaria — All Rights Reserved](LICENSE) ([ADR 0007](docs/decisions/0007-proprietary-license.md))  
-**Estado:** Post-MVP **puertas** en curso (ADR 0010) — G-MVP cerrado  
+**Estado:** ADR 0015 cámaras geométricas — gizmo tríada 0014; F5-S aprobado  
 **Remoto:** https://github.com/hfiguereo/axonbim-web
 
 ## Qué es
@@ -20,7 +20,7 @@ No es un port del desktop Godot/Python ni una traducción automática de ese có
 
 ## Etapa 0 (hecho)
 
-Shell inspirado en **Revit LT** (base de interfaz futura): menú Archivo, cinta de iconos, opciones de herramienta, Modificar/Dibujar/Cadena, compositor de paneles izq./der., navegador, propiedades, vistas, barra de vista.  
+Shell inspirado en **productos de referencia** BIM (base de interfaz futura): menú Archivo, cinta de iconos, opciones de herramienta, Modificar/Dibujar/Cadena, compositor de paneles izq./der., navegador, propiedades, vistas, barra de vista.  
 Nuevo / Abrir / Demo / Exportar `.axon`. Visor planta/3D. **Etapa 1:** Muro → trazar en planta (cadena), selección, propiedades, undo/redo.
 
 UI de referencia: [docs/ui/interface-base.md](docs/ui/interface-base.md).
@@ -37,6 +37,7 @@ pnpm install
 pnpm dev      # http://localhost:5173
 pnpm build
 pnpm test
+pnpm test:e2e # Playwright F8 (local; ver docs/validation/playwright-f8.md)
 ```
 
 ## Documentación

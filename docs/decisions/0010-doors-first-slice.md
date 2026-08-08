@@ -21,4 +21,4 @@ G-MVP cerrado. Se autoriza el primer corte post-MVP: **puerta** usable de punta 
 
 ## Fuera de este corte
 
-Ventanas · editor de familia rico · swing animado continuo · host caps · **rango de vista / corte de planta** · IFC openings.
+~~Ventanas~~ (→ ADR 0011) · editor de familia rico · swing animado continuo · host caps · **rango de vista / corte de planta** · IFC openings.

@@ -811,6 +811,21 @@ select {
   color: var(--ink-mute);
 }
 
+.props-viewport {
+  margin-top: 0.5rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--line);
+}
+
+.props-viewport__title {
+  margin: 0 0.65rem 0.45rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+
 .props > div {
   display: grid;
   grid-template-columns: 5.2rem 1fr;
@@ -887,6 +902,16 @@ select {
   height: 100%;
 }
 
+/* Crop as view limit (camera / free 3D) — screen frame; geometry clipped via planes */
+.viewport__crop-frame {
+  position: absolute;
+  inset: 8%;
+  z-index: 2;
+  pointer-events: none;
+  border: 2px solid rgba(110, 198, 255, 0.85);
+  box-shadow: 0 0 0 9999px rgba(12, 16, 20, 0.45);
+}
+
 .viewport__hint {
   position: absolute;
   left: 0.75rem;
@@ -913,8 +938,8 @@ select {
 
 .view-gizmo__canvas {
   display: block;
-  width: 96px;
-  height: 96px;
+  width: 104px;
+  height: 104px;
   border-radius: 0;
   background: transparent;
   border: none;

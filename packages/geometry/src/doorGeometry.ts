@@ -1,8 +1,11 @@
 import type { Door, Wall } from "@axonbim/model";
 import { DOOR_LEAF_ANGLE_RAD } from "@axonbim/model";
 import { MIN_WALL_LENGTH } from "@axonbim/shared";
+import type { PlanFlipControl } from "./planControls";
 import type { MeshBuffer } from "./types";
 import { emptyMesh } from "./wallBox";
+
+export type { PlanFlipControl } from "./planControls";
 
 type Acc = { positions: number[]; normals: number[]; indices: number[] };
 type V = { x: number; y: number; z: number };
@@ -31,18 +34,6 @@ export type DoorMeshes = {
   frame: MeshBuffer;
   leaf: MeshBuffer;
   hardware: MeshBuffer;
-};
-
-/** Reusable plan flip grip — doors now; windows/etc. later. */
-export type PlanFlipControl = {
-  entityType: "door";
-  entityId: string;
-  /** Extensible: swing side, hinge side, … */
-  kind: "swing" | "hinge";
-  x: number;
-  y: number;
-  z: number;
-  hitRadius: number;
 };
 
 export type DoorPlanSymbol = {

@@ -10,7 +10,9 @@ export function StatusBar() {
 
   return (
     <footer className="statusbar">
-      <span className="statusbar__msg">{status}</span>
+      <span className="statusbar__msg" data-testid="status-msg">
+        {status}
+      </span>
       <div className="statusbar__right">
         <label className="statusbar__switch" title="Snap: extremos, ortogonal y cierre">
           <span>Snap</span>
@@ -24,7 +26,7 @@ export function StatusBar() {
             <span className="switch__knob" />
           </button>
         </label>
-        <span className="statusbar__meta">
+        <span className="statusbar__meta" data-testid="status-meta">
           tool:{tool} · walls:{walls} · snap:{snapEnabled ? snap : "off"}
         </span>
       </div>

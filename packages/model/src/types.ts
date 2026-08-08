@@ -1,4 +1,4 @@
-import type { DoorFamily, WallFamily } from "@axonbim/families";
+import type { DoorFamily, WallFamily, WindowFamily } from "@axonbim/families";
 import type { Vec3 } from "@axonbim/shared";
 
 export type ProjectMeta = {
@@ -47,6 +47,21 @@ export type Door = {
   leafState: DoorLeafState;
 };
 
+/** Window hosted on a wall — same hosting pattern as Door. */
+export type Window = {
+  id: string;
+  wallId: string;
+  familyId: string;
+  centerOffset: number;
+  width: number;
+  height: number;
+  /** Height of sill above wall base (typically ~0.9 m). */
+  sill: number;
+  hinge: "start" | "end";
+  swing: DoorSwing;
+  leafState: DoorLeafState;
+};
+
 export type DoorSwing = "positive" | "negative";
 
 export type DoorLeafState = "closed" | "ajar" | "open";
@@ -57,11 +72,43 @@ export const DOOR_LEAF_ANGLE_RAD: Record<DoorLeafState, number> = {
   open: Math.PI / 2, // 90°
 };
 
+/**
+ * Axis-aligned view crop in world XY (m). Optional Z for 3D clipping.
+ * See ADR 0016.
+ */
+export type ViewCrop = {
+  enabled: boolean;
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+  /** Optional vertical clip (3D). Omit = no Z crop. */
+  minZ?: number;
+  maxZ?: number;
+};
+
+/** Geometric camera — view frustum params only (no render materials). */
+export type Camera = {
+  id: string;
+  name: string;
+  /** Eye / camera position (m). */
+  eye: Vec3;
+  /** Look-at target (m). */
+  target: Vec3;
+  /** Vertical field of view in degrees. */
+  fov: number;
+  /** Plan/3D crop region (ADR 0016). */
+  crop: ViewCrop;
+};
+
 export type AxonDocument = {
   meta: ProjectMeta;
   storeys: Storey[];
   families: WallFamily[];
   doorFamilies: DoorFamily[];
+  windowFamilies: WindowFamily[];
   walls: Wall[];
   doors: Door[];
+  windows: Window[];
+  cameras: Camera[];
 };

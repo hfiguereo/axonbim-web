@@ -4,7 +4,7 @@
 
 ## Maqueta vs etapas
 
-La maqueta replica la **distribución Revit LT** para validar UX.  
+La maqueta replica la **distribución de productos de referencia** (cinta, paneles, navegador) para validar UX.  
 La mayoría de botones son stub. Etapa 1 = corte vertical del **muro**, no paridad de cinta.
 
 ## Cinta

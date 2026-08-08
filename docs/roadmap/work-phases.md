@@ -24,7 +24,7 @@ Cerrado en documentación:
 ## F2 — Etapa 0 visible (hecho)
 
 Scaffold: pnpm workspace, Vite, React, Three.js, paquetes de dominio.  
-Entrega: app abrible (`pnpm dev`), maqueta UI Revit LT, compositor de paneles, cinta/Modificar/Cadena, visor, `.axon` stub.
+Entrega: app abrible (`pnpm dev`), maqueta UI (productos de referencia), compositor de paneles, cinta/Modificar/Cadena, visor, `.axon` stub.
 
 **Criterio:** evaluable visualmente → **G-E0 aprobado** (2026-08-06). Base: `docs/ui/interface-base.md`.
 
@@ -47,11 +47,35 @@ Cadena on por defecto; modo Línea; otros Draw modes aún no.
 Snap, inglete, demo, Fit, zoom rueda, gizmo maqueta, import/export `.axon`.  
 **Pausa de producto** hasta autorización post-MVP.
 
-## F5 — Puertas (slice entregado — ADR 0010)
+## F5 — Puertas (hecho — ADR 0010)
 
-Colocar puerta en muro + hueco + marco/hoja/herrajes + planta (arco/grips) + familia en caliente.  
-Pendiente: validación humana del corte. Ventanas / IFC / gizmo→cámaras: aún no.
+Colocar puerta en muro + hueco + marco/hoja/herrajes + planta (arco/grips) + familia en caliente.
 
-## F5+ — Más post-MVP (solo con autorización)
+## F6 — Ventanas (implementado — ADR 0011)
 
-Ventanas y siguientes capacidades del maestro.
+Mismo patrón hosted: hueco + marco con antepecho + vidrio/hoja + planta + grips.
+
+## F7 — Gizmo → cámaras reales (implementado — ADR 0012)
+
+Presets Top/Front/Right/Iso desde el gizmo 3D.
+
+## F7b — Gizmo tríada / ortho / pivot (ADR 0014)
+
+Tríada ±ejes + hub iso; hold-orbit; pivot Modelo|Selección; picking con zoom lejano.
+
+## F9 — Cámaras geométricas (ADR 0015)
+
+Colocar cámara en planta; vista 3D ligada; props geométricas; navegador.
+
+## F5-S — Estabilización (**aprobado** — 2026-08-07)
+
+IDs tras import, historial sin no-ops, parser `.axon`, tests (muros/puertas/**ventanas**).  
+Ver `f5-stabilization.md`. Gate humano cerrado.
+
+## F8 — Playwright oleada 1 (**autorizada** — 2026-08-07)
+
+Humo A + capturas B (canvas mask). Local. Ver `docs/validation/playwright-f8.md`.
+
+## Parked
+
+Paradigmas / workplanes · OCCT (ADR 0013) · IFC.

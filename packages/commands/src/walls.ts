@@ -22,10 +22,11 @@ export class CreateWallCommand implements Command {
     this.id = `cmd.create.${wall.id}`;
   }
 
-  execute(doc: AxonDocument): void {
-    if (doc.walls.some((w) => w.id === this.wall.id)) return;
+  execute(doc: AxonDocument): boolean {
+    if (doc.walls.some((w) => w.id === this.wall.id)) return false;
     doc.walls.push({ ...this.wall, p1: { ...this.wall.p1 }, p2: { ...this.wall.p2 } });
     doc.meta.updatedAt = new Date().toISOString();
+    return true;
   }
 
   undo(doc: AxonDocument): void {
@@ -38,22 +39,30 @@ export class DeleteWallCommand implements Command {
   readonly id: string;
   readonly type = "wall.delete";
   private snapshot: Wall | null = null;
+  private doorSnapshots: AxonDocument["doors"] = [];
+  private windowSnapshots: AxonDocument["windows"] = [];
 
   constructor(private readonly wallId: string) {
     this.id = `cmd.delete.${wallId}`;
   }
 
-  execute(doc: AxonDocument): void {
+  execute(doc: AxonDocument): boolean {
     const found = doc.walls.find((w) => w.id === this.wallId);
-    if (!found) return;
+    if (!found) return false;
     this.snapshot = {
       ...found,
       p1: { ...found.p1 },
       p2: { ...found.p2 },
     };
+    this.doorSnapshots = doc.doors.filter((d) => d.wallId === this.wallId).map((d) => ({ ...d }));
+    this.windowSnapshots = doc.windows
+      .filter((w) => w.wallId === this.wallId)
+      .map((w) => ({ ...w }));
     doc.walls = doc.walls.filter((w) => w.id !== this.wallId);
     doc.doors = doc.doors.filter((d) => d.wallId !== this.wallId);
+    doc.windows = doc.windows.filter((w) => w.wallId !== this.wallId);
     doc.meta.updatedAt = new Date().toISOString();
+    return true;
   }
 
   undo(doc: AxonDocument): void {
@@ -63,6 +72,8 @@ export class DeleteWallCommand implements Command {
       p1: { ...this.snapshot.p1 },
       p2: { ...this.snapshot.p2 },
     });
+    for (const d of this.doorSnapshots) doc.doors.push({ ...d });
+    for (const w of this.windowSnapshots) doc.windows.push({ ...w });
     doc.meta.updatedAt = new Date().toISOString();
   }
 }
@@ -79,12 +90,14 @@ export class SetWallHeightCommand implements Command {
     this.id = `cmd.height.${wallId}.${height}`;
   }
 
-  execute(doc: AxonDocument): void {
+  execute(doc: AxonDocument): boolean {
     const w = doc.walls.find((x) => x.id === this.wallId);
-    if (!w) return;
+    if (!w) return false;
+    if (w.height === this.height) return false;
     this.prev = w.height;
     w.height = this.height;
     doc.meta.updatedAt = new Date().toISOString();
+    return true;
   }
 
   undo(doc: AxonDocument): void {
@@ -107,12 +120,14 @@ export class SetWallThicknessCommand implements Command {
     this.id = `cmd.thickness.${wallId}.${thickness}`;
   }
 
-  execute(doc: AxonDocument): void {
+  execute(doc: AxonDocument): boolean {
     const w = doc.walls.find((x) => x.id === this.wallId);
-    if (!w) return;
+    if (!w) return false;
+    if (w.thickness === this.thickness) return false;
     this.prev = w.thickness;
     w.thickness = this.thickness;
     doc.meta.updatedAt = new Date().toISOString();
+    return true;
   }
 
   undo(doc: AxonDocument): void {
@@ -137,14 +152,16 @@ export class SetWallFamilyCommand implements Command {
     this.id = `cmd.family.${wallId}.${familyId}`;
   }
 
-  execute(doc: AxonDocument): void {
+  execute(doc: AxonDocument): boolean {
     const w = doc.walls.find((x) => x.id === this.wallId);
-    if (!w) return;
+    if (!w) return false;
+    if (w.familyId === this.familyId && w.thickness === this.thickness) return false;
     this.prevFamily = w.familyId;
     this.prevThickness = w.thickness;
     w.familyId = this.familyId;
     w.thickness = this.thickness;
     doc.meta.updatedAt = new Date().toISOString();
+    return true;
   }
 
   undo(doc: AxonDocument): void {
