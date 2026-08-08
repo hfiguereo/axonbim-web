@@ -902,14 +902,15 @@ select {
   height: 100%;
 }
 
-/* Crop as view limit (camera / free 3D) — screen frame; geometry clipped via planes */
+/* Crop as view limit (camera / free 3D) — screen frame; outside fully hidden (BUG-C) */
 .viewport__crop-frame {
   position: absolute;
   inset: 8%;
   z-index: 2;
   pointer-events: none;
   border: 2px solid rgba(110, 198, 255, 0.85);
-  box-shadow: 0 0 0 9999px rgba(12, 16, 20, 0.45);
+  /* Opaque mask matching canvas bg (#1c2228); was 0.45 alpha so exterior stayed visible */
+  box-shadow: 0 0 0 9999px #1c2228;
 }
 
 .viewport__hint {

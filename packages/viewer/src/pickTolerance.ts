@@ -26,10 +26,15 @@ export const CROP_GRIP_PROXIMITY_PX = 14;
 export const CROP_FRAME_PROXIMITY_PX = 16;
 export const FLIP_CONTROL_PROXIMITY_PX = 16;
 
-/** Plan grip sizes in pixels, with world-unit floors. */
+/** Plan grip sizes in pixels, with world-unit floors / ceilings. */
 export const CROP_GRIP_RADIUS_PX = 10;
 export const MIN_CROP_GRIP_RADIUS = 0.12;
 export const FLIP_CONTROL_RADIUS_PX = 12;
+/**
+ * Cap so swing/hinge dots stay door-scale when zoomed far out.
+ * Pickability still uses FLIP_CONTROL_PROXIMITY_PX (screen space).
+ */
+export const MAX_FLIP_CONTROL_RADIUS = 0.18;
 export const CAMERA_PICK_RADIUS_PX = 14;
 export const MIN_CAMERA_PICK_RADIUS = 0.25;
 
@@ -62,12 +67,15 @@ export function pickLineThreshold(worldPerPixel: number): number {
 
 /**
  * Grip radius that keeps a constant apparent size on screen, never smaller
- * than `minRadius` world units.
+ * than `minRadius` world units. Optional `maxRadius` stops runaway growth
+ * when zoomed far out (BUG-D4: flip dots).
  */
 export function screenScaledRadius(
   worldPerPixel: number,
   radiusPx: number,
   minRadius: number,
+  maxRadius?: number,
 ): number {
-  return Math.max(minRadius, worldPerPixel * radiusPx);
+  const r = Math.max(minRadius, worldPerPixel * radiusPx);
+  return maxRadius === undefined ? r : Math.min(maxRadius, r);
 }

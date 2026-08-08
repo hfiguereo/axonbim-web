@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   CROP_FRAME_PROXIMITY_PX,
   ENTITY_PROXIMITY_PX,
+  MAX_FLIP_CONTROL_RADIUS,
   MIN_PICK_LINE_THRESHOLD,
   orthoWorldPerPixel,
   perspectiveWorldPerPixel,
@@ -40,6 +41,15 @@ describe("pickTolerance (corte 7b)", () => {
   it("screen-scaled radius honours the world floor", () => {
     expect(screenScaledRadius(0.05, 10, 0.12)).toBeCloseTo(0.5);
     expect(screenScaledRadius(0.001, 10, 0.12)).toBeCloseTo(0.12);
+  });
+
+  it("screen-scaled radius respects optional world ceiling (BUG-D4)", () => {
+    // Zoomed far out: uncapped would be 2.4 world units
+    expect(screenScaledRadius(0.2, 12, 0.12)).toBeCloseTo(2.4);
+    expect(screenScaledRadius(0.2, 12, 0.12, MAX_FLIP_CONTROL_RADIUS)).toBe(
+      MAX_FLIP_CONTROL_RADIUS,
+    );
+    expect(MAX_FLIP_CONTROL_RADIUS).toBeLessThanOrEqual(0.25);
   });
 
   // ADR 0016: the crop frame must stay easy to grab for presentation framing.

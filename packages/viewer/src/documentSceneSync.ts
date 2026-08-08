@@ -23,6 +23,7 @@ import type { CropOverlayLayer } from "./cropOverlayLayer.js";
 import {
   CAMERA_PICK_RADIUS_PX,
   FLIP_CONTROL_RADIUS_PX,
+  MAX_FLIP_CONTROL_RADIUS,
   MIN_CAMERA_PICK_RADIUS,
   screenScaledRadius,
 } from "./pickTolerance.js";
@@ -243,6 +244,7 @@ export function createDocumentSceneSync(
               ctx.planWorldPerPixel(),
               FLIP_CONTROL_RADIUS_PX,
               ctrl.hitRadius,
+              MAX_FLIP_CONTROL_RADIUS,
             );
             grip.scale.setScalar(minR);
             grip.userData[FLIP_CONTROL] = true;
@@ -291,6 +293,7 @@ export function createDocumentSceneSync(
               ctx.planWorldPerPixel(),
               FLIP_CONTROL_RADIUS_PX,
               ctrl.hitRadius,
+              MAX_FLIP_CONTROL_RADIUS,
             );
             grip.scale.setScalar(minR);
             grip.userData[FLIP_CONTROL] = true;

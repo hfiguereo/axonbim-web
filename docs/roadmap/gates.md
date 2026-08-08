@@ -24,9 +24,10 @@ El agente y el desarrollo humano **se detienen** en cada gate. “Continúa con 
 - **Cámaras (ADR 0015):** **aprobado** 2026-08-08 — Vista → Cámara + vista 3D ligada
 - **Crop Region (ADR 0016):** **aprobado** 2026-08-08 — clip por vista; planta vs cámara independientes
 - **Parked:** paradigmas/workplanes, OCCT (ADR 0013)
-- **Refactor session/viewer:** desacople real Fases 1–2 **hechas** (2026-08-08); ver `refactor-session-viewer.md`
+- **Refactor session/viewer:** desacople real Fases 0–3 **cerradas** (2026-08-08); checklist humana OK; ver `refactor-session-viewer.md`
+- **Fase 4:** **autorizada** (cola parked) — primer ítem pendiente de elegir en `pending-work.md`
 - **Pendientes (prioridad):** **`pending-work.md`**
-- **GitHub:** https://github.com/hfiguereo/axonbim-web
+- **GitHub:** https://github.com/hfiguereo/axonbim-web (público + branch protection)
 
 ## Registro de aprobación
 
@@ -70,4 +71,6 @@ El agente y el desarrollo humano **se detienen** en cada gate. “Continúa con 
 | **Desacople session (Fase 1)** | **2026-08-08** | **hecho** | slices Zustand; B5 session cerrado |
 | **Desacople viewer (Fase 2)** | **2026-08-08** | **hecho** | módulos compositor; B5 viewer cerrado |
 | **Fase 3 residual** | **2026-08-08** | **hecho** | C1/C2 cerrados MVP; contract tests picking/crop |
-| **Fase 0 protección remota** | **2026-08-08** | **pendiente humano** | `check:history` en CI; ejecutar `setup-github-protection.sh` |
+| **Fase 0 protección remota** | **2026-08-08** | **hecho** | Repo público + branch protection; `check:history` en CI |
+| **Checklist Fases 1–3** | **2026-08-08** | **aprobado** | A/B/E ready; C ready c/obs; D aprobado c/obs D4 |
+| **Fase 4 (cola)** | **2026-08-08** | **autorizada** | Elegir primer ítem; no implementar sin gate/ADR |
