@@ -10,7 +10,7 @@
 - Remoto `origin`: https://github.com/hfiguereo/axonbim-web
 - CLI local (si se instaló): `~/.local/bin/gh`
 - Visibilidad: **público** (2026-08-08)
-- Branch protection en `main`: checks `Typecheck + unit tests` + `Playwright F8`; sin force-push; `enforce_admins`
+- Branch protection en `main`: sin force-push, sin borrado, `enforce_admins`; **sin checks requeridos**
 - Guardia fast-forward: `pnpm check:history` en CI (`scripts/check-main-fast-forward.mjs`)
 
 ### Fase 0 — repo público + branch protection (2026-08-08) · **hecho**
@@ -26,6 +26,24 @@ Reaplicar protection si hace falta:
 ```bash
 ./scripts/setup-github-protection.sh
 ```
+
+### Por qué `main` no exige status checks (2026-08-08)
+
+Al activar protection se pidieron como requeridos los jobs `Typecheck + unit tests` y
+`Playwright F8`. Resultado: **todo push directo a `main` quedó rechazado** con
+`GH006 … 2 of 2 required status checks are expected`. La causa no es un fallo de CI: los
+workflows se disparan **con** el push, así que en el momento en que GitHub evalúa la regla
+el commit todavía no tiene ninguna ejecución, y con `enforce_admins` el dueño tampoco
+queda exento.
+
+Los checks requeridos asumen flujo de **Pull Request** (empujar a otra rama → CI verde →
+merge). Este repo trabaja con push directo a `main` por decisión explícita
+(`40-git-and-scope`), así que se **retiraron los checks requeridos** y se conservó lo que
+sí protege: nada de force-push, nada de borrar `main`, `enforce_admins`, más
+`check:history` en CI. Actions sigue corriendo en cada push: informa, no bloquea.
+
+Si algún día entra un colaborador o se adopta PR, los checks requeridos vuelven a tener
+sentido — en la PR, no en el push.
 
 ## Crear y publicar el remoto
 

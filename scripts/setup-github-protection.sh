@@ -9,20 +9,17 @@ BRANCH="${2:-main}"
 echo "==> Visibilidad pública (ADR 0007: propietario, no OSS automático)"
 gh repo edit "$REPO" --visibility public --accept-visibility-change-consequences
 
-echo "==> Branch protection en $BRANCH (checks: ci + e2e)"
+echo "==> Branch protection en $BRANCH (sin force-push ni borrado)"
 # gh api -f envía todo como string; la API exige JSON con boolean/null reales.
+#
+# Sin required_status_checks a propósito: los workflows se disparan CON el push, así que
+# exigirlos rechaza todo push directo a main (GH006). Ver docs/roadmap/github.md.
 gh api \
   -X PUT \
   "repos/$REPO/branches/$BRANCH/protection" \
   --input - <<EOF
 {
-  "required_status_checks": {
-    "strict": true,
-    "contexts": [
-      "Typecheck + unit tests",
-      "Playwright F8"
-    ]
-  },
+  "required_status_checks": null,
   "enforce_admins": true,
   "required_pull_request_reviews": null,
   "restrictions": null,
