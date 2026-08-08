@@ -1,6 +1,7 @@
 # F5-S — Estabilización post-MVP (adaptado)
 
-Fuente: auditoría y cadena de instrucciones (2026-08-07), adaptadas al producto actual (**puertas + ventanas + gizmo** en rama).
+Fuente: auditoría y cadena de instrucciones (2026-08-07), adaptadas al producto actual
+(**puertas + ventanas + gizmo**, ya fusionados en `main`).
 
 ## Objetivo
 
@@ -32,11 +33,18 @@ Bloques pequeños; se pueden agrupar en un PR si cada corrección tiene test.
 
 ## No hacer en F5-S
 
-OpenCascade · IFC · OPFS/PWA · Family Editor · Push & Pull · Playwright (siguiente cola) · refactor de `sessionStore`.
+OpenCascade · IFC · OPFS/PWA · Family Editor · Push & Pull.
+
+Ya desbloqueados **después** de F5-S, con autorización propia: Playwright (F8, aprobado
+2026-08-08) y el refactor de `sessionStore` / `createViewport` (microcortes autorizados,
+ver `refactor-session-viewer.md`).
 
 ## Gate de salida
 
 Validación técnica (tests) **y** validación humana (muro + puerta + ventana, undo, abrir/guardar). Ver `docs/roadmap/gates.md`.
 
-**Estado: aprobado (2026-08-07).** Validación humana OK; typecheck/tests verdes; consola/Vite sin errores.  
-Siguiente cola pendiente de autorización explícita: **Playwright**.
+**Estado: aprobado (2026-08-07).** Validación humana OK; typecheck/tests verdes; consola/Vite sin errores.
+
+Colas posteriores ya autorizadas y cerradas: **F8 Playwright** o1 + o2 + CI (2026-08-08).
+Los cuatro hallazgos A de la auditoría están reverificados en el código
+(`docs/validation/technical-audit-2026-08.md`, 2026-08-08).
