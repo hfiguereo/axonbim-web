@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Gobernanza — merge a `main` y primacía del producto (2026-08-08)
+
+- Rama `cursor/windows-and-gizmo-cameras` fusionada en `main`; política **solo `main`** en adelante
+- ADR 0006 / gates / no negociable 21: validación estricta de factores críticos aunque el dueño apresure (sin reglas nuevas)
+
 ### Región de recorte de vista (ADR 0016) — **aprobado 2026-08-08**
 
 - Tipo `ViewCrop` (AABB); `Camera.crop` en `.axon`; crop de sesión independiente en planta/perspectiva

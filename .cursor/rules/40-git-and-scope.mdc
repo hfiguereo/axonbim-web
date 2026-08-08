@@ -1,6 +1,6 @@
 ---
-description: Git y alcance — commits claros; presupuesto de cambio; microtareas.
-alwaysApply: false
+description: Git y alcance — solo main por defecto; commits claros; sin ramas sin autorización explícita.
+alwaysApply: true
 ---
 
 # Git y alcance
@@ -11,4 +11,13 @@ alwaysApply: false
 4. No empujar secretos. Remoto principal: GitHub (`docs/roadmap/github.md`).
 5. Microtareas: terminar, reportar, esperar siguiente autorización en gates.
 
-Prohibido: mezclar historial del desktop; commits basura “WIP” con secretos.
+## Protección: solo `main` (dueño en solitario)
+
+El autor trabaja **solo en `main`** salvo autorización explícita de rama.
+
+1. **No crear** ramas nuevas (`checkout -b`, `switch -c`, acciones diff-tab *create-branch*, prefijo `cursor/…`) sin frase explícita del usuario en el chat (p. ej. «autorizo crear la rama X» / «crea la rama X»).
+2. Si la UI de Cursor pide *create-branch-and-commit* u otra acción que cree rama: **no crear la rama**; quedarse o volver a `main`, avisar en una frase, y solo entonces commit/push en `main` si el usuario también pidió commit/push.
+3. «Continúa», aprobar un plan de producto, o autorizar un ADR **no** autoriza crear rama.
+4. Colaboradores / PR: solo cuando el usuario lo pida de forma explícita (ver `docs/roadmap/github.md`).
+
+Prohibido: mezclar historial del desktop; commits basura “WIP” con secretos; ramas de trabajo espontáneas “por costumbre”.

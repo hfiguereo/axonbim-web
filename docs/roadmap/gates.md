@@ -2,6 +2,8 @@
 
 El agente y el desarrollo humano **se detienen** en cada gate. “Continúa con el proyecto” no autoriza saltarse un gate ni refactorizaciones de riesgo.
 
+**Validación estricta de lo crítico:** cuando un tramo acumula muchas decisiones (producto, arquitectura, git, alcance), los factores críticos de ADR 0006 / no negociables **se validan uno a uno** antes de cerrar. Una frase de aprobación global («apruebo todo») o un clic de UI **no** sustituye esa lista. El producto prevalece sobre el impulso del momento.
+
 | Gate | Tras | Pregunta de salida | Siguiente solo si |
 |------|------|--------------------|-------------------|
 | **G-F0** | Fundación docs + rules | ¿Alcance MVP y rules sin inflación? | Autorias F1 cerrado o Etapa 0 |
@@ -41,3 +43,4 @@ El agente y el desarrollo humano **se detienen** en cada gate. “Continúa con 
 | **ADR 0014 gizmo** | **2026-08-08** | **aprobado** | Tríada ±ejes + hold-orbit |
 | **ADR 0015 cámaras** | **2026-08-08** | **aprobado** | Cámara geométrica + vista ligada |
 | **ADR 0016 crop** | **2026-08-08** | **aprobado** | Clip por vista; marco seleccionable en planta |
+| **Merge → main** | **2026-08-08** | **hecho** | `cursor/windows-and-gizmo-cameras` → `main`; política solo-main + primacía producto (ADR 0006 reforzado) |

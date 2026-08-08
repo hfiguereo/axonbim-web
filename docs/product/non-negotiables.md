@@ -22,3 +22,4 @@ Fuente: Plan Maestro §58. Aplican a producto y a agentes.
 18. Una función de usuario no está terminada si no puede usarse desde la interfaz.
 19. El proyecto demo se mantiene actualizado.
 20. El agente se detiene al cumplir el objetivo.
+21. La aprobación apresurada (propia o de UI) no sustituye la validación estricta de gates, SoT, ADRs y evidencia; el producto prevalece sobre el impulso del momento (ADR 0006).
