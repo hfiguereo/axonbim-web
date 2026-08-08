@@ -39,11 +39,17 @@ import {
   WebGLRenderer,
 } from "three";
 import {
+  resolveCameraPresetPose,
+  type CameraPreset,
+} from "./cameraPresetPose.js";
+import {
   applyViewCropClipping,
   clearGroupMeshes,
   createClipPlanePool,
   createPlanCropMaskMaterial,
 } from "./viewCropClip.js";
+
+export type { CameraPreset } from "./cameraPresetPose.js";
 
 export type ViewProjection = "perspective" | "plan";
 
@@ -58,16 +64,6 @@ export type CropGripPick = {
   /** Camera entity id, or null for session ProjectView.crop */
   cameraId: string | null;
 };
-
-/** Named camera poses for the 3D (perspective) viewport. */
-export type CameraPreset =
-  | "top"
-  | "bottom"
-  | "front"
-  | "back"
-  | "left"
-  | "right"
-  | "iso";
 
 export type ViewportHandle = {
   canvas: HTMLCanvasElement;
@@ -722,43 +718,22 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
     },
     setCameraPreset(preset: CameraPreset) {
       if (mode === "plan") return;
-      const dist = Math.max(
-        3,
-        useOrtho3d
-          ? ortho3d.position.distanceTo(orbitTarget)
-          : persp.position.distanceTo(orbitTarget),
-      );
-      const unit: Record<
-        CameraPreset,
-        { d: [number, number, number]; up: [number, number, number] }
-      > = {
-        top: { d: [0, 0, 1], up: [0, 1, 0] },
-        bottom: { d: [0, 0, -1], up: [0, 1, 0] },
-        front: { d: [0, -1, 0], up: [0, 0, 1] },
-        back: { d: [0, 1, 0], up: [0, 0, 1] },
-        right: { d: [1, 0, 0], up: [0, 0, 1] },
-        left: { d: [-1, 0, 0], up: [0, 0, 1] },
-        iso: { d: [0.75, -0.9, 0.65], up: [0, 0, 1] },
-      };
-      const u = unit[preset];
-      const len = Math.hypot(u.d[0], u.d[1], u.d[2]) || 1;
-      const px = orbitTarget.x + (u.d[0] / len) * dist;
-      const py = orbitTarget.y + (u.d[1] / len) * dist;
-      const pz = orbitTarget.z + (u.d[2] / len) * dist;
-
-      if (preset === "iso") {
+      const dist = useOrtho3d
+        ? ortho3d.position.distanceTo(orbitTarget)
+        : persp.position.distanceTo(orbitTarget);
+      const pose = resolveCameraPresetPose(preset, orbitTarget, dist);
+      if (!pose.useOrtho3d) {
         useOrtho3d = false;
-        persp.position.set(px, py, pz);
-        persp.up.set(u.up[0], u.up[1], u.up[2]);
+        persp.position.set(pose.eye.x, pose.eye.y, pose.eye.z);
+        persp.up.set(pose.up.x, pose.up.y, pose.up.z);
         persp.lookAt(orbitTarget);
         persp.updateProjectionMatrix();
       } else {
         useOrtho3d = true;
-        ortho3d.position.set(px, py, pz);
-        ortho3d.up.set(u.up[0], u.up[1], u.up[2]);
+        ortho3d.position.set(pose.eye.x, pose.eye.y, pose.eye.z);
+        ortho3d.up.set(pose.up.x, pose.up.y, pose.up.z);
         ortho3d.lookAt(orbitTarget);
-        // Apparent size ≈ prior distance framing
-        updateOrtho3dFrustum(Math.max(2, dist * 0.55));
+        updateOrtho3dFrustum(pose.orthoHalfH);
       }
     },
     orbitByDelta(dx, dy) {

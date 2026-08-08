@@ -2,7 +2,8 @@
 
 ## Autorización
 
-**2026-08-08** — dueño: refactor controlado · cortes 1–4.
+**2026-08-08** — dueño: refactor controlado · cortes 1–5.  
+Pruebas manuales adicionales del dueño (tras corte 4): sin problemas reportados.
 
 ## Principio
 
@@ -28,12 +29,18 @@ No reescribir `sessionStore` ni `createViewport` de un golpe. No IFC/OCCT/workpl
 - `viewCropClip.test.ts` (2) — ecuaciones AABB → planos
 - `createViewport` delega clip/máscara; vitest en `@axonbim/viewer`
 
+## Corte 5 (**hecho** 2026-08-08) — pose de presets de cámara
+
+- `packages/viewer/src/cameraPresetPose.ts`: `resolveCameraPresetPose` + tipo `CameraPreset`
+- `cameraPresetPose.test.ts` (3) — top / iso / clamp distancia
+- `createViewport.setCameraPreset` solo aplica la pose al runtime Three.js
+
 ## Parada
 
-Cortes 1–4 cerrados. Corte 5 **no** sin OK explícito.
+Cortes 1–5 cerrados. Corte 6 **no** sin OK explícito.
 
 ## Siguiente (requiere OK)
 
 | # | Idea |
 |---|------|
-| 5 | (proponer) más extracción de `createViewport` o peels de `sessionStore` |
+| 6 | (proponer) peels de `sessionStore` o más helpers del viewer (`fit` AABB, pick tolerance) |

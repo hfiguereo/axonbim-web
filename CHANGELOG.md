@@ -35,13 +35,14 @@
 - Config: no reutilizar Vite ajeno en 5173 (evita timeouts del menú Archivo)
 - Ver `docs/validation/playwright-f8.md`
 
-### Refactor controlado session/viewer — cortes 1–4 (2026-08-08)
+### Refactor controlado session/viewer — cortes 1–5 (2026-08-08)
 
 - Plan: `docs/roadmap/refactor-session-viewer.md`
 - Corte 1: `viewCropResolve.ts` — active/clipping crop + tests
 - Corte 2: `viewCropDrag.ts` — begin/update/commit drag + tests
 - Corte 3: `sessionTypes.ts` — tipos de vista/docks/cinta
 - Corte 4: `viewCropClip.ts` — clip GPU + máscara planta fuera de `createViewport` + tests
+- Corte 5: `cameraPresetPose.ts` — pose pura de presets gizmo (ADR 0014) + tests
 
 
 ### F5-S — estabilización (IDs, historial, `.axon`) — **aprobado 2026-08-07**
