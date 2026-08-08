@@ -1,7 +1,7 @@
 import { useCallback, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { isSketchTool, type DrawMode } from "@axonbim/tools";
-import type { RibbonTab } from "../sessionStore";
+import type { RibbonTab } from "../session/sessionTypes";
 import { useSessionStore } from "../sessionStore";
 import { Icon } from "./RibbonIcons";
 

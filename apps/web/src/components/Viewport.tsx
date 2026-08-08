@@ -1,6 +1,7 @@
 import { createViewport, type ViewportHandle } from "@axonbim/viewer";
 import { useEffect, useRef } from "react";
-import { useSessionStore, type OrbitPivotMode } from "../sessionStore";
+import type { OrbitPivotMode } from "../session/sessionTypes";
+import { useSessionStore } from "../sessionStore";
 import { ViewOrientationGizmo } from "./ViewOrientationGizmo";
 
 function modelPivot(walls: { p1: { x: number; y: number }; p2: { x: number; y: number }; height: number }[]) {

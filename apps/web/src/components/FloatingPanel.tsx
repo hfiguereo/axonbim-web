@@ -1,5 +1,5 @@
 import { useEffect, useRef, type PointerEvent, type ReactNode } from "react";
-import type { DockSide, FloatPos, PanelId } from "../sessionStore";
+import type { DockSide, FloatPos, PanelId } from "../session/sessionTypes";
 import { useSessionStore } from "../sessionStore";
 
 type FloatingPanelProps = {
