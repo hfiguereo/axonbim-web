@@ -26,6 +26,31 @@ git remote add origin git@github.com:<usuario>/axonbim-web.git
 git push -u origin main
 ```
 
+## Integración continua (Actions)
+
+Dos workflows independientes, para que un fallo de navegador y un fallo de tipos/tests
+se distingan de un vistazo:
+
+| Workflow | Corre | Desde |
+|----------|-------|-------|
+| `.github/workflows/ci.yml` | `pnpm typecheck` + `pnpm test` | 2026-08-08 |
+| `.github/workflows/e2e.yml` | `pnpm test:e2e` (Playwright F8 o1 + o2) | 2026-08-08 (F8-CI) |
+
+Ambos en `push` y `pull_request` sobre `main`. Actions con runtime Node 24
+(`checkout@v5`, `setup-node@v5`, `pnpm/action-setup@v6`); toolchain Node 22, pnpm 10.12.1.
+
+**Por qué `ci.yml` existe (2026-08-08):** hasta esa fecha el único workflow era el de
+Playwright, así que «typecheck y tests verdes» era siempre la palabra de quien lo hubiera
+corrido en local — nunca verificación independiente. Ahora cada push lo comprueba solo.
+
+Límites conocidos que **no** cubre este CI:
+
+- `pnpm lint` no ejecuta nada: ningún paquete define script `lint`. No se añadió a CI
+  para no dar una señal falsa de comodidad.
+- `packages/model` usa `--passWithNoTests` y tiene 0 tests; `families` y `shared` no tienen
+  script de test y `--if-present` los salta. «Verde» abarca menos de lo que parece.
+  Pendiente de autorización: cerrar ese hueco.
+
 ## Política
 
 - Rama por defecto: **`main`**

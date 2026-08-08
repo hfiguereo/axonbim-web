@@ -50,6 +50,12 @@
 - Política: 1 peel crítico / hasta 3 triviales; agente clasifica; Opus en críticos
 - ADR 0016: nota de producto — marcos de recorte cliqueables/editables (requisito, no extra)
 
+### CI: typecheck + tests unitarios verificados en Actions (2026-08-08)
+
+- Nuevo `.github/workflows/ci.yml`; antes el único workflow era Playwright, así que
+  «typecheck y tests verdes» nunca se verificaba de forma independiente
+- Límites anotados en `docs/roadmap/github.md`: `lint` no ejecuta nada; `model`/`families`/`shared` sin tests
+
 ### Marco de recorte más fácil de agarrar (2026-08-08)
 
 - Tolerancia de clic del **marco de crop**: 12 px → **16 px** (era la más estrecha de la app, sobre línea fina)
