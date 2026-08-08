@@ -17,7 +17,7 @@ Punto de entrada para agentes de IA. Lee esto antes de cualquier cambio material
 | Si vas a… | Lee primero |
 |-----------|-------------|
 | Entender el producto | `docs/product/vision.md`, `mvp-scope.md`, `non-negotiables.md`, `doc-governance.md` |
-| Tocar arquitectura / capas | `docs/architecture/overview.md` + ADR en `docs/decisions/` |
+| Tocar arquitectura / capas | `docs/architecture/overview.md` + ADR: índice en `docs/decisions/README.md` |
 | Modelo / IDs / `.axon` | `docs/architecture/document-model.md` |
 | Coordenadas / tolerancias | `docs/architecture/coordinate-system.md` |
 | Geometría | `docs/architecture/geometry-policy.md`; OCCT parked: ADR 0013 |

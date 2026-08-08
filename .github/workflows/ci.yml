@@ -40,6 +40,9 @@ jobs:
       - name: No test shortcuts or type suppressions
         run: pnpm check:shortcuts
 
+      - name: Documentation reachable from the AGENTS.md index
+        run: pnpm check:docs
+
       - name: Typecheck
         run: pnpm typecheck
 
