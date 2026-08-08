@@ -50,6 +50,20 @@
 - Política: 1 peel crítico / hasta 3 triviales; agente clasifica; Opus en críticos
 - ADR 0016: nota de producto — marcos de recorte cliqueables/editables (requisito, no extra)
 
+### Reglas con respaldo mecánico: P1–P4 cerrados (2026-08-08)
+
+- **P1 / D3:** `tsconfig.e2e.json` mete `e2e/` y `playwright.config.ts` en `pnpm typecheck`;
+  el error inyectado que antes daba exit 0 ahora da exit 2
+- **P2 / D1:** `pnpm check:docs` falla si un `.md` o `.pdf` rastreado no es alcanzable desde
+  el índice de `AGENTS.md`. Al exigirlo apareció **D9**: el índice de ADR no listaba el 0009
+- **P3 / D2:** `pnpm check:layers` falla si el dominio importa React / Three / viewer o usa
+  `localStorage` / `indexedDB` / `navigator`, y si el viewer importa React o Zustand
+- **P4 / D4:** paso `Production build` en CI; `typecheck` no es build
+- Los tres guardias verificados en negativo (Three en `geometry`, React en `commands` y en
+  `viewer`, `indexedDB` en `persistence`, doc y PDF sin indexar, error de tipos en un spec)
+- `check:layers` ignora a propósito los identificadores `window` y `document`: son
+  sustantivos del dominio BIM y producían un falso positivo en `commands/windows.ts`
+
 ### Auditoría del sistema de control: reglas sin comprobación (2026-08-08)
 
 - Hallazgos D1–D8 en `docs/validation/technical-audit-2026-08.md`, con pendientes P1–P8

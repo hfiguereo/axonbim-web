@@ -33,8 +33,24 @@ se distingan de un vistazo:
 
 | Workflow | Corre | Desde |
 |----------|-------|-------|
-| `.github/workflows/ci.yml` | `pnpm check:shortcuts` + `pnpm typecheck` + `pnpm test` | 2026-08-08 |
+| `.github/workflows/ci.yml` | `check:shortcuts` → `check:docs` → `check:layers` → `typecheck` → `test` → `build` | 2026-08-08 |
 | `.github/workflows/e2e.yml` | `pnpm test:e2e` (Playwright F8 o1 + o2) | 2026-08-08 (F8-CI) |
+
+Los tres `check:*` son guardias de reglas: convierten mandatos de `.cursor/rules/` en algo
+que **falla** si se incumple. Todos se validaron incumpliéndolos a propósito.
+
+| Guardia | Regla que respalda | Falla si… |
+|---------|--------------------|-----------|
+| `check:shortcuts` | `30-testing-validation` §3 | hay `.skip` / `.only` / `.todo` / `xit`, `@ts-ignore` / `@ts-nocheck` / `@ts-expect-error`, o `--passWithNoTests` |
+| `check:docs` | `10-agent-behavior` §10 | un `.md` o `.pdf` rastreado no es alcanzable desde el índice de `AGENTS.md` (se permite **un salto** vía doc índice) |
+| `check:layers` | `00-architecture` §5, `20-typescript-domain` §2 | el dominio importa React / Three / viewer / `@axonbim/web` o usa `localStorage`, `indexedDB`, `navigator`…; o el viewer importa React / Zustand |
+
+`check:layers` **no** vigila los identificadores `window` ni `document`: en este dominio son
+sustantivos legítimos (una ventana BIM, el `AxonDocument`), y un guardia con falsos
+positivos acaba desactivado. Las librerías DOM sí se detectan por el import.
+
+Excepciones legítimas: añadirlas a la lista `SKIPPED` / `NOT_INDEXED` del script con su
+motivo, nunca relajando un patrón.
 
 ### Guardia de atajos (`pnpm check:shortcuts`)
 
@@ -62,7 +78,10 @@ Cobertura de `pnpm test`: los **9 paquetes** tienen script de test y al menos un
 Límite conocido que **no** cubre este CI:
 
 - `pnpm lint` no ejecuta nada: ningún paquete define script `lint`. No se añadió a CI
-  para no dar una señal falsa de comodidad.
+  para no dar una señal falsa de comodidad. Pendiente P5 en
+  [`technical-audit-2026-08.md`](../validation/technical-audit-2026-08.md).
+- `scripts/*.mjs` (los propios guardias) no pasan por `typecheck`: son JavaScript. Se
+  validan ejecutándolos en negativo, no por tipos.
 
 ## Política
 

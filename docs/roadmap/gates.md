@@ -62,3 +62,5 @@ El agente y el desarrollo humano **se detienen** en cada gate. “Continúa con 
 | **CI typecheck + tests** | **2026-08-08** | **hecho** | `ci.yml` verde en Actions; antes solo corría e2e |
 | **Cobertura de paquetes** | **2026-08-08** | **hecho** | `model`/`families`/`shared` pasan de 0 tests a cubiertos; 60 → 99 tests |
 | **Guardia de atajos** | **2026-08-08** | **hecho** | `check:shortcuts` en CI; verificado en negativo |
+| **Auditoría del control (serie D)** | **2026-08-08** | **hecho** | D1–D9; el plan maestro estaba fuera del índice desde el primer commit |
+| **Guardias P1–P4** | **2026-08-08** | **hecho** | `e2e` en typecheck, `check:docs`, `check:layers`, `build` en CI; los cuatro verificados en negativo |
