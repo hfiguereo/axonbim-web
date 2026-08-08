@@ -15,30 +15,29 @@ import {
   Vector3,
   WebGLRenderer,
 } from "three";
+import type { CameraPreset } from "@axonbim/viewer";
 import { useSessionStore } from "../sessionStore";
 
 type AxisId = "x" | "y" | "z";
 
 const AXIS_META: Record<
   AxisId,
-  { label: string; color: number; dir: [number, number, number] }
+  { label: string; color: number; dir: [number, number, number]; preset: CameraPreset }
 > = {
-  x: { label: "X · derecha", color: 0xe05a5a, dir: [1, 0, 0] },
-  y: { label: "Y · frente", color: 0x5bb85b, dir: [0, 1, 0] },
-  z: { label: "Z · arriba", color: 0x5a8ae0, dir: [0, 0, 1] },
+  x: { label: "X · derecha", color: 0xe05a5a, dir: [1, 0, 0], preset: "right" },
+  y: { label: "Y · frente", color: 0x5bb85b, dir: [0, 1, 0], preset: "front" },
+  z: { label: "Z · arriba", color: 0x5a8ae0, dir: [0, 0, 1], preset: "top" },
 };
 
 /**
- * Gizmo 3D animado (estilo Blender) — maqueta.
- * Etiqueta de texto solo al resaltar un extremo de eje.
- * Orientación real de cámara = etapa futura.
+ * Gizmo 3D (estilo Blender) — clics aplican presets reales a la cámara perspectiva.
  */
 export function ViewOrientationGizmo({ visible }: { visible: boolean }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const setStatus = useSessionStore((s) => s.setStatus);
+  const requestCameraPreset = useSessionStore((s) => s.requestCameraPreset);
   const [hover, setHover] = useState<{
-    id: AxisId;
+    id: AxisId | "hub";
     label: string;
     x: number;
     y: number;
@@ -91,7 +90,6 @@ export function ViewOrientationGizmo({ visible }: { visible: boolean }) {
         meta.dir[1] * 0.36,
         meta.dir[2] * 0.36,
       );
-      // Cylinder default along Y — align to axis
       if (id === "x") shaft.rotation.z = -Math.PI / 2;
       else if (id === "z") shaft.rotation.x = Math.PI / 2;
 
@@ -117,29 +115,31 @@ export function ViewOrientationGizmo({ visible }: { visible: boolean }) {
       z: makeAxis("z"),
     };
 
-    const hub = new Mesh(
-      new SphereGeometry(0.1, 16, 12),
-      new MeshLambertMaterial({ color: 0xc8cdd2 }),
-    );
+    const hubMat = new MeshLambertMaterial({ color: 0xc8cdd2 });
+    const hub = new Mesh(new SphereGeometry(0.1, 16, 12), hubMat);
+    hub.userData.axisId = "hub";
     root.add(hub);
+    tipMeshes.push(hub);
 
     const raycaster = new Raycaster();
     const ndc = new Vector2();
-    let highlighted: AxisId | null = null;
+    let highlighted: AxisId | "hub" | null = null;
     let raf = 0;
     let t0 = performance.now();
 
-    const setHighlight = (id: AxisId | null) => {
+    const setHighlight = (id: AxisId | "hub" | null) => {
       highlighted = id;
       (Object.keys(axes) as AxisId[]).forEach((k) => {
         const on = k === id;
         axes[k].tip.scale.setScalar(on ? 1.35 : 1);
         axes[k].tipMat.emissive = new Color(on ? 0x333333 : 0x000000);
       });
+      hub.scale.setScalar(id === "hub" ? 1.35 : 1);
+      hubMat.emissive = new Color(id === "hub" ? 0x333333 : 0x000000);
     };
 
-    const projectTip = (id: AxisId) => {
-      const v = new Vector3().copy(axes[id].tip.getWorldPosition(new Vector3()));
+    const projectTip = (obj: Mesh) => {
+      const v = new Vector3().copy(obj.getWorldPosition(new Vector3()));
       v.project(camera);
       return {
         x: (v.x * 0.5 + 0.5) * size,
@@ -150,11 +150,9 @@ export function ViewOrientationGizmo({ visible }: { visible: boolean }) {
     const render = (now: number) => {
       raf = requestAnimationFrame(render);
       const elapsed = (now - t0) / 1000;
-      // Idle spin — slow orbit feel
       root.rotation.z = Math.sin(elapsed * 0.35) * 0.22;
       root.rotation.x = Math.cos(elapsed * 0.28) * 0.1;
-      // Soft pulse on highlighted tip
-      if (highlighted) {
+      if (highlighted && highlighted !== "hub") {
         const pulse = 1.28 + Math.sin(elapsed * 6) * 0.08;
         axes[highlighted].tip.scale.setScalar(pulse);
       }
@@ -168,15 +166,16 @@ export function ViewOrientationGizmo({ visible }: { visible: boolean }) {
       ndc.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
       raycaster.setFromCamera(ndc, camera);
       const hits = raycaster.intersectObjects(tipMeshes, false);
-      const id = hits[0]?.object.userData.axisId as AxisId | undefined;
+      const id = hits[0]?.object.userData.axisId as AxisId | "hub" | undefined;
       if (!id) {
         setHighlight(null);
         setHover(null);
         return;
       }
       setHighlight(id);
-      const p = projectTip(id);
-      setHover({ id, label: AXIS_META[id].label, x: p.x, y: p.y });
+      const p = projectTip(hits[0]!.object as Mesh);
+      const label = id === "hub" ? "Isométrica" : AXIS_META[id].label;
+      setHover({ id, label, x: p.x, y: p.y });
     };
 
     const onLeave = () => {
@@ -186,9 +185,11 @@ export function ViewOrientationGizmo({ visible }: { visible: boolean }) {
 
     const onClick = () => {
       if (!highlighted) return;
-      setStatus(
-        `Gizmo ${AXIS_META[highlighted].label}: maqueta — orientación real en etapa futura`,
-      );
+      if (highlighted === "hub") {
+        requestCameraPreset("iso");
+        return;
+      }
+      requestCameraPreset(AXIS_META[highlighted].preset);
     };
 
     canvas.addEventListener("pointermove", onMove);
@@ -201,16 +202,16 @@ export function ViewOrientationGizmo({ visible }: { visible: boolean }) {
       canvas.removeEventListener("pointerleave", onLeave);
       canvas.removeEventListener("click", onClick);
       tipMeshes.forEach((m) => {
-        m.geometry.dispose();
+        if (m !== hub) m.geometry.dispose();
       });
+      hub.geometry.dispose();
+      hubMat.dispose();
       shaftMats.forEach((m) => m.dispose());
       tipMats.forEach((m) => m.dispose());
-      hub.geometry.dispose();
-      (hub.material as MeshLambertMaterial).dispose();
       root.clear();
       renderer.dispose();
     };
-  }, [visible, setStatus]);
+  }, [visible, requestCameraPreset]);
 
   if (!visible) return null;
 
@@ -218,7 +219,8 @@ export function ViewOrientationGizmo({ visible }: { visible: boolean }) {
     <div
       ref={hostRef}
       className="view-gizmo"
-      aria-label="Orientación de vista 3D (maqueta)"
+      aria-label="Orientación de vista 3D"
+      title="Z superior · Y frontal · X derecha · centro isométrica"
     >
       <canvas ref={canvasRef} className="view-gizmo__canvas" width={96} height={96} />
       {hover && (

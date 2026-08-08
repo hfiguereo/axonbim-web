@@ -22,7 +22,7 @@ Fuente viva del shell: `apps/web`. Referencia conceptual: [revit-lt-baseline.md]
 | Cinta | Pestañas por tarea; herramientas = iconos; tip flotante corto |
 | Opciones | Renglón bajo la cinta = parámetros de la herramienta activa |
 | Dock izq./der. | Propiedades + Navegador (stack vertical, ancho y alto redimensionables) |
-| Lienzo | Vistas en pestañas; planta = ortogonal (**zoom** rueda, **pan** clic medio); 3D = perspectiva (**orbit** clic medio/derecho); puerta en planta = arco + grips sentido/bisagra |
+| Lienzo | Vistas en pestañas; planta = ortogonal (**zoom** rueda, **pan** clic medio); 3D = perspectiva (**orbit** clic medio/derecho); puerta/ventana en planta = arco + grips sentido/bisagra |
 | Barra de vista | **Fit**, escala, estilo, detalle, render (stub) — bajo el lienzo |
 | Estado | Mensaje + switch **Snap** + meta (`tool` / `walls` / `snap:`) — Cadena solo en opciones de herramienta (sin redundancia) |
 | Gizmo 3D | Widget Three.js animado (esquina sup. der. en perspectiva); texto solo al resaltar un extremo; orientación real = etapa futura |
@@ -54,9 +54,13 @@ Al activar **Muro** (y futuros sketch tools):
 
 Mostrar/ocultar UI: **Gestionar → Interfaz**.
 
+## Arquitectura — herramientas activas
+
+En **Arquitectura → Construir**: **Muro**, **Puerta**, **Ventana** (colocación en muro; familia en Propiedades). Resto de iconos = stubs de maqueta.
+
 ## Qué queda fuera de Etapa 0–1 (aunque esté en la maqueta)
 
-Puertas, ventanas, cotas, sheets, IFC, render real, sync, la mayoría de Modify geométrico — se activan por etapa cuando el gate lo autorice.
+Cotas, sheets, IFC, render real, sync, la mayoría de Modify geométrico — se activan por etapa cuando el gate lo autorice. Puertas/ventanas: post-MVP (ADR 0010 / 0011).
 
 ## Cómo correr
 

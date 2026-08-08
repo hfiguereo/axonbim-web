@@ -7,7 +7,7 @@ Punto de entrada para agentes de IA. Lee esto antes de cualquier cambio material
 1. **Lee las reglas activas** en `.cursor/rules/` (mandatos cortos).
 2. **Lee la documentación de soporte** bajo `docs/` para el dominio que toques. El detalle vive en docs, no en las rules.
 3. **No copies ni traduzcas** el desktop Godot/Python. Portar = comportamiento → prueba → invariante → especificación → implementación nueva. Ver `docs/migration/migration-rules.md`.
-4. **Post-MVP puertas autorizado** (corte vertical puerta — ADR 0010). No abras ventanas/IFC u otras capacidades sin autorización explícita.
+4. **Post-MVP:** puertas (0010), ventanas (0011) y **gizmo→cámaras (0012)** autorizados. Cola: Playwright. No abras IFC sin autorización.
 5. **No dupliques controles UI** (cinta vs status vs opciones) salvo petición explícita. Ver `docs/ui/interface-base.md` (anti-redundancia).
 
 ## Índice de lectura
@@ -28,7 +28,7 @@ Punto de entrada para agentes de IA. Lee esto antes de cualquier cambio material
 ## Prohibiciones
 
 - Inventar APIs, valores normativos o comportamiento “porque el desktop lo tenía documentado”.
-- Añadir puertas, IFC, DXF, OpenCascade, PWA, OPFS o paquetes fuera del alcance autorizado.
+- Añadir IFC, DXF, OpenCascade, PWA, OPFS o paquetes fuera del alcance autorizado.
 - Mutar el documento desde React o Three.js.
 - Introducir JSON-RPC interno entre UI y dominio.
 - Expansión silenciosa: terminar la tarea, proponer mejoras aparte, esperar autorización.

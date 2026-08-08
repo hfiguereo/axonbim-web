@@ -1,4 +1,8 @@
-import { BUILTIN_DOOR_FAMILIES, BUILTIN_WALL_FAMILIES } from "@axonbim/families";
+import {
+  BUILTIN_DOOR_FAMILIES,
+  BUILTIN_WALL_FAMILIES,
+  BUILTIN_WINDOW_FAMILIES,
+} from "@axonbim/families";
 import { FloatingPanel } from "./FloatingPanel";
 import { useSessionStore } from "../sessionStore";
 
@@ -14,15 +18,22 @@ export function PropertiesPanel({ flexGrow = 1 }: { flexGrow?: number }) {
   const visible = useSessionStore((s) => s.propertiesVisible);
   const selectedWallId = useSessionStore((s) => s.selectedWallId);
   const selectedDoorId = useSessionStore((s) => s.selectedDoorId);
+  const selectedWindowId = useSessionStore((s) => s.selectedWindowId);
   const activeFamilyId = useSessionStore((s) => s.activeFamilyId);
   const activeDoorFamilyId = useSessionStore((s) => s.activeDoorFamilyId);
+  const activeWindowFamilyId = useSessionStore((s) => s.activeWindowFamilyId);
   const wallHeight = useSessionStore((s) => s.wallHeight);
   const setActiveFamilyId = useSessionStore((s) => s.setActiveFamilyId);
   const setActiveDoorFamilyId = useSessionStore((s) => s.setActiveDoorFamilyId);
+  const setActiveWindowFamilyId = useSessionStore((s) => s.setActiveWindowFamilyId);
   const setSelectedDoorLeafState = useSessionStore((s) => s.setSelectedDoorLeafState);
   const setSelectedDoorFamily = useSessionStore((s) => s.setSelectedDoorFamily);
   const setSelectedDoorSwing = useSessionStore((s) => s.setSelectedDoorSwing);
   const setSelectedDoorHinge = useSessionStore((s) => s.setSelectedDoorHinge);
+  const setSelectedWindowLeafState = useSessionStore((s) => s.setSelectedWindowLeafState);
+  const setSelectedWindowFamily = useSessionStore((s) => s.setSelectedWindowFamily);
+  const setSelectedWindowSwing = useSessionStore((s) => s.setSelectedWindowSwing);
+  const setSelectedWindowHinge = useSessionStore((s) => s.setSelectedWindowHinge);
   const setWallHeight = useSessionStore((s) => s.setWallHeight);
   const setSelectedWallHeight = useSessionStore((s) => s.setSelectedWallHeight);
   const setSelectedWallThickness = useSessionStore((s) => s.setSelectedWallThickness);
@@ -33,6 +44,9 @@ export function PropertiesPanel({ flexGrow = 1 }: { flexGrow?: number }) {
     : undefined;
   const selectedDoor = selectedDoorId
     ? doc.doors.find((d) => d.id === selectedDoorId)
+    : undefined;
+  const selectedWindow = selectedWindowId
+    ? doc.windows.find((w) => w.id === selectedWindowId)
     : undefined;
 
   return (
@@ -45,7 +59,89 @@ export function PropertiesPanel({ flexGrow = 1 }: { flexGrow?: number }) {
       flexGrow={flexGrow}
       className="float-panel--properties"
     >
-      {selectedDoor ? (
+      {selectedWindow ? (
+        <>
+          <label className="type-selector">
+            <span>Familia</span>
+            <select
+              value={selectedWindow.familyId}
+              onChange={(e) => setSelectedWindowFamily(e.target.value)}
+            >
+              {BUILTIN_WINDOW_FAMILIES.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.label} ({(f.width * 1000).toFixed(0)}×{(f.height * 1000).toFixed(0)} mm)
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="type-selector">
+            <span>Hoja</span>
+            <select
+              value={selectedWindow.leafState ?? "closed"}
+              onChange={(e) =>
+                setSelectedWindowLeafState(e.target.value as "closed" | "ajar" | "open")
+              }
+            >
+              <option value="open">Abierta (90°)</option>
+              <option value="ajar">Entreabierta (45°)</option>
+              <option value="closed">Cerrada (0°)</option>
+            </select>
+          </label>
+          <label className="type-selector">
+            <span>Sentido</span>
+            <select
+              value={selectedWindow.swing ?? "positive"}
+              onChange={(e) =>
+                setSelectedWindowSwing(e.target.value as "positive" | "negative")
+              }
+            >
+              <option value="positive">Normal (+)</option>
+              <option value="negative">Invertido (−)</option>
+            </select>
+          </label>
+          <label className="type-selector">
+            <span>Bisagra</span>
+            <select
+              value={selectedWindow.hinge}
+              onChange={(e) =>
+                setSelectedWindowHinge(e.target.value as "start" | "end")
+              }
+            >
+              <option value="start">Inicio (hacia p1)</option>
+              <option value="end">Fin (hacia p2)</option>
+            </select>
+          </label>
+          <p className="props-hint">
+            En planta: esfera azul = invertir sentido · verde = cambiar bisagra
+          </p>
+          <dl className="props">
+            <div>
+              <dt>Id</dt>
+              <dd>{selectedWindow.id}</dd>
+            </div>
+            <div>
+              <dt>Muro</dt>
+              <dd>{selectedWindow.wallId}</dd>
+            </div>
+            <div>
+              <dt>Ancho</dt>
+              <dd>{selectedWindow.width.toFixed(2)} m</dd>
+            </div>
+            <div>
+              <dt>Alto</dt>
+              <dd>{selectedWindow.height.toFixed(2)} m</dd>
+            </div>
+            <div>
+              <dt>Alféizar</dt>
+              <dd>{selectedWindow.sill.toFixed(2)} m</dd>
+            </div>
+            <div>
+              <dt>Offset</dt>
+              <dd>{selectedWindow.centerOffset.toFixed(2)} m</dd>
+            </div>
+          </dl>
+        </>
+      ) : selectedDoor ? (
         <>
           <label className="type-selector">
             <span>Familia</span>
@@ -189,7 +285,21 @@ export function PropertiesPanel({ flexGrow = 1 }: { flexGrow?: number }) {
         </>
       ) : (
         <>
-          {activeTool === "door" ? (
+          {activeTool === "window" ? (
+            <label className="type-selector">
+              <span>Familia ventana</span>
+              <select
+                value={activeWindowFamilyId}
+                onChange={(e) => setActiveWindowFamilyId(e.target.value)}
+              >
+                {BUILTIN_WINDOW_FAMILIES.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.label} ({(f.width * 1000).toFixed(0)}×{(f.height * 1000).toFixed(0)} mm)
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : activeTool === "door" ? (
             <label className="type-selector">
               <span>Familia puerta</span>
               <select
@@ -267,6 +377,10 @@ export function PropertiesPanel({ flexGrow = 1 }: { flexGrow?: number }) {
             <div>
               <dt>Puertas</dt>
               <dd>{doc.doors.length}</dd>
+            </div>
+            <div>
+              <dt>Ventanas</dt>
+              <dd>{doc.windows.length}</dd>
             </div>
           </dl>
         </>

@@ -9,6 +9,17 @@
 - Hoja con paneles, bisagras, manilla horizontal; planta: arco + grips sentido/bisagra
 - Familia editable en caliente; navegación: zoom, orbit 3D, pan planta
 
+### Post-MVP — ventanas (ADR 0011)
+
+- Entidad `Window`, familias 60×100 / 90×120 / 120×120; alféizar desde familia
+- Comandos `window.create` / delete / familia / swing / hinge / hoja; solape con puertas y ventanas
+- Cinta **Ventana**, colocación en muro, props + grips en planta; hoja por defecto cerrada
+
+### Post-MVP — gizmo cámaras (ADR 0012)
+
+- Clic en gizmo 3D aplica vistas reales: Z superior, Y frontal, X derecha, centro isométrica
+- `setCameraPreset` en el viewer; orbit/zoom se conservan
+
 ## 2026-08-06 — MVP estricto (G-MVP)
 
 - Snap muro + feedback; switch Snap en status; Cadena solo en opciones de muro (ADR 0009)

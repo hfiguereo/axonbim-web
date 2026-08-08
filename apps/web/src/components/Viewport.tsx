@@ -9,6 +9,8 @@ export function Viewport() {
   const handleRef = useRef<ViewportHandle | null>(null);
 
   const fitViewRequest = useSessionStore((s) => s.fitViewRequest);
+  const cameraPresetRequest = useSessionStore((s) => s.cameraPresetRequest);
+  const cameraPreset = useSessionStore((s) => s.cameraPreset);
   const activeViewId = useSessionStore((s) => s.activeViewId);
   const activeViewKind = useSessionStore(
     (s) => s.views.find((v) => v.id === s.activeViewId)?.kind,
@@ -17,8 +19,10 @@ export function Viewport() {
   const documentRev = useSessionStore((s) => s.documentRev);
   const walls = useSessionStore((s) => s.document.walls);
   const doors = useSessionStore((s) => s.document.doors);
+  const windows = useSessionStore((s) => s.document.windows);
   const selectedWallId = useSessionStore((s) => s.selectedWallId);
   const selectedDoorId = useSessionStore((s) => s.selectedDoorId);
+  const selectedWindowId = useSessionStore((s) => s.selectedWindowId);
   const activeTool = useSessionStore((s) => s.activeTool);
   const wallPending = useSessionStore((s) => s.wallPending);
   const wallHover = useSessionStore((s) => s.wallHover);
@@ -62,8 +66,20 @@ export function Viewport() {
   }, [fitViewRequest, activeViewId, activeViewKind]);
 
   useEffect(() => {
-    handleRef.current?.syncWalls(walls, doors, selectedWallId, selectedDoorId);
-  }, [documentRev, walls, doors, selectedWallId, selectedDoorId]);
+    if (!cameraPreset || cameraPresetRequest <= 0) return;
+    handleRef.current?.setCameraPreset(cameraPreset);
+  }, [cameraPresetRequest, cameraPreset]);
+
+  useEffect(() => {
+    handleRef.current?.syncWalls(
+      walls,
+      doors,
+      windows,
+      selectedWallId,
+      selectedDoorId,
+      selectedWindowId,
+    );
+  }, [documentRev, walls, doors, windows, selectedWallId, selectedDoorId, selectedWindowId]);
 
   useEffect(() => {
     handleRef.current?.setPreviewSegment(wallPending, wallHover);
@@ -109,6 +125,17 @@ export function Viewport() {
         return;
       }
 
+      if (s.activeTool === "window") {
+        const wallId = vp.pickWallId(e.clientX, e.clientY);
+        if (!wallId) {
+          s.setStatus("Clic en un muro para colocar la ventana");
+          return;
+        }
+        const p = vp.pickGround(e.clientX, e.clientY, elevation);
+        if (p) s.placeWindowOnWall(wallId, p);
+        return;
+      }
+
       const flip = vp.pickFlipControl(e.clientX, e.clientY);
       if (flip?.entityType === "door") {
         s.setSelectedDoorId(flip.entityId);
@@ -116,7 +143,18 @@ export function Viewport() {
         else s.flipSelectedDoorHinge();
         return;
       }
+      if (flip?.entityType === "window") {
+        s.setSelectedWindowId(flip.entityId);
+        if (flip.kind === "swing") s.flipSelectedWindowSwing();
+        else s.flipSelectedWindowHinge();
+        return;
+      }
 
+      const windowId = vp.pickWindowId(e.clientX, e.clientY);
+      if (windowId) {
+        s.setSelectedWindowId(windowId);
+        return;
+      }
       const doorId = vp.pickDoorId(e.clientX, e.clientY);
       if (doorId) {
         s.setSelectedDoorId(doorId);
@@ -151,6 +189,11 @@ export function Viewport() {
           s.deleteSelectedDoor();
           return;
         }
+        if (s.selectedWindowId) {
+          e.preventDefault();
+          s.deleteSelectedWindow();
+          return;
+        }
         if (s.selectedWallId) {
           e.preventDefault();
           s.deleteSelectedWall();
@@ -170,7 +213,8 @@ export function Viewport() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const drawing = activeTool === "wall" || activeTool === "door";
+  const drawing =
+    activeTool === "wall" || activeTool === "door" || activeTool === "window";
   const snapLabel =
     lastSnapKind === "endpoint"
       ? "snap extremo"
@@ -182,7 +226,9 @@ export function Viewport() {
             ? "sin snap"
             : activeTool === "door"
               ? "clic en muro"
-              : "";
+              : activeTool === "window"
+                ? "clic en muro"
+                : "";
 
   return (
     <div className={drawing ? "viewport viewport--draw" : "viewport"} ref={hostRef}>

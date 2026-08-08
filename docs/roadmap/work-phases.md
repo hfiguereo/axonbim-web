@@ -47,11 +47,19 @@ Cadena on por defecto; modo Línea; otros Draw modes aún no.
 Snap, inglete, demo, Fit, zoom rueda, gizmo maqueta, import/export `.axon`.  
 **Pausa de producto** hasta autorización post-MVP.
 
-## F5 — Puertas (slice entregado — ADR 0010)
+## F5 — Puertas (hecho — ADR 0010)
 
-Colocar puerta en muro + hueco + marco/hoja/herrajes + planta (arco/grips) + familia en caliente.  
-Pendiente: validación humana del corte. Ventanas / IFC / gizmo→cámaras: aún no.
+Colocar puerta en muro + hueco + marco/hoja/herrajes + planta (arco/grips) + familia en caliente.
 
-## F5+ — Más post-MVP (solo con autorización)
+## F6 — Ventanas (implementado — ADR 0011)
 
-Ventanas y siguientes capacidades del maestro.
+Mismo patrón hosted: hueco + marco con antepecho + vidrio/hoja + planta + grips.
+
+## F7 — Gizmo → cámaras reales (en curso — ADR 0012)
+
+Presets Top/Front/Right/Iso desde el gizmo 3D.  
+**Después:** Playwright (calidad).
+
+## F7+ — Calidad / más post-MVP
+
+Playwright · IFC · etc.

@@ -1,6 +1,6 @@
 /** Interaction tools — wall draw, snapping (MVP). */
 
-export type ToolId = "select" | "wall" | "door" | "none";
+export type ToolId = "select" | "wall" | "door" | "window" | "none";
 
 /** Revit-like Draw panel modes while a sketch/placement tool is active. */
 export type DrawMode =
@@ -21,9 +21,9 @@ export function isSketchTool(tool: ToolId): boolean {
   return tool === "wall";
 }
 
-/** One-click host placement (door on wall). */
+/** One-click host placement (door/window on wall). */
 export function isHostedTool(tool: ToolId): boolean {
-  return tool === "door";
+  return tool === "door" || tool === "window";
 }
 
 export type Point2 = { x: number; y: number; z: number };

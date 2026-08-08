@@ -11,3 +11,5 @@
 | [0007](0007-proprietary-license.md) | Licencia propietaria |
 | [0008](0008-wall-corner-join-extension.md) | Esquinas de muro por inglete (miter) |
 | [0010](0010-doors-first-slice.md) | Puertas — primer corte post-MVP |
+| [0011](0011-windows-slice.md) | Ventanas — segundo corte post-MVP |
+| [0012](0012-gizmo-real-cameras.md) | Gizmo → cámaras reales (Top/Front/…) |

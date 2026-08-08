@@ -1,4 +1,8 @@
-import { BUILTIN_DOOR_FAMILIES, BUILTIN_WALL_FAMILIES } from "@axonbim/families";
+import {
+  BUILTIN_DOOR_FAMILIES,
+  BUILTIN_WALL_FAMILIES,
+  BUILTIN_WINDOW_FAMILIES,
+} from "@axonbim/families";
 import type { AxonDocument, Wall } from "./types.js";
 
 function isoNow(): string {
@@ -18,8 +22,10 @@ export function createEmptyDocument(name = "Sin título"): AxonDocument {
     storeys: [{ id: "storey.default", name: "Nivel 1", elevation: 0 }],
     families: [...BUILTIN_WALL_FAMILIES],
     doorFamilies: [...BUILTIN_DOOR_FAMILIES],
+    windowFamilies: [...BUILTIN_WINDOW_FAMILIES],
     walls: [],
     doors: [],
+    windows: [],
   };
 }
 

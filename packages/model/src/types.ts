@@ -1,4 +1,4 @@
-import type { DoorFamily, WallFamily } from "@axonbim/families";
+import type { DoorFamily, WallFamily, WindowFamily } from "@axonbim/families";
 import type { Vec3 } from "@axonbim/shared";
 
 export type ProjectMeta = {
@@ -47,6 +47,21 @@ export type Door = {
   leafState: DoorLeafState;
 };
 
+/** Window hosted on a wall — same hosting pattern as Door. */
+export type Window = {
+  id: string;
+  wallId: string;
+  familyId: string;
+  centerOffset: number;
+  width: number;
+  height: number;
+  /** Height of sill above wall base (typically ~0.9 m). */
+  sill: number;
+  hinge: "start" | "end";
+  swing: DoorSwing;
+  leafState: DoorLeafState;
+};
+
 export type DoorSwing = "positive" | "negative";
 
 export type DoorLeafState = "closed" | "ajar" | "open";
@@ -62,6 +77,8 @@ export type AxonDocument = {
   storeys: Storey[];
   families: WallFamily[];
   doorFamilies: DoorFamily[];
+  windowFamilies: WindowFamily[];
   walls: Wall[];
   doors: Door[];
+  windows: Window[];
 };

@@ -13,8 +13,9 @@ El agente y el desarrollo humano **se detienen** en cada gate. “Continúa con 
 ## Estado actual
 
 - **G-MVP:** **aprobado** (2026-08-06)
-- **Post-MVP:** **puertas** autorizadas (ADR 0010) — slice implementado; pendiente validación humana; ventanas/IFC/etc. siguen bloqueadas
-- **Opcional:** Playwright
+- **Post-MVP:** puertas (0010) + ventanas (0011) implementadas; **gizmo→cámaras** (0012) en curso
+- **Cola acordada:** gizmo→cámaras → Playwright (calidad)
+- **Bloqueado hasta su turno:** IFC
 - **GitHub:** https://github.com/hfiguereo/axonbim-web
 
 ## Registro de aprobación
@@ -26,4 +27,6 @@ El agente y el desarrollo humano **se detienen** en cada gate. “Continúa con 
 | G-E0 | 2026-08-06 | aprobado | Base UI: cinta, Modificar/Dibujar/Cadena, compositor L/R |
 | G-E1 | 2026-08-06 | aprobado | Primer muro usable; autoriza MVP estricto |
 | G-MVP | 2026-08-06 | aprobado | Validación humana: dibujo claro y útil |
-| Post-MVP puertas | 2026-08-06 | autorizado | Primer corte: colocar puerta en muro + hueco |
+| Post-MVP puertas | 2026-08-06 | autorizado / entregado | ADR 0010 |
+| Post-MVP ventanas | 2026-08-07 | autorizado | ADR 0011 |
+| Gizmo→cámaras | 2026-08-07 | autorizado | ADR 0012; luego Playwright |

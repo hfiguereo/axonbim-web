@@ -146,11 +146,13 @@ export function Ribbon() {
   const modifyTabLabel =
     activeTool === "door"
       ? "Modificar | Colocar puerta"
-      : sketching && activeTool === "wall"
-        ? "Modificar | Colocar muro"
-        : sketching
-          ? "Modificar | Trazar"
-          : "Modificar";
+      : activeTool === "window"
+        ? "Modificar | Colocar ventana"
+        : sketching && activeTool === "wall"
+          ? "Modificar | Colocar muro"
+          : sketching
+            ? "Modificar | Trazar"
+            : "Modificar";
 
   return (
     <div className="ribbon">
@@ -177,7 +179,7 @@ export function Ribbon() {
             <Group title="Construir">
               <Tool tips={tips} icon="wall" label="Muro" tip="Muro" active={activeTool === "wall"} onClick={() => setTool("wall")} />
               <Tool tips={tips} icon="door" label="Puerta" tip="Puerta" active={activeTool === "door"} onClick={() => setTool("door")} />
-              <Stub tips={tips} icon="window" label="Ventana" tip="Ventana" />
+              <Tool tips={tips} icon="window" label="Ventana" tip="Ventana" active={activeTool === "window"} onClick={() => setTool("window")} />
               <Stub tips={tips} icon="component" label="Componente" tip="Componente" />
               <Stub tips={tips} icon="column" label="Columna" tip="Columna" />
               <Stub tips={tips} icon="roof" label="Cubierta" tip="Cubierta" />
@@ -488,12 +490,19 @@ export function Ribbon() {
                 ? "Colocar muro"
                 : activeTool === "door"
                   ? "Colocar puerta"
-                  : activeTool === "select"
-                    ? "Seleccionar"
-                    : activeTool}
+                  : activeTool === "window"
+                    ? "Colocar ventana"
+                    : activeTool === "select"
+                      ? "Seleccionar"
+                      : activeTool}
             </span>
             <div className="ribbon__options-list">
               {activeTool === "door" && (
+                <span className="ribbon__options-hint">
+                  Clic en un muro · familia en Propiedades
+                </span>
+              )}
+              {activeTool === "window" && (
                 <span className="ribbon__options-hint">
                   Clic en un muro · familia en Propiedades
                 </span>

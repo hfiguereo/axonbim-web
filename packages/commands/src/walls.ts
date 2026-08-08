@@ -38,6 +38,8 @@ export class DeleteWallCommand implements Command {
   readonly id: string;
   readonly type = "wall.delete";
   private snapshot: Wall | null = null;
+  private doorSnapshots: AxonDocument["doors"] = [];
+  private windowSnapshots: AxonDocument["windows"] = [];
 
   constructor(private readonly wallId: string) {
     this.id = `cmd.delete.${wallId}`;
@@ -51,8 +53,13 @@ export class DeleteWallCommand implements Command {
       p1: { ...found.p1 },
       p2: { ...found.p2 },
     };
+    this.doorSnapshots = doc.doors.filter((d) => d.wallId === this.wallId).map((d) => ({ ...d }));
+    this.windowSnapshots = doc.windows
+      .filter((w) => w.wallId === this.wallId)
+      .map((w) => ({ ...w }));
     doc.walls = doc.walls.filter((w) => w.id !== this.wallId);
     doc.doors = doc.doors.filter((d) => d.wallId !== this.wallId);
+    doc.windows = doc.windows.filter((w) => w.wallId !== this.wallId);
     doc.meta.updatedAt = new Date().toISOString();
   }
 
@@ -63,6 +70,8 @@ export class DeleteWallCommand implements Command {
       p1: { ...this.snapshot.p1 },
       p2: { ...this.snapshot.p2 },
     });
+    for (const d of this.doorSnapshots) doc.doors.push({ ...d });
+    for (const w of this.windowSnapshots) doc.windows.push({ ...w });
     doc.meta.updatedAt = new Date().toISOString();
   }
 }
