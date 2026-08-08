@@ -33,8 +33,21 @@ se distingan de un vistazo:
 
 | Workflow | Corre | Desde |
 |----------|-------|-------|
-| `.github/workflows/ci.yml` | `pnpm typecheck` + `pnpm test` | 2026-08-08 |
+| `.github/workflows/ci.yml` | `pnpm check:shortcuts` + `pnpm typecheck` + `pnpm test` | 2026-08-08 |
 | `.github/workflows/e2e.yml` | `pnpm test:e2e` (Playwright F8 o1 + o2) | 2026-08-08 (F8-CI) |
+
+### Guardia de atajos (`pnpm check:shortcuts`)
+
+`scripts/check-no-test-shortcuts.mjs` recorre los archivos rastreados y **falla** si
+encuentra `.skip` / `.only` / `.todo` / `xit`, `@ts-ignore` / `@ts-nocheck` /
+`@ts-expect-error`, o `--passWithNoTests`. Convierte la regla «no debilitar pruebas para
+pasar CI» en algo que se comprueba solo, en vez de depender de la disciplina del agente.
+
+Se verificó **en negativo**: inyectando un `.skip` en un test y un `@ts-ignore` en código
+de app, el guardia sale con código 1 e indica archivo, línea y motivo.
+
+Excepciones legítimas: añadirlas a `SKIPPED` en el script con su motivo, nunca relajando
+un patrón. Hoy la única es el propio script, que necesita nombrar lo que busca.
 
 Ambos en `push` y `pull_request` sobre `main`. Actions con runtime Node 24
 (`checkout@v5`, `setup-node@v5`, `pnpm/action-setup@v6`); toolchain Node 22, pnpm 10.12.1.

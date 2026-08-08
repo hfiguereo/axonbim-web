@@ -50,6 +50,14 @@
 - Política: 1 peel crítico / hasta 3 triviales; agente clasifica; Opus en críticos
 - ADR 0016: nota de producto — marcos de recorte cliqueables/editables (requisito, no extra)
 
+### Guardia contra atajos de prueba (2026-08-08)
+
+- `pnpm check:shortcuts` (`scripts/check-no-test-shortcuts.mjs`) en CI: falla ante
+  `.skip` / `.only` / `.todo` / `xit`, `@ts-ignore` / `@ts-nocheck` / `@ts-expect-error`
+  y `--passWithNoTests`
+- Verificado en negativo (inyectando atajos se obtiene exit 1, con archivo y línea)
+- `--passWithNoTests` eliminado también de `persistence` y `apps/web`, que ya tenían tests
+
 ### Cobertura: fin del verde silencioso (2026-08-08)
 
 - `packages/model` tenía **0 tests** con `--passWithNoTests`, y `families` / `shared` no

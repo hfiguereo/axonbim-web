@@ -10,4 +10,11 @@ alwaysApply: false
 3. No eliminar ni debilitar pruebas para ocultar fallos.
 4. Aceptación de producto MVP: `docs/validation/acceptance-matrix.md`.
 
+## Comprobación mecánica
+
+El punto 3 **no depende de la disciplina del agente**: `pnpm check:shortcuts` corre en CI y
+falla ante `.skip` / `.only` / `.todo` / `xit`, `@ts-ignore` / `@ts-nocheck` /
+`@ts-expect-error` y `--passWithNoTests`. No lo esquives ni añadas excepciones por tu
+cuenta: si una es legítima, pídela en el chat (`docs/roadmap/github.md`).
+
 Prohibido: marcar hecho un criterio de UI solo porque hay un unit test.

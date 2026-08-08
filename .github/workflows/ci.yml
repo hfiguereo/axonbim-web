@@ -37,6 +37,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: No test shortcuts or type suppressions
+        run: pnpm check:shortcuts
+
       - name: Typecheck
         run: pnpm typecheck
 

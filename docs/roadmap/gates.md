@@ -61,3 +61,4 @@ El agente y el desarrollo humano **se detienen** en cada gate. “Continúa con 
 | **Refactor corte 7c** | **2026-08-08** | **hecho** | crítico×1 `documentMutation` + 6 tests (invariante F5-S en sesión); e2e verdes |
 | **CI typecheck + tests** | **2026-08-08** | **hecho** | `ci.yml` verde en Actions; antes solo corría e2e |
 | **Cobertura de paquetes** | **2026-08-08** | **hecho** | `model`/`families`/`shared` pasan de 0 tests a cubiertos; 60 → 99 tests |
+| **Guardia de atajos** | **2026-08-08** | **hecho** | `check:shortcuts` en CI; verificado en negativo |
