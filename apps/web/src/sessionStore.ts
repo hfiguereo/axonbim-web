@@ -61,6 +61,13 @@ import {
   resolveActiveViewCrop,
   resolveClippingCrop,
 } from "./session/viewCropResolve";
+import {
+  beginCameraFrameMoveDrag,
+  beginCornerCropDrag,
+  resolveCropDragCommit,
+  updateCropDragLive,
+  type CropDragMeta,
+} from "./session/viewCropDrag";
 
 export type OrbitPivotMode = "model" | "selection";
 
@@ -130,17 +137,7 @@ type SessionState = {
   selectedCropFrameCameraId: string | null;
   /** Live crop while dragging a plan grip (not yet committed to history). */
   cropDragLive: ViewCrop | null;
-  cropDragMeta: {
-    cameraId: string | null;
-    viewId: string;
-    mode: "corner" | "move";
-    corner: CropCorner;
-    baseline: ViewCrop;
-    startX: number;
-    startY: number;
-    baselineEye?: { x: number; y: number; z: number };
-    baselineTarget?: { x: number; y: number; z: number };
-  } | null;
+  cropDragMeta: CropDragMeta | null;
   /** Live camera pose while dragging the crop frame (move mode). */
   cameraPoseDragLive: {
     cameraId: string;
@@ -1194,126 +1191,63 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
   beginCropDrag: (cameraId, corner) => {
     const s = get();
-    let baseline: ViewCrop | null = null;
-    if (cameraId) {
-      baseline = s.document.cameras.find((c) => c.id === cameraId)?.crop ?? null;
-    } else {
-      baseline = s.views.find((v) => v.id === s.activeViewId)?.crop ?? null;
-    }
-    if (!baseline?.enabled) return;
-    set({
-      cropDragMeta: {
-        cameraId,
-        viewId: s.activeViewId,
-        mode: "corner",
-        corner,
-        baseline: cloneViewCrop(baseline),
-        startX: 0,
-        startY: 0,
-      },
-      cropDragLive: cloneViewCrop(baseline),
-      cameraPoseDragLive: null,
-      selectedCameraId: cameraId ?? s.selectedCameraId,
-      selectedCropFrameCameraId: cameraId ?? s.selectedCropFrameCameraId,
-      status: "Redimensionando recorte…",
+    const start = beginCornerCropDrag({
+      cameraId,
+      corner,
+      activeViewId: s.activeViewId,
+      cameras: s.document.cameras,
+      views: s.views,
+      selectedCameraId: s.selectedCameraId,
+      selectedCropFrameCameraId: s.selectedCropFrameCameraId,
     });
+    if (!start) return;
+    set(start);
   },
 
   beginCameraFrameMove: (cameraId, x, y) => {
-    const cam = get().document.cameras.find((c) => c.id === cameraId);
-    if (!cam?.crop?.enabled) return;
-    set({
-      cropDragMeta: {
-        cameraId,
-        viewId: get().activeViewId,
-        mode: "move",
-        corner: 0,
-        baseline: cloneViewCrop(cam.crop),
-        startX: x,
-        startY: y,
-        baselineEye: { ...cam.eye },
-        baselineTarget: { ...cam.target },
-      },
-      cropDragLive: cloneViewCrop(cam.crop),
-      cameraPoseDragLive: {
-        cameraId,
-        eye: { ...cam.eye },
-        target: { ...cam.target },
-      },
-      selectedCameraId: cameraId,
-      selectedCropFrameCameraId: cameraId,
-      status: "Moviendo cámara + marco…",
+    const start = beginCameraFrameMoveDrag({
+      cameraId,
+      x,
+      y,
+      activeViewId: get().activeViewId,
+      cameras: get().document.cameras,
     });
+    if (!start) return;
+    set(start);
   },
 
   updateCropDrag: (x, y) => {
     const meta = get().cropDragMeta;
     if (!meta) return;
-    if (meta.mode === "move" && meta.cameraId && meta.baselineEye && meta.baselineTarget) {
-      const dx = x - meta.startX;
-      const dy = y - meta.startY;
-      set({
-        cropDragLive: normalizeViewCrop({
-          ...meta.baseline,
-          minX: meta.baseline.minX + dx,
-          maxX: meta.baseline.maxX + dx,
-          minY: meta.baseline.minY + dy,
-          maxY: meta.baseline.maxY + dy,
-        }),
-        cameraPoseDragLive: {
-          cameraId: meta.cameraId,
-          eye: {
-            x: meta.baselineEye.x + dx,
-            y: meta.baselineEye.y + dy,
-            z: meta.baselineEye.z,
-          },
-          target: {
-            x: meta.baselineTarget.x + dx,
-            y: meta.baselineTarget.y + dy,
-            z: meta.baselineTarget.z,
-          },
-        },
-      });
-      return;
-    }
-    set({
-      cropDragLive: resizeViewCropCorner(meta.baseline, meta.corner, x, y),
-    });
+    set(updateCropDragLive(meta, x, y));
   },
 
   commitCropDrag: () => {
     const s = get();
-    const meta = s.cropDragMeta;
-    const live = s.cropDragLive;
-    if (!meta || !live) {
-      set({ cropDragMeta: null, cropDragLive: null, cameraPoseDragLive: null });
-      return;
-    }
-    if (meta.mode === "move" && meta.cameraId) {
-      const dx = live.minX - meta.baseline.minX;
-      const dy = live.minY - meta.baseline.minY;
-      set({ cropDragMeta: null, cropDragLive: null, cameraPoseDragLive: null });
+    const commit = resolveCropDragCommit(s.cropDragMeta, s.cropDragLive);
+    set({ cropDragMeta: null, cropDragLive: null, cameraPoseDragLive: null });
+    if (commit.kind === "clear-only") return;
+    if (commit.kind === "translate-camera") {
       applyCommand(
         get,
         set,
-        new TranslateCameraPlanCommand(meta.cameraId, dx, dy),
+        new TranslateCameraPlanCommand(commit.cameraId, commit.dx, commit.dy),
         "Cámara movida en planta",
       );
       return;
     }
-    set({ cropDragMeta: null, cropDragLive: null, cameraPoseDragLive: null });
-    if (meta.cameraId) {
+    if (commit.kind === "set-camera-crop") {
       applyCommand(
         get,
         set,
-        new SetCameraCropCommand(meta.cameraId, live),
+        new SetCameraCropCommand(commit.cameraId, commit.crop),
         "Recorte redimensionado",
       );
       return;
     }
     set({
       views: get().views.map((v) =>
-        v.id === meta.viewId ? { ...v, crop: cloneViewCrop(live) } : v,
+        v.id === commit.viewId ? { ...v, crop: commit.crop } : v,
       ),
       status: "Recorte de vista redimensionado",
     });

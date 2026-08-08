@@ -2,7 +2,7 @@
 
 ## Autorización
 
-**2026-08-08** — dueño: «autorizo el refactor controlado».
+**2026-08-08** — dueño: «autorizo el refactor controlado» · corte 2: «apruebo segundo corte».
 
 ## Principio
 
@@ -11,26 +11,23 @@ No reescribir `sessionStore` ni `createViewport` de un golpe. No IFC/OCCT/workpl
 
 ## Corte 1 (**hecho** 2026-08-08) — resolución de crop
 
-**Qué:** sacar a módulo puro la lógica ADR 0016 de *qué crop se edita* vs *qué crop clipea*:
+- `viewCropResolve.ts` + 6 tests Vitest
+- Verificación: unit + typecheck + e2e (9) verdes
 
-- `apps/web/src/session/viewCropResolve.ts`
-- `defaultSessionViewCrop`
-- `resolveActiveViewCrop`
-- `resolveClippingCrop`
-- Tests Vitest: `viewCropResolve.test.ts` (6)
+## Corte 2 (**hecho** 2026-08-08) — drag de crop
 
-**Verificación:** `pnpm --filter @axonbim/web test` + typecheck + `pnpm test:e2e` (9) verdes.
-
-**Fuera de corte 1:** drag/commit de grips, split del store Zustand, tocado de `createViewport`.
+- `viewCropDrag.ts`: `beginCornerCropDrag`, `beginCameraFrameMoveDrag`, `updateCropDragLive`, `resolveCropDragCommit`
+- 6 tests Vitest
+- `sessionStore` solo orquesta (set / applyCommand)
+- Verificación: 12 unit + typecheck + e2e (9) verdes
 
 ## Parada
 
-Corte 1 cerrado. Cortes 2–4 **no** se encadenan sin OK explícito.
+Cortes 1–2 cerrados. Cortes 3–4 **no** se encadenan sin OK explícito.
 
 ## Cortes siguientes (requieren OK explícito)
 
 | # | Idea |
 |---|------|
-| 2 | Helpers de drag crop (`begin`/`update`/`commit`) → módulo |
 | 3 | Tipos tipos `ProjectView` / docks → `sessionTypes.ts` |
 | 4 | Primer corte viewer: clip/máscara fuera de `createViewport` |
