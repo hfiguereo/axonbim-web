@@ -13,3 +13,4 @@
 | [0010](0010-doors-first-slice.md) | Puertas — primer corte post-MVP |
 | [0011](0011-windows-slice.md) | Ventanas — segundo corte post-MVP |
 | [0012](0012-gizmo-real-cameras.md) | Gizmo → cámaras reales (Top/Front/…) |
+| [0013](0013-geometry-api-occt-candidate.md) | Geometry API propia; OCCT candidato (parked) |

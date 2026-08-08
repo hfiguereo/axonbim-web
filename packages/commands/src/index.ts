@@ -29,3 +29,4 @@ export {
   createWindowId,
   resetWindowIdSeq,
 } from "./windows";
+export { syncIdSequencesFromDocument, maxNumericSuffix } from "./ids";

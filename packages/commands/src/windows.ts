@@ -19,11 +19,12 @@ export class CreateWindowCommand implements Command {
     this.id = `cmd.window.create.${window.id}`;
   }
 
-  execute(doc: AxonDocument): void {
-    if (doc.windows.some((w) => w.id === this.window.id)) return;
-    if (!doc.walls.some((w) => w.id === this.window.wallId)) return;
+  execute(doc: AxonDocument): boolean {
+    if (doc.windows.some((w) => w.id === this.window.id)) return false;
+    if (!doc.walls.some((w) => w.id === this.window.wallId)) return false;
     doc.windows.push({ ...this.window });
     doc.meta.updatedAt = new Date().toISOString();
+    return true;
   }
 
   undo(doc: AxonDocument): void {
@@ -41,12 +42,13 @@ export class DeleteWindowCommand implements Command {
     this.id = `cmd.window.delete.${windowId}`;
   }
 
-  execute(doc: AxonDocument): void {
+  execute(doc: AxonDocument): boolean {
     const found = doc.windows.find((w) => w.id === this.windowId);
-    if (!found) return;
+    if (!found) return false;
     this.snapshot = { ...found };
     doc.windows = doc.windows.filter((w) => w.id !== this.windowId);
     doc.meta.updatedAt = new Date().toISOString();
+    return true;
   }
 
   undo(doc: AxonDocument): void {
@@ -68,12 +70,15 @@ export class SetWindowLeafStateCommand implements Command {
     this.id = `cmd.window.leaf.${windowId}.${leafState}`;
   }
 
-  execute(doc: AxonDocument): void {
+  execute(doc: AxonDocument): boolean {
     const w = doc.windows.find((x) => x.id === this.windowId);
-    if (!w) return;
-    this.prev = w.leafState ?? "closed";
+    if (!w) return false;
+    const cur = w.leafState ?? "closed";
+    if (cur === this.leafState) return false;
+    this.prev = cur;
     w.leafState = this.leafState;
     doc.meta.updatedAt = new Date().toISOString();
+    return true;
   }
 
   undo(doc: AxonDocument): void {
@@ -96,12 +101,15 @@ export class SetWindowSwingCommand implements Command {
     this.id = `cmd.window.swing.${windowId}.${swing}`;
   }
 
-  execute(doc: AxonDocument): void {
+  execute(doc: AxonDocument): boolean {
     const w = doc.windows.find((x) => x.id === this.windowId);
-    if (!w) return;
-    this.prev = w.swing ?? "positive";
+    if (!w) return false;
+    const cur = w.swing ?? "positive";
+    if (cur === this.swing) return false;
+    this.prev = cur;
     w.swing = this.swing;
     doc.meta.updatedAt = new Date().toISOString();
+    return true;
   }
 
   undo(doc: AxonDocument): void {
@@ -124,12 +132,14 @@ export class SetWindowHingeCommand implements Command {
     this.id = `cmd.window.hinge.${windowId}.${hinge}`;
   }
 
-  execute(doc: AxonDocument): void {
+  execute(doc: AxonDocument): boolean {
     const w = doc.windows.find((x) => x.id === this.windowId);
-    if (!w) return;
+    if (!w) return false;
+    if (w.hinge === this.hinge) return false;
     this.prev = w.hinge;
     w.hinge = this.hinge;
     doc.meta.updatedAt = new Date().toISOString();
+    return true;
   }
 
   undo(doc: AxonDocument): void {
@@ -158,9 +168,17 @@ export class SetWindowFamilyCommand implements Command {
     this.id = `cmd.window.family.${windowId}.${familyId}`;
   }
 
-  execute(doc: AxonDocument): void {
+  execute(doc: AxonDocument): boolean {
     const w = doc.windows.find((x) => x.id === this.windowId);
-    if (!w) return;
+    if (!w) return false;
+    if (
+      w.familyId === this.familyId &&
+      w.width === this.width &&
+      w.height === this.height &&
+      w.sill === this.sill
+    ) {
+      return false;
+    }
     this.prevFamily = w.familyId;
     this.prevWidth = w.width;
     this.prevHeight = w.height;
@@ -170,6 +188,7 @@ export class SetWindowFamilyCommand implements Command {
     w.height = this.height;
     w.sill = this.sill;
     doc.meta.updatedAt = new Date().toISOString();
+    return true;
   }
 
   undo(doc: AxonDocument): void {

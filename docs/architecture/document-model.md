@@ -80,7 +80,11 @@ Semántica (oráculo conceptual del legado `WallSpec`):
 - Longitud de eje `>= MIN_WALL_LENGTH`.
 - Altura extruye en **+Z** desde `min(p1.z, p2.z)`.
 - Espesor centrado respecto al eje.
-- **Sin openings en MVP.**
+- Huecos post-MVP: puertas y ventanas hospedadas en el muro (no “opening” genérico en v1).
+
+### Door / Window (post-MVP)
+
+Hospedadas en `wallId`. Ver ADR 0010 / 0011. Al borrar el muro se eliminan y el undo las restaura.
 
 ### AxonDocument (en memoria)
 
@@ -89,7 +93,11 @@ Semántica (oráculo conceptual del legado `WallSpec`):
   meta: ProjectMeta,
   storeys: Storey[],
   families: WallFamily[],
+  doorFamilies: DoorFamily[],
+  windowFamilies: WindowFamily[],
   walls: Wall[],
+  doors: Door[],
+  windows: Window[],
   selection?: { wallIds: string[] }  // opcional; puede vivir en capa UI — ver nota
 }
 ```
@@ -117,7 +125,11 @@ Archivo JSON UTF-8, extensión `.axon` (también acepta `.json` con el mismo esq
     { "id": "family.block-150", "label": "Bloque 150", "thickness": 0.15 },
     { "id": "family.block-200", "label": "Bloque 200", "thickness": 0.2 }
   ],
-  "walls": []
+  "doorFamilies": [],
+  "windowFamilies": [],
+  "walls": [],
+  "doors": [],
+  "windows": []
 }
 ```
 
@@ -132,9 +144,14 @@ Archivo JSON UTF-8, extensión `.axon` (también acepta `.json` con el mismo esq
 
 - `format === "axon"` y `formatVersion === 1`
 - Al menos un storey
-- Cada muro referencia `storeyId` y `familyId` existentes
+- Cada muro referencia `storeyId` y `familyId` existentes; eje `>= MIN_WALL_LENGTH`
+- Puertas/ventanas: `wallId` y `familyId` existentes; sin IDs duplicados
 - Geometría cumple mínimos de [coordinate-system.md](coordinate-system.md)
+
+### IDs tras importar
+
+Tras Abrir / Demo / Nuevo, la sesión alinea las secuencias `wall.N` / `door.N` / `window.N` al máximo numérico presente (`syncIdSequencesFromDocument`) para evitar colisiones al crear.
 
 ## Fuera de v1
 
-Historial de undo en disco · IFC · materiales · openings · losas · múltiples documentos enlazados
+Historial de undo en disco · IFC · materiales · losas · múltiples documentos enlazados

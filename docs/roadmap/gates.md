@@ -13,9 +13,13 @@ El agente y el desarrollo humano **se detienen** en cada gate. “Continúa con 
 ## Estado actual
 
 - **G-MVP:** **aprobado** (2026-08-06)
-- **Post-MVP:** puertas (0010) + ventanas (0011) implementadas; **gizmo→cámaras** (0012) en curso
-- **Cola acordada:** gizmo→cámaras → Playwright (calidad)
-- **Bloqueado hasta su turno:** IFC
+## Estado actual
+
+- **G-MVP:** aprobado (2026-08-06)
+- **Post-MVP código:** puertas (0010), ventanas (0011), gizmo→cámaras (0012) en rama
+- **Fase activa: F5-S estabilización** — IDs, historial no-op, parser `.axon`, tests (incluye ventanas). Ver `f5-stabilization.md`
+- **Parked:** paradigmas/workplanes, OCCT (ADR 0013)
+- **Cola tras F5-S + validación humana:** Playwright (calidad)
 - **GitHub:** https://github.com/hfiguereo/axonbim-web
 
 ## Registro de aprobación
@@ -24,9 +28,10 @@ El agente y el desarrollo humano **se detienen** en cada gate. “Continúa con 
 |------|-------|----------|-------|
 | G-F0 | 2026-08-06 | aprobado | Autorización Etapa 0 |
 | G-F1 | 2026-08-06 | aprobado | Autorización Etapa 0 |
-| G-E0 | 2026-08-06 | aprobado | Base UI: cinta, Modificar/Dibujar/Cadena, compositor L/R |
-| G-E1 | 2026-08-06 | aprobado | Primer muro usable; autoriza MVP estricto |
-| G-MVP | 2026-08-06 | aprobado | Validación humana: dibujo claro y útil |
-| Post-MVP puertas | 2026-08-06 | autorizado / entregado | ADR 0010 |
+| G-E0 | 2026-08-06 | aprobado | Base UI |
+| G-E1 | 2026-08-06 | aprobado | Primer muro |
+| G-MVP | 2026-08-06 | aprobado | Dibujo usable |
+| Post-MVP puertas | 2026-08-06 | autorizado | ADR 0010 |
 | Post-MVP ventanas | 2026-08-07 | autorizado | ADR 0011 |
-| Gizmo→cámaras | 2026-08-07 | autorizado | ADR 0012; luego Playwright |
+| Gizmo→cámaras | 2026-08-07 | autorizado | ADR 0012 |
+| **F5-S** | 2026-08-07 | **autorizado** | Congelar features nuevas; estabilizar (A1+C ventanas) |

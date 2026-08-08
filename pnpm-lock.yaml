@@ -78,6 +78,9 @@ importers:
       typescript:
         specifier: ^5.8.3
         version: 5.9.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.7
 
   packages/families:
     devDependencies:
@@ -122,6 +125,9 @@ importers:
       '@axonbim/model':
         specifier: workspace:*
         version: link:../model
+      '@axonbim/shared':
+        specifier: workspace:*
+        version: link:../shared
     devDependencies:
       typescript:
         specifier: ^5.8.3

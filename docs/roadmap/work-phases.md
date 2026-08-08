@@ -55,11 +55,19 @@ Colocar puerta en muro + hueco + marco/hoja/herrajes + planta (arco/grips) + fam
 
 Mismo patrón hosted: hueco + marco con antepecho + vidrio/hoja + planta + grips.
 
-## F7 — Gizmo → cámaras reales (en curso — ADR 0012)
+## F7 — Gizmo → cámaras reales (implementado — ADR 0012)
 
-Presets Top/Front/Right/Iso desde el gizmo 3D.  
-**Después:** Playwright (calidad).
+Presets Top/Front/Right/Iso desde el gizmo 3D.
 
-## F7+ — Calidad / más post-MVP
+## F5-S — Estabilización (activa — 2026-08-07)
 
-Playwright · IFC · etc.
+IDs tras import, historial sin no-ops, parser `.axon`, tests (muros/puertas/**ventanas**).  
+Ver `f5-stabilization.md`. Congela features nuevas hasta gate humano.
+
+## F8 — Playwright (cola post F5-S)
+
+Pruebas visuales / calidad — no feature de modelado.
+
+## Parked
+
+Paradigmas / workplanes · OCCT (ADR 0013) · IFC.

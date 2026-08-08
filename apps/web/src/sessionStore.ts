@@ -20,6 +20,7 @@ import {
   createDoorId,
   createWallId,
   createWindowId,
+  syncIdSequencesFromDocument,
   type Command,
 } from "@axonbim/commands";
 import { doorFamilyById, familyById, windowFamilyById } from "@axonbim/families";
@@ -235,7 +236,11 @@ function applyCommand(
   status: string,
 ): void {
   const { document, history } = get();
-  history.push(cmd, document);
+  const mutated = history.push(cmd, document);
+  if (!mutated) {
+    set({ status: "Sin cambios (operación no aplicada)" });
+    return;
+  }
   set({
     document: touchDoc(document),
     history,
@@ -290,8 +295,10 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   draggingPanel: null,
 
   newProject: () => {
+    const document = createEmptyDocument();
+    syncIdSequencesFromDocument(document);
     set({
-      document: createEmptyDocument(),
+      document,
       history: new HistoryStack(),
       views: defaultViews(),
       activeViewId: "view.plan.level1",
@@ -310,8 +317,10 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   },
 
   openDemo: () => {
+    const document = createDemoDocument();
+    syncIdSequencesFromDocument(document);
     set({
-      document: createDemoDocument(),
+      document,
       history: new HistoryStack(),
       views: defaultViews(),
       activeViewId: "view.plan.level1",
@@ -333,6 +342,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   openFromText: (text, fileName) => {
     try {
       const document = parseDocument(text);
+      syncIdSequencesFromDocument(document);
       set({
         document,
         history: new HistoryStack(),

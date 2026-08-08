@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### F5-S — estabilización (IDs, historial, `.axon`)
+
+- `syncIdSequencesFromDocument` tras Nuevo / Demo / Abrir (evita colisión de IDs)
+- `Command.execute` → `boolean`; historial solo registra mutaciones reales
+- Parser `.axon` valida refs (storey/family/wall), geometría mínima e IDs duplicados
+- Tests REG IDs, DeleteWall+puertas/ventanas undo/redo, no-op, round-trip
+
 ### Post-MVP — puertas (ADR 0010)
 
 - Entidad `Door`, familias 80/90/100; `door.create` / delete / familia / swing / hinge / hoja
