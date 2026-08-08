@@ -1,0 +1,13 @@
+{
+  // The e2e suite lives outside every package tsconfig, so `pnpm -r typecheck`
+  // never saw it: a type error in a spec only surfaced when Playwright ran it.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    // playwright.config.ts reads process.env for CI-only behaviour.
+    "types": ["node"]
+  },
+  "include": ["e2e", "playwright.config.ts"]
+}
