@@ -40,7 +40,7 @@ export function App() {
   const showDropGuides = draggingPanel !== null;
 
   return (
-    <div className="shell">
+    <div className="shell" data-testid="app-shell">
       <AppChrome />
       <Ribbon />
       <div className="shell__workspace">

@@ -7,7 +7,7 @@ Punto de entrada para agentes de IA. Lee esto antes de cualquier cambio material
 1. **Lee las reglas activas** en `.cursor/rules/` (mandatos cortos).
 2. **Lee la documentación de soporte** bajo `docs/` para el dominio que toques. El detalle vive en docs, no en las rules. Política: `docs/product/doc-governance.md`.
 3. **No copies ni traduzcas** el desktop Godot/Python. Portar = comportamiento → prueba → invariante → especificación → implementación nueva. Ver `docs/migration/migration-rules.md`.
-4. **Fase actual: F5-S estabilización** (IDs, historial, `.axon`, tests). Puertas/ventanas/gizmo ya en código; **no** Playwright/IFC/OCCT hasta cerrar F5-S + autorización. Ver `docs/roadmap/f5-stabilization.md`.
+4. **F5-S cerrado** (2026-08-07). **F8 Playwright oleada 1 autorizado** (estrecho, A+B, local) — ver `docs/validation/playwright-f8.md`. No IFC/OCCT/workplanes/CI-e2e sin auth.
 5. **No dupliques controles UI** (cinta vs status vs opciones) salvo petición explícita. Ver `docs/ui/interface-base.md` (anti-redundancia).
 
 ## Índice de lectura
@@ -22,7 +22,7 @@ Punto de entrada para agentes de IA. Lee esto antes de cualquier cambio material
 | Paradigmas edición / workplanes | `docs/architecture/editing-paradigms.md`, `docs/roadmap/workplanes-roadmap.md` (**parked**) |
 | Comandos / historial | `docs/architecture/commands-and-history.md` |
 | Legado desktop | `docs/migration/legacy-inventory.md`, `migration-rules.md` |
-| Validar / auditoría | `docs/validation/acceptance-matrix.md`, `technical-audit-2026-08.md` |
+| Validar / auditoría | `docs/validation/acceptance-matrix.md`, `technical-audit-2026-08.md`, `playwright-f8.md` |
 | UI / layout | `docs/ui/interface-base.md`, `revit-lt-baseline.md`, `axonbim-shell-v0.md` |
 | Fase / gates | `docs/roadmap/work-phases.md`, `gates.md`, **`f5-stabilization.md`** |
 
@@ -48,4 +48,4 @@ pnpm typecheck
 
 ## Paradas obligatorias
 
-Tras F0, F1, Etapa 0, Etapa 1, MVP y **F5-S**: detenerse para evaluación humana. Ver `docs/roadmap/gates.md`.
+Tras F0, F1, Etapa 0, Etapa 1, MVP y F5-S: detenerse para evaluación humana. Ver `docs/roadmap/gates.md`. Playwright y expansiones parked requieren autorización nueva.

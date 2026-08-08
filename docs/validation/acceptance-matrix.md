@@ -27,7 +27,7 @@ Checklist humana. Una fila no está hecha si no se puede ejercer **desde la inte
 | 20 | Exportar `.axon` | hecho | Archivo → Exportar |
 | 21 | Importar `.axon` | hecho | Archivo → Abrir |
 | 22 | Pruebas geométricas muro caja | hecho | Vitest + inglete |
-| 23 | Pruebas visuales mínimas | pendiente | Playwright u equiv. (no bloquea G-MVP) |
+| 23 | Pruebas visuales mínimas | en curso | Playwright F8 o1 — ver `playwright-f8.md` |
 | 24 | Toggle Snap en UI | hecho | barra de estado (Cadena solo en opciones de muro) |
 | 25 | Gizmo orientación 3D | maqueta | 3D animado; texto al hover; cámara real = post-MVP |
 

@@ -173,6 +173,8 @@ export function AppChrome() {
             className={open ? "chrome__brand chrome__brand--open" : "chrome__brand"}
             aria-haspopup="menu"
             aria-expanded={open}
+            aria-label="Menú Archivo"
+            data-testid="file-menu"
             onClick={() => setOpen((v) => !v)}
             title="Menú Archivo"
           >
@@ -232,6 +234,7 @@ export function AppChrome() {
         type="file"
         accept=".axon,.json,application/json"
         hidden
+        data-testid="file-open-input"
         onChange={(e) => {
           void onFile(e.target.files?.[0]);
           e.target.value = "";

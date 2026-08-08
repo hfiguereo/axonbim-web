@@ -9,17 +9,15 @@ El agente y el desarrollo humano **se detienen** en cada gate. “Continúa con 
 | **G-E0** | App abrible | ¿Layout/navegación útiles? | Autorizas Etapa 1 |
 | **G-E1** | Primer muro | ¿Corte vertical usable? | Autorizas MVP estricto |
 | **G-MVP** | MVP estricto | ¿Sensación de dibujo, claridad, utilidad? | Autorizas post-MVP (puertas/etc.) |
+| **F5-S** | Estabilización IDs/historial/`.axon` | ¿Regresiones cerradas y uso manual OK? | Autorizas Playwright u otra cola |
 
-## Estado actual
-
-- **G-MVP:** **aprobado** (2026-08-06)
 ## Estado actual
 
 - **G-MVP:** aprobado (2026-08-06)
-- **Post-MVP código:** puertas (0010), ventanas (0011), gizmo→cámaras (0012) en rama
-- **Fase activa: F5-S estabilización** — IDs, historial no-op, parser `.axon`, tests (incluye ventanas). Ver `f5-stabilization.md`
+- **Post-MVP código:** puertas (0010), ventanas (0011), gizmo→cámaras (0012)
+- **F5-S:** **aprobado** (2026-08-07) — validación técnica + humana; ver `f5-stabilization.md`
+- **F8 Playwright oleada 1:** **autorizado** (2026-08-07) — alcance estrecho, tipos A+B, solo local. Ver `docs/validation/playwright-f8.md`
 - **Parked:** paradigmas/workplanes, OCCT (ADR 0013)
-- **Cola tras F5-S + validación humana:** Playwright (calidad)
 - **GitHub:** https://github.com/hfiguereo/axonbim-web
 
 ## Registro de aprobación
@@ -34,4 +32,6 @@ El agente y el desarrollo humano **se detienen** en cada gate. “Continúa con 
 | Post-MVP puertas | 2026-08-06 | autorizado | ADR 0010 |
 | Post-MVP ventanas | 2026-08-07 | autorizado | ADR 0011 |
 | Gizmo→cámaras | 2026-08-07 | autorizado | ADR 0012 |
-| **F5-S** | 2026-08-07 | **autorizado** | Congelar features nuevas; estabilizar (A1+C ventanas) |
+| F5-S (inicio) | 2026-08-07 | autorizado | Congelar features; estabilizar (A1+C ventanas) |
+| **F5-S (cierre)** | **2026-08-07** | **aprobado** | Tests verdes + pruebas humanas; logs limpios |
+| **F8 Playwright o1** | **2026-08-07** | **autorizado** | Estrecho + A/B; local; sin CI |

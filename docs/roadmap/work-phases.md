@@ -59,14 +59,14 @@ Mismo patrón hosted: hueco + marco con antepecho + vidrio/hoja + planta + grips
 
 Presets Top/Front/Right/Iso desde el gizmo 3D.
 
-## F5-S — Estabilización (activa — 2026-08-07)
+## F5-S — Estabilización (**aprobado** — 2026-08-07)
 
 IDs tras import, historial sin no-ops, parser `.axon`, tests (muros/puertas/**ventanas**).  
-Ver `f5-stabilization.md`. Congela features nuevas hasta gate humano.
+Ver `f5-stabilization.md`. Gate humano cerrado.
 
-## F8 — Playwright (cola post F5-S)
+## F8 — Playwright oleada 1 (**autorizada** — 2026-08-07)
 
-Pruebas visuales / calidad — no feature de modelado.
+Humo A + capturas B (canvas mask). Local. Ver `docs/validation/playwright-f8.md`.
 
 ## Parked
 

@@ -4,7 +4,7 @@ Documento de trabajo consolidado 2026-08-07. Versión adaptada al repo: los hall
 
 ## Conclusión
 
-Arquitectura alineada (documento SoT, comandos, geometría, React, Three). Prioridad: **F5-S** antes de más features de producto.
+Arquitectura alineada (documento SoT, comandos, geometría, React, Three). **F5-S aprobado** (2026-08-07). Siguiente cola: Playwright (con autorización).
 
 ## Hallazgos
 

@@ -11,8 +11,13 @@
     "dev": "pnpm --filter @axonbim/web dev",
     "build": "pnpm -r --if-present build",
     "test": "pnpm -r --if-present test",
+    "test:e2e": "playwright test",
+    "test:e2e:update": "playwright test --update-snapshots",
     "lint": "pnpm -r --if-present lint",
     "typecheck": "pnpm -r --if-present typecheck"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.54.2"
   },
   "pnpm": {
     "onlyBuiltDependencies": ["esbuild"]

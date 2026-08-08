@@ -4,7 +4,7 @@ Software BIM **web, local-first**, orientado a una experiencia de modelado peque
 
 **Autor:** Arq. Hector Nathanael Figuereo  
 **Licencia:** [Propietaria — All Rights Reserved](LICENSE) ([ADR 0007](docs/decisions/0007-proprietary-license.md))  
-**Estado:** F5-S (estabilización) en curso — puertas/ventanas/gizmo en rama; gate humano pendiente  
+**Estado:** F8 Playwright oleada 1 en curso (A+B, local) — F5-S aprobado  
 **Remoto:** https://github.com/hfiguereo/axonbim-web
 
 ## Qué es
@@ -37,6 +37,7 @@ pnpm install
 pnpm dev      # http://localhost:5173
 pnpm build
 pnpm test
+pnpm test:e2e # Playwright F8 (local; ver docs/validation/playwright-f8.md)
 ```
 
 ## Documentación

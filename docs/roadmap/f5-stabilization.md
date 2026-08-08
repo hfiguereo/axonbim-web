@@ -28,7 +28,7 @@ Bloques pequeños; se pueden agrupar en un PR si cada corrección tiene test.
 3. Confirmar Undo muro+hospedados (ya hecho; tests).
 4. `Command.execute` → `boolean` + `HistoryStack.push` condicional.
 5. Parser `.axon` reforzado.
-6. Documentación + **gate humano** ← siguiente parada.
+6. Documentación + gate humano.
 
 ## No hacer en F5-S
 
@@ -38,4 +38,5 @@ OpenCascade · IFC · OPFS/PWA · Family Editor · Push & Pull · Playwright (si
 
 Validación técnica (tests) **y** validación humana (muro + puerta + ventana, undo, abrir/guardar). Ver `docs/roadmap/gates.md`.
 
-**Código F5-S listo para revisión humana.** No continuar a Playwright sin autorización post-gate.
+**Estado: aprobado (2026-08-07).** Validación humana OK; typecheck/tests verdes; consola/Vite sin errores.  
+Siguiente cola pendiente de autorización explícita: **Playwright**.

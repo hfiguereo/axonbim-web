@@ -2,12 +2,19 @@
 
 ## Unreleased
 
-### F5-S — estabilización (IDs, historial, `.axon`)
+### F8 — Playwright oleada 1 (autorizado)
+
+- Humo A: carga, demo, nuevo, export/abrir `.axon`, undo tras borrar muro
+- Capturas B: layout con canvas enmascarado (`pnpm test:e2e`)
+- Ver `docs/validation/playwright-f8.md`
+
+### F5-S — estabilización (IDs, historial, `.axon`) — **aprobado 2026-08-07**
 
 - `syncIdSequencesFromDocument` tras Nuevo / Demo / Abrir (evita colisión de IDs)
 - `Command.execute` → `boolean`; historial solo registra mutaciones reales
 - Parser `.axon` valida refs (storey/family/wall), geometría mínima e IDs duplicados
 - Tests REG IDs, DeleteWall+puertas/ventanas undo/redo, no-op, round-trip
+- Gate humano: pruebas manuales OK + logs limpios
 
 ### Post-MVP — puertas (ADR 0010)
 
