@@ -23,6 +23,7 @@ Punto de entrada para agentes de IA. Lee esto antes de cualquier cambio material
 | Geometría | `docs/architecture/geometry-policy.md`; OCCT parked: ADR 0013 |
 | Paradigmas edición / workplanes | `docs/architecture/editing-paradigms.md`, `docs/roadmap/workplanes-roadmap.md` (**parked**) |
 | Comandos / historial | `docs/architecture/commands-and-history.md` |
+| **Plan maestro (fuente fundacional)** | **`docs/migration/plan-maestro-resumen.md`** → completo en `docs/migration/plan-maestro-axonbim-web.pdf` |
 | Legado desktop | `docs/migration/legacy-inventory.md`, `migration-rules.md` |
 | Validar / auditoría | `docs/validation/acceptance-matrix.md`, `technical-audit-2026-08.md`, `playwright-f8.md`, `navigation-3d-checklist.md` |
 | UI / layout | `docs/ui/interface-base.md`, `reference-shell-baseline.md`, `axonbim-shell-v0.md` |

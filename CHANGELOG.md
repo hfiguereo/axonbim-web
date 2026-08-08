@@ -50,6 +50,17 @@
 - Política: 1 peel crítico / hasta 3 triviales; agente clasifica; Opus en críticos
 - ADR 0016: nota de producto — marcos de recorte cliqueables/editables (requisito, no extra)
 
+### Auditoría del sistema de control: reglas sin comprobación (2026-08-08)
+
+- Hallazgos D1–D8 en `docs/validation/technical-audit-2026-08.md`, con pendientes P1–P8
+  consolidados para no perder el hilo
+- **D1:** el plan maestro (PDF v1.0) y su resumen estaban fuera del índice de `AGENTS.md`
+  desde el primer commit: existían pero ningún agente los leía. Índice corregido
+- **D3:** ningún `tsconfig` incluye `e2e/`; verificado en negativo (un error de tipos en un
+  spec deja `pnpm typecheck` en exit 0)
+- **D2/D4/D5:** sin comprobación de pureza del dominio, sin `build` en CI, y la protección
+  de rama no es posible en plan gratuito con repo privado (403 de GitHub)
+
 ### Guardia contra atajos de prueba (2026-08-08)
 
 - `pnpm check:shortcuts` (`scripts/check-no-test-shortcuts.mjs`) en CI: falla ante

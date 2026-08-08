@@ -13,6 +13,10 @@ Arquitectura alineada (documento SoT, comandos, geometría, React, Three).
 Los cuatro hallazgos de la serie A están **cerrados y verificados en el código**.
 Deuda estructural viva: tamaño de `sessionStore` y `createViewport` (ver B5).
 
+El código está en mejor estado que el **sistema de control** que lo vigila: la serie D
+(2026-08-08) encuentra que varias reglas no tenían nada que las comprobara. Pendientes
+consolidados al final de la serie D.
+
 ## Hallazgos A (auditoría original) — todos cerrados
 
 | ID | Tema | Sev. | Estado | Evidencia en código (2026-08-08) |
@@ -41,6 +45,45 @@ Ninguno era visible con pruebas funcionales: el comportamiento observable era co
 | ID | Tema | Estado |
 |----|------|--------|
 | C1 | Este documento quedó desactualizado tras F5-S y F8: describía defectos ya corregidos como vigentes | **cerrado** hoy. Regla práctica: al cerrar un gate, reverificar los hallazgos contra el código, no solo añadir una línea de estado |
+
+## Hallazgos D — auditoría del sistema de control (2026-08-08)
+
+Pedido del dueño: comprobar si las reglas se **verifican** o solo se **declaran**. Una
+regla que nadie comprueba es un placebo: da la sensación de control sin darlo.
+
+Criterio usado: para cada regla, ¿existe algo que **falle** si se incumple? Los huecos
+marcados «verificado en negativo» se comprobaron incumpliéndolos a propósito.
+
+| ID | Regla que dice… | ¿Se comprueba? | Sev. | Estado |
+|----|-----------------|----------------|------|--------|
+| D1 | `10-agent-behavior` §10: doc permanente nueva → **actualizar el índice de `AGENTS.md`** | **No.** Y ya estaba incumplida: `plan-maestro-axonbim-web.pdf` (plan maestro, v1.0, 649 KB) y su `plan-maestro-resumen.md` no aparecían en el índice, así que ningún agente los leía | **P1** | índice **corregido** hoy; comprobación automática **pendiente** |
+| D2 | `00-architecture` §5: dominio sin React / Three / DOM / almacenamiento | **No.** Hoy el dominio está limpio (verificado a mano en los 7 paquetes), pero nada impide que el próximo agente importe `three` en `packages/geometry` | **P1** | **abierto** |
+| D3 | `pnpm typecheck` cubre el repo | **No.** Ningún `tsconfig` incluye `e2e/`. Verificado en negativo: `const roto: number = "…"` en `e2e/smoke.spec.ts` deja `typecheck` en **exit 0**. Los specs de Playwright solo fallan en ejecución | **P1** | **abierto** |
+| D4 | CI valida lo que se entrega | **Parcial.** `pnpm build` no está en CI: un build de producción roto puede entrar en `main` y solo se detecta a mano (`typecheck` no es build) | **P2** | **abierto** |
+| D5 | `40-git-and-scope`: solo `main`, sin sync destructivo | **No, y no se puede hoy.** El repo es privado en plan gratuito: la API de protección de ramas responde `403 Upgrade to GitHub Pro`. La regla depende **por completo** de la obediencia del agente. Único respaldo real: solo existe `main` en el remoto | **P2** | **abierto por límite de plataforma** |
+| D6 | `plan-maestro-resumen.md` describe el estado del repo | **Contenido obsoleto:** afirmaba «el código empieza solo tras autorización post-gate F1» cuando F1, MVP, F5-S y F8 ya están cerrados | **P2** | **anotado** hoy con nota fechada |
+| D7 | `30-testing-validation` §3: no debilitar pruebas | **Sí**, desde hoy: `pnpm check:shortcuts`, verificado en negativo | — | **cerrado** |
+| D8 | Secretos fuera del repo | **Sí, razonable:** `.gitignore` cubre `.env*`, y no hay `.env`, clave ni credencial rastreada | — | **cerrado** |
+
+Lo que **sí** está sólido y conviene no tocar: `strict: true` con `noUnusedLocals` /
+`noUnusedParameters` / `noFallthroughCasesInSwitch` en `tsconfig.base.json`; `forbidOnly`
+en CI para Playwright; los 9 paquetes con script de test real; ningún enlace relativo roto
+en los 47 documentos; y ningún test con más tests que aserciones.
+
+### Pendientes vivos (no perder el hilo)
+
+Orden sugerido por relación coste//riesgo. Ninguno está autorizado todavía.
+
+| # | Pendiente | Origen | Coste |
+|---|-----------|--------|-------|
+| P1 | Meter `e2e/` en el typecheck | D3 | bajo |
+| P2 | Comprobación automática del índice de `AGENTS.md` (falla si un doc no está indexado) | D1 | bajo |
+| P3 | Comprobación automática de pureza del dominio (imports prohibidos) | D2 | bajo |
+| P4 | `pnpm build` en CI | D4 | bajo |
+| P5 | ESLint real + `pnpm lint` en CI (hoy `lint` no ejecuta nada) | B6 vecino | medio |
+| P6 | Seguir pelando `sessionStore` / `createViewport` (cortes 7d+) | B5 | medio, por cortes |
+| P7 | Unificar umbrales de proximidad de clic con criterio documentado | B2 | bajo, requiere decisión de producto |
+| P8 | Protección de rama en GitHub | D5 | requiere plan Pro o repo público |
 
 ## No introducir en esta fase
 
