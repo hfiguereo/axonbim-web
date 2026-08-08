@@ -2,13 +2,85 @@
 
 ## Autorización
 
-**2026-08-08** — dueño: refactor controlado · cortes 1–6.  
+**2026-08-08** — dueño: refactor controlado · cortes 1–7a.  
 Pruebas manuales adicionales del dueño (tras corte 4): sin problemas reportados.
 
 ## Principio
 
-Microcortes con comportamiento idéntico. Tras cada corte: `pnpm test` + `pnpm test:e2e`.  
+Microcortes con comportamiento idéntico. Tras cada autorización: `pnpm test` + `pnpm test:e2e` **una vez** al cerrar el corte.  
 No reescribir `sessionStore` ni `createViewport` de un golpe. No IFC/OCCT/workplanes.
+
+### Ritmo de peels (2026-08-08, dueño)
+
+| Tipo | Regla |
+|------|--------|
+| **Crítico** | **1 peel** por autorización. Toca SoT/historial, crop ADR 0016, picking/selección, navegación/cámara con contrato de producto, o riesgo alto de regresión visual. |
+| **Trivial** | Hasta **3 peels** agrupados en la misma autorización. Helpers puros ya acotados, tipos/reexports, constantes UI (`defaultViews`, ciclos escala/estilo), clones superficiales sin semántica nueva. |
+
+Si hay duda → tratar como **crítico** (1 peel). No mezclar un crítico con triviales en el mismo corte.
+
+### Quién clasifica (dueño no tiene que adivinar)
+
+**El agente clasifica** cada peel propuesto. El dueño solo confirma el OK.  
+En cada propuesta de corte, el agente entrega una ficha:
+
+```
+Peel: <nombre>
+Clase: crítico | trivial
+Por qué: <1–2 líneas>
+Factores tocados: <lista o “ninguno de la tabla”>
+Ritmo: 1 peel | lote trivial N/3
+Modelo: Opus | Composer
+```
+
+#### Tabla de decisión (sí → **crítico**)
+
+| ¿La función / peel toca…? | Ejemplo en este repo |
+|---------------------------|----------------------|
+| **Documento / SoT** (walls, doors, cameras, `.axon`) | parse, serialize, IDs |
+| **Comandos / historial** (undo, `execute`, `applyCommand`) | `HistoryStack`, mutaciones |
+| **Selección o picking** (qué ID recibe el clic) | `pickWallId`, `worldPerPixel`, grips |
+| **Crop / clip** (ADR 0016) | resolve/drag crop, clipping planes |
+| **Navegación 3D con contrato** (ADR 0014/0015) | órbita, presets gizmo, cámara geométrica |
+| **Coordenadas / tolerancias** | snap, planos, fit que cambie pivote “de verdad” del modelo |
+| **Regresión visual fácil** si el número falla | umbrales de pick, máscaras de planta |
+
+#### Suele ser **trivial** (lote ≤3) si es solo…
+
+| Caso | Ejemplo |
+|------|---------|
+| Mover **tipos** / constantes / reexports | `sessionTypes`, `CameraPreset` type |
+| Helper **puro** con tests, sin I/O ni picking | AABB fit, ecuaciones de plano ya extraídas |
+| UI de **shell** sin mutar documento | docks, ciclos escala/estilo, `defaultViews` |
+| Clone superficial para re-render | `touchDoc` (arrays shallow) |
+| Docs / CHANGELOG / gates del propio corte | — |
+
+**Regla práctica:** si un fallo del peel puede **borrar undo**, **seleccionar mal**, **clipar mal** o **romper SoT** → crítico. Si solo mueve código y un test unitario basta → trivial.
+
+#### Cortes hechos (re-clasificados)
+
+| Corte | Clase | Motivo |
+|-------|-------|--------|
+| 1 resolve crop | **crítico** | ADR 0016 — qué crop clipea |
+| 2 drag crop | **crítico** | mutación live + commit crop |
+| 3 sessionTypes | **trivial** | solo tipos |
+| 4 viewCropClip | **crítico** | clip GPU / máscara planta |
+| 5 cameraPresetPose | **crítico** | ADR 0014 poses gizmo |
+| 6 fitWallsFraming | **trivial\*** | framing de vista; no muta modelo (*borderline; tratado como peel único por seguridad*) |
+| 7a shell session | **trivial×3** | `defaultViews` + ciclos UI + `touchDoc` |
+
+\*A partir de ahora, peels como el 6 pueden ir en **lote trivial** si son helpers puros de framing/UI.
+
+### Modelos (2026-08-08, dueño)
+
+Autorizado **Opus** (`claude-opus-5-thinking-high` en subagentes) para **equilibrar** gasto:
+
+| Trabajo | Modelo preferido |
+|---------|------------------|
+| Corte **crítico**, diseño de peel, ambigüedad / riesgo de regresión | **Opus** (subagente o chat en Opus) |
+| Lote **trivial** (hasta 3), verify mecánico, docs de cierre | Modelo del chat / Composer (más barato) |
+
+El agente padre no puede cambiar solo el modelo del chat: el dueño lo elige en el selector de Cursor. En subagentes, Opus solo si el dueño lo autorizó (esta sección).
 
 ## Corte 1 (**hecho**) — resolución de crop
 
@@ -41,12 +113,20 @@ No reescribir `sessionStore` ni `createViewport` de un golpe. No IFC/OCCT/workpl
 - `fitWallsFraming.test.ts` (4)
 - `createViewport.fitWalls` solo aplica el framing al runtime
 
+## Corte 7a (**hecho** 2026-08-08) — shell session (lote trivial×3)
+
+- `session/defaultViews.ts`
+- `session/displayCycles.ts` — escala / estilo / detalle
+- `session/touchDoc.ts` — clone superficial post-comando
+- `sessionShell.test.ts` (3)
+
 ## Parada
 
-Cortes 1–6 cerrados. Corte 7 **no** sin OK explícito.
+Cortes 1–7a cerrados. Siguiente **no** sin OK explícito.
 
 ## Siguiente (requiere OK)
 
-| # | Idea |
-|---|------|
-| 7 | (proponer) peels de `sessionStore` (p. ej. `defaultViews`/`touchDoc`/ciclos UI) o pick-tolerance del viewer |
+| # | Tipo | Idea |
+|---|------|------|
+| 7b | crítico×1 | viewer: pick-tolerance / `worldPerPixel` (afecta picking) — **Opus** |
+| 7c | crítico×1 | session: peels que toquen `applyCommand` / historial — **Opus** |

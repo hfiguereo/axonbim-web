@@ -81,6 +81,13 @@ import {
   type ViewKind,
   type VisualStyle,
 } from "./session/sessionTypes";
+import { defaultViews } from "./session/defaultViews";
+import {
+  nextDetailLevel,
+  nextGraphicScale,
+  nextVisualStyle,
+} from "./session/displayCycles";
+import { touchDoc } from "./session/touchDoc";
 
 export type {
   DetailLevel,
@@ -276,31 +283,6 @@ type SessionState = {
   cycleVisualStyle: () => void;
   cycleDetailLevel: () => void;
 };
-
-function defaultViews(): ProjectView[] {
-  return [
-    { id: "view.plan.level1", name: "Planta Nivel 1", kind: "plan", open: true },
-    { id: "view.3d.perspective", name: "Perspectiva 3D", kind: "perspective", open: true },
-  ];
-}
-
-const SCALES = ["1:20", "1:50", "1:100", "1:200"] as const;
-const STYLES: VisualStyle[] = ["wireframe", "hiddenLine", "shaded"];
-const DETAILS: DetailLevel[] = ["coarse", "medium", "fine"];
-
-function touchDoc(doc: AxonDocument): AxonDocument {
-  return {
-    ...doc,
-    walls: [...doc.walls],
-    doors: [...doc.doors],
-    windows: [...doc.windows],
-    storeys: [...doc.storeys],
-    families: [...doc.families],
-    doorFamilies: [...doc.doorFamilies],
-    windowFamilies: [...doc.windowFamilies],
-    meta: { ...doc.meta },
-  };
-}
 
 function applyCommand(
   get: () => SessionState,
@@ -1559,16 +1541,12 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   setDraggingPanel: (draggingPanel) => set({ draggingPanel }),
 
   cycleGraphicScale: () => {
-    const cur = get().graphicScale;
-    const i = SCALES.indexOf(cur as (typeof SCALES)[number]);
-    get().setGraphicScale(SCALES[(i + 1) % SCALES.length] ?? SCALES[0]);
+    get().setGraphicScale(nextGraphicScale(get().graphicScale));
   },
   cycleVisualStyle: () => {
-    const i = STYLES.indexOf(get().visualStyle);
-    get().setVisualStyle(STYLES[(i + 1) % STYLES.length] ?? STYLES[0]);
+    get().setVisualStyle(nextVisualStyle(get().visualStyle));
   },
   cycleDetailLevel: () => {
-    const i = DETAILS.indexOf(get().detailLevel);
-    get().setDetailLevel(DETAILS[(i + 1) % DETAILS.length] ?? DETAILS[0]);
+    get().setDetailLevel(nextDetailLevel(get().detailLevel));
   },
 }));
