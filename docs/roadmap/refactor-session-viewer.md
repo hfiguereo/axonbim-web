@@ -2,7 +2,7 @@
 
 ## Autorización
 
-**2026-08-08** — dueño: refactor controlado · cortes 1–5.  
+**2026-08-08** — dueño: refactor controlado · cortes 1–6.  
 Pruebas manuales adicionales del dueño (tras corte 4): sin problemas reportados.
 
 ## Principio
@@ -35,12 +35,18 @@ No reescribir `sessionStore` ni `createViewport` de un golpe. No IFC/OCCT/workpl
 - `cameraPresetPose.test.ts` (3) — top / iso / clamp distancia
 - `createViewport.setCameraPreset` solo aplica la pose al runtime Three.js
 
+## Corte 6 (**hecho** 2026-08-08) — framing fit-to-walls
+
+- `packages/viewer/src/fitWallsFraming.ts`: AABB + poses planta/perspectiva
+- `fitWallsFraming.test.ts` (4)
+- `createViewport.fitWalls` solo aplica el framing al runtime
+
 ## Parada
 
-Cortes 1–5 cerrados. Corte 6 **no** sin OK explícito.
+Cortes 1–6 cerrados. Corte 7 **no** sin OK explícito.
 
 ## Siguiente (requiere OK)
 
 | # | Idea |
 |---|------|
-| 6 | (proponer) peels de `sessionStore` o más helpers del viewer (`fit` AABB, pick tolerance) |
+| 7 | (proponer) peels de `sessionStore` (p. ej. `defaultViews`/`touchDoc`/ciclos UI) o pick-tolerance del viewer |

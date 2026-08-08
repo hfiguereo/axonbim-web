@@ -43,6 +43,11 @@ import {
   type CameraPreset,
 } from "./cameraPresetPose.js";
 import {
+  computeWallsFitBounds,
+  resolvePerspectiveFitFraming,
+  resolvePlanFitFraming,
+} from "./fitWallsFraming.js";
+import {
   applyViewCropClipping,
   clearGroupMeshes,
   createClipPlanePool,
@@ -662,36 +667,28 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
       updateOrtho3dFrustum(10);
     },
     fitWalls(walls) {
-      if (walls.length === 0) {
+      const bounds = computeWallsFitBounds(walls);
+      if (!bounds) {
         this.fitEmpty();
         return;
       }
-      let minX = Infinity;
-      let maxX = -Infinity;
-      let minY = Infinity;
-      let maxY = -Infinity;
-      let maxH = 2.7;
-      for (const w of walls) {
-        minX = Math.min(minX, w.p1.x, w.p2.x);
-        maxX = Math.max(maxX, w.p1.x, w.p2.x);
-        minY = Math.min(minY, w.p1.y, w.p2.y);
-        maxY = Math.max(maxY, w.p1.y, w.p2.y);
-        maxH = Math.max(maxH, w.height);
-      }
-      const cx = (minX + maxX) / 2;
-      const cy = (minY + maxY) / 2;
-      const span = Math.max(maxX - minX, maxY - minY, 2) * 0.7 + 2;
       if (mode === "plan") {
-        ortho.position.set(cx, cy, 40);
-        ortho.lookAt(cx, cy, 0);
-        updateOrthoFrustum(span);
+        const framing = resolvePlanFitFraming(bounds);
+        ortho.position.set(
+          framing.position.x,
+          framing.position.y,
+          framing.position.z,
+        );
+        ortho.lookAt(framing.lookAt.x, framing.lookAt.y, framing.lookAt.z);
+        updateOrthoFrustum(framing.orthoHalfH);
       } else {
-        orbitTarget.set(cx, cy, maxH * 0.35);
+        const framing = resolvePerspectiveFitFraming(bounds);
+        orbitTarget.set(framing.orbit.x, framing.orbit.y, framing.orbit.z);
         useOrtho3d = false;
-        persp.position.set(cx + span, cy - span * 1.2, span * 0.9);
-        persp.up.set(0, 0, 1);
+        persp.position.set(framing.eye.x, framing.eye.y, framing.eye.z);
+        persp.up.set(framing.up.x, framing.up.y, framing.up.z);
         persp.lookAt(orbitTarget);
-        updateOrtho3dFrustum(span);
+        updateOrtho3dFrustum(framing.orthoHalfH);
       }
     },
     setProjection(next: ViewProjection) {

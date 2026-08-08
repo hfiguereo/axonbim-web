@@ -24,7 +24,7 @@ El agente y el desarrollo humano **se detienen** en cada gate. “Continúa con 
 - **Cámaras (ADR 0015):** **aprobado** 2026-08-08 — Vista → Cámara + vista 3D ligada
 - **Crop Region (ADR 0016):** **aprobado** 2026-08-08 — clip por vista; planta vs cámara independientes
 - **Parked:** paradigmas/workplanes, OCCT (ADR 0013)
-- **Refactor session/viewer:** cortes 1–5 **hechos**; corte 6 pausado — `refactor-session-viewer.md`
+- **Refactor session/viewer:** cortes 1–6 **hechos**; corte 7 pausado — `refactor-session-viewer.md`
 - **GitHub:** https://github.com/hfiguereo/axonbim-web
 
 ## Registro de aprobación
@@ -55,3 +55,4 @@ El agente y el desarrollo humano **se detienen** en cada gate. “Continúa con 
 | **Refactor corte 3** | **2026-08-08** | **hecho** | `sessionTypes.ts`; UI importa tipos desde ahí |
 | **Refactor corte 4** | **2026-08-08** | **hecho** | `viewCropClip` + 2 tests; e2e verdes |
 | **Refactor corte 5** | **2026-08-08** | **hecho** | `cameraPresetPose` + 3 tests; e2e verdes; OK manual dueño |
+| **Refactor corte 6** | **2026-08-08** | **hecho** | `fitWallsFraming` + 4 tests; e2e verdes |
