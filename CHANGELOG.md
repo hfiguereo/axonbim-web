@@ -35,11 +35,11 @@
 - Config: no reutilizar Vite ajeno en 5173 (evita timeouts del menú Archivo)
 - Ver `docs/validation/playwright-f8.md`
 
-### F8-CI + oleada 2 — **aprobado 2026-08-08**
+### Refactor controlado session/viewer — corte 1 (2026-08-08)
 
-- GitHub Actions `e2e.yml` (push/PR → `main`); actions en runtime Node 24
-- Oleada 2: puerta / ventana / cámara + undo (`e2e/o2.spec.ts`, hooks `__AXON_E2E__`)
-- Status bar: contadores `doors` / `windows` / `cameras`
+- Autorizado: microcortes; plan en `docs/roadmap/refactor-session-viewer.md`
+- Corte 1: `viewCropResolve.ts` — `resolveActiveViewCrop` / `resolveClippingCrop` + tests Vitest
+
 
 ### F5-S — estabilización (IDs, historial, `.axon`) — **aprobado 2026-08-07**
 
