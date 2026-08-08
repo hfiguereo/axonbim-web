@@ -9,6 +9,31 @@
 
 - Remoto `origin`: https://github.com/hfiguereo/axonbim-web
 - CLI local (si se instaló): `~/.local/bin/gh`
+- Visibilidad: **privado** hasta ejecutar script Fase 0 (plan: **público** + branch protection)
+- Guardia fast-forward: `pnpm check:history` en CI (`scripts/check-main-fast-forward.mjs`)
+
+### Fase 0 — repo público + branch protection (2026-08-08)
+
+El plan «base limpia y desacople real» adopta repo **público** para activar branch
+protection en plan gratuito. Implicación de licencia: ADR 0007 (propietario, no OSS
+automático al hacer público).
+
+**Ejecutar manualmente** (cambio remoto sensible; no desde sandbox del agente):
+
+```bash
+chmod +x scripts/setup-github-protection.sh
+./scripts/setup-github-protection.sh
+```
+
+O paso a paso:
+
+```bash
+gh repo edit hfiguereo/axonbim-web --visibility public --accept-visibility-change-consequences
+# Luego branch protection: checks «Typecheck + unit tests» y «Playwright F8»
+```
+
+Cinturón extra en CI: en cada push a `main`, `check:history` falla si el push no es
+fast-forward (detecta force-push aunque alguien desactive protection un día).
 
 ## Crear y publicar el remoto
 

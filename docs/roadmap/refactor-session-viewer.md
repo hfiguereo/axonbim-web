@@ -149,49 +149,44 @@ Hallazgos anotados (no cambiados — cambiarlos altera comportamiento):
 Antes no había ninguna prueba del contrato de historial a nivel de sesión: el invariante
 F5-S solo estaba cubierto en `@axonbim/commands`, no en el camino que usa la UI.
 
-## Parada
+## Estado: ACTIVO — desacople real (2026-08-08)
 
-Cortes 1–7c cerrados. Siguiente **no** sin OK explícito.
+**R1 resuelto:** abandonar microcortes como vía principal; adoptar **slices Zustand** (session)
+y **módulos compositor** (viewer). Plan: [`pending-work.md`](pending-work.md).
 
-## Estado: PAUSADO (2026-08-08, dueño)
+### Estrategia slices / módulos
 
-Los cortes quedan **pausados**. La auditoría del control (serie D, P1–P5) está **cerrada**.
-Decisión del dueño: no mezclar más refactor con infraestructura hasta resolver **R1**
-(objetivo del refactor) en [`pending-work.md`](pending-work.md).
+| Área | Compositor | Módulos |
+|------|------------|---------|
+| Session | `session/createSessionStore.ts` (~20 líneas) | `projectSlice`, `shellSlice`, `viewportBridgeSlice`, `selectionSlice`, `viewCropSlice`, `sketchToolSlice` |
+| Viewer | `createViewport.ts` (~223 líneas) | `viewportContext`, `viewportSceneGraph`, `viewportCameraController`, `documentSceneSync`, `cropOverlayLayer`, `viewportPicking`, `viewportUserData` |
 
-### Medición al pausar: los cortes compran testabilidad, no descomposición
+Contratos cross-slice: `session/sliceContracts.ts`.
 
-| Métrica | Antes del corte 1 | Tras 7c | Δ |
-|---------|-------------------|---------|---|
-| `apps/web/src/sessionStore.ts` | 1696 líneas | 1541 | **−9 %** |
-| `packages/viewer/src/createViewport.ts` | 1380 líneas | 1316 | **−4,6 %** |
-| Módulos extraídos (producción) | 0 | **774 líneas** en 11 módulos | — |
-| Tests sobre ellos | 0 | **564 líneas** | — |
+### Medición tras desacople (Fases 1–2)
 
-Diez cortes redujeron los monolitos un **7 %** en conjunto. El motivo es que se
-extrajeron **funciones puras** (matemática de crop, poses de cámara, tolerancias), que es
-lo seguro; lo que abulta los dos archivos es estado, manejadores de eventos y ciclo de
-vida de Three. Conclusión honesta: **por esta vía B5 no se cierra.** La testabilidad
-ganada sí es real (el invariante de historial de F5-S ahora tiene prueba en el camino de
-la UI, corte 7c), pero no debe presentarse como «romper el monolito».
+| Métrica | Antes (pausa microcortes) | Tras desacople | Δ |
+|---------|---------------------------|----------------|----|
+| `sessionStore.ts` | 1541 líneas | **~13** (re-export) | compositor |
+| `createViewport.ts` | 1316 líneas | **~223** | **−83 %** |
+| Módulos session (prod.) | parcial | **~2500** en slices | estado + handlers fuera del monolito |
+| Módulos viewer (prod.) | parcial | **~1500** en 7 módulos | sync/camera/pick separados |
 
-Al reanudar hay que elegir entre dos objetivos, no confundirlos:
+**B5 cerrado** en auditoría (session + viewer).
 
-1. **Seguir ganando testabilidad** con cortes triviales de funciones puras (7d y sucesivos).
-2. **Descomponer de verdad**: mover estado y efectos a slices/módulos con contrato. Es
-   trabajo **crítico** por definición y necesita diseño previo, no un corte más.
+Cortes 1–7c permanecen como **histórico** (testabilidad ganada; −7 % monolito).
 
-## Siguiente (requiere OK, pausado)
+## Parada anterior (microcortes)
 
-**Cola y prioridad:** [`pending-work.md`](pending-work.md) · ítem **R1** bloqueante.
+Cortes 1–7c cerrados. Microcortes **pausados** el 2026-08-08 tras medición −7 %.
 
-| # | Tipo | Idea |
-|---|------|------|
-| 7d | trivial×≤3 | viewer: materiales/escena (`clipMats`, grupos, dispose) a fábrica — **Composer** |
-| — | diseño | decidir **R1** (objetivo 1 vs 2) antes de seguir acumulando cortes |
+## Siguiente (Fase 4 — requiere OK)
+
+Cola en [`pending-work.md`](pending-work.md) § Fase 4. No mezclar con desacople.
 
 Resueltos desde la última edición de esta sección:
 
 - Tolerancia del marco de crop: **subida a 16 px** (2026-08-08), ADR 0016 y
-  `packages/viewer/src/pickTolerance.ts`. Ya no está pendiente.
+  `packages/viewer/src/pickTolerance.ts`.
 - Auditoría completa: **hecha** (2026-08-08), serie D + guardias P1–P5.
+- Desacople real Fases 1–2: **hecho** (2026-08-08).

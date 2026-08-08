@@ -11,7 +11,8 @@ aprobado. Se corrige y se anota abajo como hallazgo de proceso (C1).
 Arquitectura alineada (documento SoT, comandos, geometría, React, Three).
 **F5-S aprobado** (2026-08-07). **F8 Playwright o1 + o2 + CI aprobados** (2026-08-08).
 Los cuatro hallazgos de la serie A están **cerrados y verificados en el código**.
-Deuda estructural viva: tamaño de `sessionStore` y `createViewport` (ver B5).
+Deuda estructural B5 (`sessionStore` / `createViewport`): **cerrada** 2026-08-08 tras
+desacople real (Fases 1–2). Pendiente operativo: protección remota A1 (script listo).
 
 El código está en mejor estado que el **sistema de control** que lo vigila: la serie D
 (2026-08-08) encuentra que varias reglas no tenían nada que las comprobara. Pendientes
@@ -33,10 +34,10 @@ Ninguno era visible con pruebas funcionales: el comportamiento observable era co
 | ID | Tema | Estado |
 |----|------|--------|
 | B1 | La fórmula de world-per-pixel estaba duplicada **6 veces** en `createViewport` | **cerrado** — corte 7b, `packages/viewer/src/pickTolerance.ts` |
-| B2 | Umbrales de proximidad de clic no uniformes (entidad 14 px, grip crop 14, marco crop 12, flip 16) sin criterio documentado | **nombrados** en 7b; marco subido a 16 px por decisión del dueño (2026-08-08); el resto sigue sin unificar a propósito |
+| B2 | Umbrales de proximidad de clic documentados (entidad/grip 14 px, marco/flip 16 px) | **cerrado (MVP)** — `pickTolerance.ts`; decisión C1 |
 | B3 | Código muerto en `pickCropGrip` (`const wpp = …; void wpp;`) | **cerrado** — corte 7b |
 | B4 | El invariante de historial de F5-S no tenía prueba en el camino que usa la UI (solo dentro de `@axonbim/commands`) | **cerrado** — corte 7c, `apps/web/src/session/documentMutation.test.ts` |
-| B5 | `sessionStore` (~1540 líneas) y `createViewport` (~1315) siguen siendo monolitos | **abierto, y medido 2026-08-08**: diez cortes los redujeron solo un **7 %** (1696→1541 y 1380→1316). Los cortes extraen funciones puras, no estado, así que **por esta vía B5 no se cierra**. Detalle en [`refactor-session-viewer.md`](../roadmap/refactor-session-viewer.md) |
+| B5 | Monolitos `sessionStore` / `createViewport` | **cerrado** — desacople real 2026-08-08; compositor session ~13 líneas, viewer ~223 líneas; ver [`refactor-session-viewer.md`](../roadmap/refactor-session-viewer.md) |
 | B6 | CI solo ejecutaba Playwright: «typecheck y tests verdes» nunca se verificaba de forma independiente | **cerrado** — `.github/workflows/ci.yml` (2026-08-08) |
 | B7 | `packages/model` (matemática de crop del ADR 0016, SoT) tenía **0 tests** bajo `--passWithNoTests`; `families` y `shared` sin script de test | **cerrado** — 2026-08-08; 60 → 99 tests, 9/9 paquetes cubiertos |
 
@@ -81,7 +82,7 @@ Resumen 2026-08-08:
 |---|-----------|------|--------|
 | P1–P5 | Guardias + lint + build + e2e typecheck | A — Control | **hecho** |
 | **R1** | Elegir objetivo del refactor (testabilidad vs descomposición) | B — Refactor | **bloqueante · espera dueño** |
-| B5 / P6 | Monolitos `sessionStore` / `createViewport` | B — Refactor | **abierto**, subordinado a R1 |
+| B5 / P6 | Monolitos `sessionStore` / `createViewport` | B — Refactor | **cerrado** 2026-08-08 |
 | P7 / C1 | Umbrales de clic unificados | C — Producto | abierto, decisión producto |
 | P8 / A1 | Protección de rama GitHub | A — Proceso | abierto, límite plan gratuito |
 | P9 / C2 | Bundle ~834 kB | C — Producto | abierto, sin autorizar |

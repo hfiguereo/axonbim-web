@@ -24,7 +24,7 @@ El agente y el desarrollo humano **se detienen** en cada gate. “Continúa con 
 - **Cámaras (ADR 0015):** **aprobado** 2026-08-08 — Vista → Cámara + vista 3D ligada
 - **Crop Region (ADR 0016):** **aprobado** 2026-08-08 — clip por vista; planta vs cámara independientes
 - **Parked:** paradigmas/workplanes, OCCT (ADR 0013)
-- **Refactor session/viewer:** cortes 1–7c **hechos**; 7d+ **pausado** — `refactor-session-viewer.md`
+- **Refactor session/viewer:** desacople real Fases 1–2 **hechas** (2026-08-08); ver `refactor-session-viewer.md`
 - **Pendientes (prioridad):** **`pending-work.md`**
 - **GitHub:** https://github.com/hfiguereo/axonbim-web
 
@@ -66,4 +66,8 @@ El agente y el desarrollo humano **se detienen** en cada gate. “Continúa con 
 | **Auditoría del control (serie D)** | **2026-08-08** | **hecho** | D1–D9; el plan maestro estaba fuera del índice desde el primer commit |
 | **Guardias P1–P4** | **2026-08-08** | **hecho** | `e2e` en typecheck, `check:docs`, `check:layers`, `build` en CI; los cuatro verificados en negativo |
 | **P5 lint real** | **2026-08-08** | **hecho** | `eslint .` en CI; react-hooks y promesas verificadas en negativo |
-| **Refactor cortes 7d+** | **2026-08-08** | **pausado** | decisión del dueño: cerrar auditoría primero. Requiere elegir objetivo (testabilidad vs descomposición) |
+| **Refactor cortes 7d+** | **2026-08-08** | **sustituido** | R1 → desacople real; ver Fases 1–2 abajo |
+| **Desacople session (Fase 1)** | **2026-08-08** | **hecho** | slices Zustand; B5 session cerrado |
+| **Desacople viewer (Fase 2)** | **2026-08-08** | **hecho** | módulos compositor; B5 viewer cerrado |
+| **Fase 3 residual** | **2026-08-08** | **hecho** | C1/C2 cerrados MVP; contract tests picking/crop |
+| **Fase 0 protección remota** | **2026-08-08** | **pendiente humano** | `check:history` en CI; ejecutar `setup-github-protection.sh` |

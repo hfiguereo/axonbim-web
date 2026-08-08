@@ -37,6 +37,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Main branch fast-forward only
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: pnpm check:history
+        env:
+          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
+          GITHUB_EVENT_AFTER: ${{ github.event.after }}
+          GITHUB_REF: ${{ github.ref }}
+
       - name: No test shortcuts or type suppressions
         run: pnpm check:shortcuts
 

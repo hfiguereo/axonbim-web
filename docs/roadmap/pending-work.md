@@ -3,158 +3,101 @@
 **Fuente de verdad** para lo que queda por hacer. Si otro documento contradice este,
 **prevalece este** hasta que se actualice explícitamente.
 
-Última revisión: **2026-08-08** (auditoría del control cerrada; cortes pausados).
+Última revisión: **2026-08-08** (plan «base limpia y desacople real» — Fases 0–3 hechas en código).
 
-## Cómo leer esto
+## Cola activa
 
-Hay **tres hilos** que no deben mezclarse. Cada ítem lleva su hilo y su prioridad
-global (1 = más urgente).
+Plan maestro: desacople real de `sessionStore` (slices Zustand) y `createViewport` (módulos).
+Detalle en [`refactor-session-viewer.md`](refactor-session-viewer.md).
 
-| Hilo | Qué es | Estado |
-|------|--------|--------|
-| **A — Control** | Reglas que se comprueban solas (CI, guardias, lint) | **cerrado** (P1–P5 hechos) |
-| **B — Refactor** | Microcortes `sessionStore` / `createViewport` | **pausado** (espera decisión de objetivo) |
-| **C — Producto** | Comportamiento visible, nuevas capacidades, UX | **cola baja** — no tocar sin autorización |
-
-**Auditoría del control:** serie D en [`technical-audit-2026-08.md`](../validation/technical-audit-2026-08.md).
-**Refactor:** plan y medición en [`refactor-session-viewer.md`](refactor-session-viewer.md).
+| Fase | Estado | Gate |
+|------|--------|------|
+| **0** Base operativa | **código hecho** · protección remota **pendiente en GitHub** | OK humano tras `scripts/setup-github-protection.sh` |
+| **1** Session slices | **cerrada** | B5 session cerrado |
+| **2** Viewer módulos | **cerrada** | B5 viewer cerrado |
+| **3** Deuda residual | **cerrada** | base limpia declarada |
+| **4** Desarrollo parked | **cola** | solo tras gate Fase 3 ✓ |
 
 ---
 
 ## Prioridad global (mayor → menor)
 
-Solo aparecen ítems **abiertos** o **bloqueados en ti**. Lo ya hecho (P1–P5, cortes 1–7c,
-F5-S, F8, ADR 0014–0016) está en [`gates.md`](gates.md) y en el CHANGELOG.
+### 1. Proceso — protección remota (Hilo A)
 
-### 1. Decisión bloqueante — objetivo del refactor (Hilo B)
-
-| ID | Qué decidir | Por qué importa | Acción cuando decidas |
-|----|-------------|-----------------|------------------------|
-| **R1** | ¿Seguir cortes **triviales** (más testabilidad, ~7 % menos monolito) o **diseñar descomposición real** (mover estado/efectos)? | Diez cortes ya demostraron que la vía actual **no rompe el monolito** (1696→1541 y 1380→1316). Seguir sin elegir acumula módulos pero no resuelve B5. | Autorizar **7d** (objetivo 1) **o** pedir un **plan de diseño** antes de tocar código (objetivo 2). Ver medición en refactor doc. |
-
-**Estado:** pausado · **espera tu OK** · no es trabajo de auditoría.
+| ID | Pendiente | Estado |
+|----|-----------|--------|
+| **A1** | Repo público + branch protection en `main` | **Script listo:** `scripts/setup-github-protection.sh`. Ejecutar con `gh` autenticado. Guardia complementaria: `pnpm check:history` en CI (push a `main`). |
+| **A2** | Mantener docs al cerrar gates | Práctica continua; reverificar hallazgos contra código. |
+| **A3** | Límite conocido de CI | Contract tests añadidos (Fase 3); e2e sigue siendo red de seguridad. |
 
 ---
 
-### 2. Proceso y riesgo — sin respaldo mecánico completo (Hilo A)
+### 2. Deuda técnica — monolitos (Hilo B)
 
-| ID | Pendiente | Por qué importa | Bloqueo |
-|----|-----------|-----------------|---------|
-| **A1** | Protección de rama en GitHub (`main` no se puede forzar desde fuera) | La regla «solo `main`» depende de la obediencia del agente. Hoy solo existe `main` en el remoto, pero no hay candado de plataforma. | Repo privado en plan gratuito → API responde **403**. Opciones: GitHub Pro, repo público, o aceptar el riesgo con disciplina manual. |
-| **A2** | Mantener docs al cerrar gates | C1 demostró que la auditoría y el plan de refactor **mintieron** sobre el estado real. | **Hábito:** al cerrar un gate, reverificar hallazgos contra el código y actualizar **este documento**. Los guardias `check:docs` y `check:shortcuts` ayudan; no sustituyen la revisión humana. |
-| **A3** | Límite conocido de CI | Ningún guardia detecta un test que pasa sin comprobar lo que dice. | Al autorizar trabajo sensible, pedir **verificación en negativo** (romper a propósito y comprobar que falla). Documentado en technical-audit. |
+| ID | Deuda | Estado |
+|----|-------|--------|
+| **B5 session** | `sessionStore.ts` | **cerrado** — compositor ~13 líneas; slices en `apps/web/src/session/` |
+| **B5 viewer** | `createViewport.ts` | **cerrado** — compositor ~223 líneas; módulos en `packages/viewer/src/viewport*.ts`, `documentSceneSync.ts`, `cropOverlayLayer.ts` |
 
-**Estado:** A1 abierto por plataforma · A2/A3 son práctica continua, no tickets.
-
----
-
-### 3. Deuda técnica medida — monolitos (Hilo B, ligado a R1)
-
-| ID | Deuda | Evidencia | Notas |
-|----|-------|-----------|-------|
-| **B5** | `sessionStore.ts` (~1541 líneas) y `createViewport.ts` (~1316 líneas) | Hallazgo B5; medición 2026-08-08 | **No cerrar** con más cortes de funciones puras sin haber resuelto **R1**. Objetivo 2 requiere diseño, no un «corte 8». |
-
-**Estado:** abierto · subordinado a **R1**.
+Cortes 1–7c: **histórico** (microcortes −7 %; estrategia abandonada como vía principal).
 
 ---
 
-### 4. Decisiones de producto pendientes (Hilo C — prioridad media-baja)
+### 3. Decisiones de producto (Hilo C)
 
-Requieren tu criterio de uso, no solo ingeniería.
-
-| ID | Tema | Contexto | Estado |
+| ID | Tema | Decisión | Estado |
 |----|------|----------|--------|
-| **C1** | Unificar umbrales de proximidad de clic | B2: entidad 14 px, grip crop 14, marco 16, flip 16 — nombrados pero sin criterio único | **Abierto** · marco ya subido a 16 px por tu pedido; el resto sin unificar |
-| **C2** | Bundle de producción ~834 kB | Aviso Vite (>500 kB) al añadir `build` en CI | **Abierto** · ¿optimizar ahora o aceptar en MVP? |
-| **C3** | Marco de crop editable en todas las vistas | ADR 0016: marco seleccionable en planta; cámaras con lógica distinta | **Parcial** · funciona en planta; ampliar requiere gate/ADR |
-
-**Estado:** ninguno autorizado para implementar hoy.
+| **C1** | Umbrales de proximidad de clic | **Documentado** en `pickTolerance.ts`: entidad/grip 14 px, marco/flip 16 px. No unificar sin prueba de regresión. | **cerrado (MVP)** |
+| **C2** | Bundle ~834 kB | **Aceptar en MVP**; revisitar solo si hay queja de carga. | **cerrado (MVP)** |
+| **C3** | Crop editable en más vistas | **Parked** hasta Fase 4 | **parked** |
 
 ---
 
-### 5. Refactor en cola — pausado (Hilo B)
+### 4. Fase 4 — desarrollo y features parked (Hilo C — menor prioridad)
 
-No empezar hasta resolver **R1**.
+**Autorizado** entrar en cola tras gate Fase 3. Cada ítem = gate + ADR + entrada aquí.
 
-| ID | Ítem | Tipo | Modelo sugerido |
-|----|------|------|-----------------|
-| **7d** | Extraer materiales/escena del viewer (`clipMats`, grupos, dispose) | trivial×≤3 | Composer |
-| **7e+** | Sin planificar | — | Depende de R1 |
+| Prioridad | Tema | Doc |
+|-----------|------|-----|
+| 1 | Crop editable en más vistas (C3) | ADR 0016 |
+| 2 | Workplanes / paradigmas de edición | [`workplanes-roadmap.md`](workplanes-roadmap.md) |
+| 3 | OpenCascade / kernel CAD | ADR 0013 |
+| 4 | IFC operativo | ADR 0003 |
+| 5 | IndexedDB / OPFS / PWA | technical-audit §No introducir |
+| 6 | Colaboración multiusuario | — |
+| 7 | Nuevos tipos de elemento, familias, más Playwright, desktop no portado | gate + ADR cada uno |
 
-Detalle de cortes hechos (1–7c): [`refactor-session-viewer.md`](refactor-session-viewer.md).
-
----
-
-### 6. Parked por gate — no tocar sin autorización nueva (Hilo C)
-
-Explícitamente **fuera** del MVP y de F5-S. Autorización = gate + ADR, no «continúa».
-
-| Tema | Doc | Motivo del parking |
-|------|-----|-------------------|
-| Workplanes / paradigmas de edición | [`workplanes-roadmap.md`](workplanes-roadmap.md), [`editing-paradigms.md`](../architecture/editing-paradigms.md) | Gate no abierto |
-| OpenCascade / kernel CAD | ADR 0013 | Parked; geometría MVP sin OCCT |
-| IFC operativo | ADR 0003 | Adaptador futuro, no MVP |
-| IndexedDB / OPFS / PWA | technical-audit §No introducir | Fuera de fase |
-| Colaboración multiusuario | — | Fuera de fase |
-| Migrar todo a UUID | — | Fuera de fase |
-
----
-
-### 7. Continuación de desarrollo y nuevas features (Hilo C — **menor prioridad**)
-
-**No empezar** mientras **R1** (refactor) o ítems de producto **C1–C3** sigan sin decidir,
-salvo que autorices explícitamente saltar la cola.
-
-Ejemplos de lo que **no** está en cola activa:
-
-- Nuevos tipos de elemento (losas, columnas, techos…)
-- Editor general de familias
-- Import/export más allá de `.axon`
-- Expansión Playwright más allá de F8 o1+o2
-- Mejoras cosméticas de shell no pedidas
-- Cualquier feature del desktop no portada con ficha + ADR
-
-Cuando quieras abrir una feature nueva: **gate + ADR + entrada nueva en este documento**
-con prioridad explícita (no sustituye silenciosamente lo de arriba).
+**No empezar** ninguno sin autorización explícita en chat.
 
 ---
 
 ## Qué está cerrado (referencia rápida)
 
-Para no reabrir hilos terminados:
-
 | Área | Cierre | Dónde |
 |------|--------|-------|
-| F5-S estabilización | 2026-08-07 | `f5-stabilization.md`, gates |
-| F8 Playwright o1 + CI + o2 | 2026-08-08 | `playwright-f8.md`, gates |
-| ADR 0014–0016 (gizmo, cámaras, crop) | 2026-08-08 | ADR, gates |
-| Auditoría control P1–P5 | 2026-08-08 | `technical-audit-2026-08.md` serie D |
-| CI siete pasos | 2026-08-08 | `github.md` |
-| Cortes refactor 1–7c | 2026-08-08 | `refactor-session-viewer.md` |
+| F5-S, F8, ADR 0014–0016 | 2026-08-07/08 | gates, playwright-f8 |
+| Auditoría control P1–P5 | 2026-08-08 | technical-audit serie D |
+| CI siete pasos + `check:history` | 2026-08-08 | github.md |
+| Desacople session (Fase 1) | 2026-08-08 | refactor-session-viewer.md |
+| Desacople viewer (Fase 2) | 2026-08-08 | refactor-session-viewer.md |
+| Contract tests picking/crop (Fase 3) | 2026-08-08 | viewportUserData.test.ts |
+| R1 decisión refactor | 2026-08-08 | desacople real (no microcortes) |
 
 ---
 
-## CI vigente (recordatorio)
+## CI vigente
 
-Cada push a `main` ejecuta, en orden:
+Cada push a `main`:
 
-1. `pnpm check:shortcuts`
-2. `pnpm check:docs`
-3. `pnpm check:layers`
-4. `pnpm typecheck` (incluye `e2e/`)
-5. `pnpm lint`
-6. `pnpm test`
-7. `pnpm build`
+1. `pnpm check:history` (solo push a main)
+2. `pnpm check:shortcuts` → `check:docs` → `check:layers`
+3. `pnpm typecheck` → `lint` → `test` → `build`
 
-Más workflow aparte: `pnpm test:e2e` (Playwright).
+Workflow aparte: `pnpm test:e2e` (Playwright F8).
 
 ---
 
-## Próximo paso recomendado (una sola cosa)
+## Próximo paso recomendado
 
-**Resolver R1:** decir si al reanudar el refactor quieres **7d** (más testabilidad) o un
-**diseño de descomposición** antes de otro corte. Todo lo demás espera detrás de eso o
-pertenece a la cola baja de producto.
-
-Cuando tomes una decisión, actualiza este documento (o pide al agente que lo haga en la
-misma tarea) para no perder trazabilidad.
+1. Ejecutar `scripts/setup-github-protection.sh` (repo público + branch protection).
+2. Elegir el primer ítem de **Fase 4** con gate explícito.
