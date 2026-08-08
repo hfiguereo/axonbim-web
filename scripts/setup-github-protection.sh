@@ -10,16 +10,25 @@ echo "==> Visibilidad pública (ADR 0007: propietario, no OSS automático)"
 gh repo edit "$REPO" --visibility public --accept-visibility-change-consequences
 
 echo "==> Branch protection en $BRANCH (checks: ci + e2e)"
+# gh api -f envía todo como string; la API exige JSON con boolean/null reales.
 gh api \
   -X PUT \
   "repos/$REPO/branches/$BRANCH/protection" \
-  -f required_status_checks.strict=true \
-  -f required_status_checks.contexts[]='Typecheck + unit tests' \
-  -f required_status_checks.contexts[]='Playwright F8' \
-  -f enforce_admins=true \
-  -f required_pull_request_reviews=null \
-  -f restrictions=null \
-  -f allow_force_pushes=false \
-  -f allow_deletions=false
+  --input - <<EOF
+{
+  "required_status_checks": {
+    "strict": true,
+    "contexts": [
+      "Typecheck + unit tests",
+      "Playwright F8"
+    ]
+  },
+  "enforce_admins": true,
+  "required_pull_request_reviews": null,
+  "restrictions": null,
+  "allow_force_pushes": false,
+  "allow_deletions": false
+}
+EOF
 
 echo "==> Hecho. Verifica en GitHub → Settings → Branches."
