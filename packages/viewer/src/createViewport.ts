@@ -48,6 +48,21 @@ import {
   resolvePlanFitFraming,
 } from "./fitWallsFraming.js";
 import {
+  CAMERA_PICK_RADIUS_PX,
+  CROP_FRAME_PROXIMITY_PX,
+  CROP_GRIP_PROXIMITY_PX,
+  CROP_GRIP_RADIUS_PX,
+  ENTITY_PROXIMITY_PX,
+  FLIP_CONTROL_PROXIMITY_PX,
+  FLIP_CONTROL_RADIUS_PX,
+  MIN_CAMERA_PICK_RADIUS,
+  MIN_CROP_GRIP_RADIUS,
+  orthoWorldPerPixel,
+  perspectiveWorldPerPixel,
+  pickLineThreshold,
+  screenScaledRadius,
+} from "./pickTolerance.js";
+import {
   applyViewCropClipping,
   clearGroupMeshes,
   createClipPlanePool,
@@ -447,21 +462,23 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
   /** World units ≈ one screen pixel at the orbit pivot (for pick tolerance). */
   const worldPerPixelAtPivot = (): number => {
     const cam = activeCamera();
-    const h = Math.max(height, 1);
     if (cam instanceof OrthographicCamera) {
-      const half = mode === "plan" ? orthoHalfH : ortho3dHalfH;
-      return (half * 2) / h;
+      return orthoWorldPerPixel(mode === "plan" ? orthoHalfH : ortho3dHalfH, height);
     }
-    const dist = Math.max(0.5, cam.position.distanceTo(orbitTarget));
-    const vFov = ((cam as PerspectiveCamera).fov * Math.PI) / 180;
-    return (2 * dist * Math.tan(vFov / 2)) / h;
+    return perspectiveWorldPerPixel(
+      cam.position.distanceTo(orbitTarget),
+      (cam as PerspectiveCamera).fov,
+      height,
+    );
   };
 
+  /** World units ≈ one screen pixel in plan (grip sizing while syncing). */
+  const planWorldPerPixel = () => orthoWorldPerPixel(orthoHalfH, height);
+
   const applyPickThreshold = () => {
-    const wpp = worldPerPixelAtPivot();
-    const px = 10;
-    raycaster.params.Line = { threshold: Math.max(0.08, wpp * px) };
-    raycaster.params.Points = { threshold: Math.max(0.08, wpp * px) };
+    const threshold = pickLineThreshold(worldPerPixelAtPivot());
+    raycaster.params.Line = { threshold };
+    raycaster.params.Points = { threshold };
   };
 
   const syncSceneForMode = () => {
@@ -554,7 +571,7 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
     lastY = e.clientY;
 
     if (mode === "plan") {
-      const scale = (orthoHalfH * 2) / Math.max(height, 1);
+      const scale = planWorldPerPixel();
       ortho.position.x -= dx * scale;
       ortho.position.y += dy * scale;
       ortho.lookAt(ortho.position.x, ortho.position.y, 0);
@@ -610,7 +627,7 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
       }
     }
     // Screen-space proximity when zoomed out
-    const maxPx = 14;
+    const maxPx = ENTITY_PROXIMITY_PX;
     let bestId: string | null = null;
     let bestD = maxPx;
     const seen = new Set<string>();
@@ -824,7 +841,11 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
         for (const c of viewCropCorners(crop, frameZ + 0.05)) {
           const grip = new Mesh(flipSphereGeom, cropGripMat);
           grip.position.set(c.x, c.y, c.z);
-          const minR = Math.max(0.12, ((orthoHalfH * 2) / Math.max(height, 1)) * 10);
+          const minR = screenScaledRadius(
+            planWorldPerPixel(),
+            CROP_GRIP_RADIUS_PX,
+            MIN_CROP_GRIP_RADIUS,
+          );
           grip.scale.setScalar(minR);
           grip.userData.cropGrip = true;
           grip.userData.corner = c.corner;
@@ -888,9 +909,10 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
                 ctrl.kind === "swing" ? flipSwingMat : flipHingeMat,
               );
               grip.position.set(ctrl.x, ctrl.y, ctrl.z);
-              const minR = Math.max(
+              const minR = screenScaledRadius(
+                planWorldPerPixel(),
+                FLIP_CONTROL_RADIUS_PX,
                 ctrl.hitRadius,
-                ((orthoHalfH * 2) / Math.max(height, 1)) * 12,
               );
               grip.scale.setScalar(minR);
               grip.userData.flipControl = true;
@@ -935,9 +957,10 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
                 ctrl.kind === "swing" ? flipSwingMat : flipHingeMat,
               );
               grip.position.set(ctrl.x, ctrl.y, ctrl.z);
-              const minR = Math.max(
+              const minR = screenScaledRadius(
+                planWorldPerPixel(),
+                FLIP_CONTROL_RADIUS_PX,
                 ctrl.hitRadius,
-                ((orthoHalfH * 2) / Math.max(height, 1)) * 12,
               );
               grip.scale.setScalar(minR);
               grip.userData.flipControl = true;
@@ -981,7 +1004,11 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
           selected ? cameraPickSelectedMat : cameraPickMat,
         );
         pick.position.set(symbol.pick.x, symbol.pick.y, symbol.pick.z);
-        const r = Math.max(0.25, ((orthoHalfH * 2) / Math.max(height, 1)) * 14);
+        const r = screenScaledRadius(
+          planWorldPerPixel(),
+          CAMERA_PICK_RADIUS_PX,
+          MIN_CAMERA_PICK_RADIUS,
+        );
         pick.scale.setScalar(r);
         pick.userData.cameraId = cam.id;
         camerasGroup.add(pick);
@@ -1095,7 +1122,7 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
         hits[0]?.object;
       if (!obj?.userData?.flipControl) {
         // Proximity fallback for tiny grips when zoomed out
-        const maxPx = 16;
+        const maxPx = FLIP_CONTROL_PROXIMITY_PX;
         let bestD = maxPx;
         let best: (typeof flipControlsGroup.children)[number] | undefined;
         for (const child of flipControlsGroup.children) {
@@ -1141,8 +1168,7 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
         return { corner, cameraId };
       }
       // Proximity fallback
-      const wpp = worldPerPixelAtPivot();
-      const maxPx = 14;
+      const maxPx = CROP_GRIP_PROXIMITY_PX;
       let best: CropGripPick | null = null;
       let bestD = maxPx;
       for (const child of cropGroup.children) {
@@ -1163,7 +1189,6 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
           };
         }
       }
-      void wpp;
       return best;
     },
     pickCropFrame(clientX, clientY) {
@@ -1179,7 +1204,7 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
         return { cameraId: obj.userData.cameraId };
       }
       // Screen-proximity to frame corners/edges (thin lines)
-      const maxPx = 12;
+      const maxPx = CROP_FRAME_PROXIMITY_PX;
       let bestId: string | null = null;
       let bestD = maxPx;
       for (const child of cropGroup.children) {

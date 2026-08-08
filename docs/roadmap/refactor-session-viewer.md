@@ -2,7 +2,7 @@
 
 ## Autorización
 
-**2026-08-08** — dueño: refactor controlado · cortes 1–7a.  
+**2026-08-08** — dueño: refactor controlado · cortes 1–7b.  
 Pruebas manuales adicionales del dueño (tras corte 4): sin problemas reportados.
 
 ## Principio
@@ -68,6 +68,7 @@ Modelo: Opus | Composer
 | 5 cameraPresetPose | **crítico** | ADR 0014 poses gizmo |
 | 6 fitWallsFraming | **trivial\*** | framing de vista; no muta modelo (*borderline; tratado como peel único por seguridad*) |
 | 7a shell session | **trivial×3** | `defaultViews` + ciclos UI + `touchDoc` |
+| 7b pickTolerance | **crítico** | define qué entidad recibe el clic |
 
 \*A partir de ahora, peels como el 6 pueden ir en **lote trivial** si son helpers puros de framing/UI.
 
@@ -120,13 +121,30 @@ El agente padre no puede cambiar solo el modelo del chat: el dueño lo elige en 
 - `session/touchDoc.ts` — clone superficial post-comando
 - `sessionShell.test.ts` (3)
 
+## Corte 7b (**hecho** 2026-08-08) — tolerancia de picking (crítico×1)
+
+- `packages/viewer/src/pickTolerance.ts`: `orthoWorldPerPixel`, `perspectiveWorldPerPixel`,
+  `pickLineThreshold`, `screenScaledRadius` + constantes en píxeles del contrato de selección
+- `pickTolerance.test.ts` (6) — escalado por zoom, suelos, clamp de distancia de pivote
+- `createViewport` deja de repetir `(orthoHalfH * 2) / max(height, 1)` (estaban **6** copias)
+
+**Equivalencia verificada** fórmula por fórmula antes de cerrar (ortho, perspectiva,
+umbral de raycaster, 3 radios de grip, escala de paneo): sin cambio numérico.
+
+Hallazgos anotados (no cambiados — cambiarlos altera comportamiento):
+
+- Los umbrales de proximidad **no son uniformes**: entidad 14 px, grip crop 14, marco crop 12,
+  flip control 16. Ahora están nombrados en un solo archivo; unificarlos sería decisión de producto.
+- Se eliminó código muerto en `pickCropGrip` (`const wpp = …; void wpp;`), sin efecto en runtime.
+
 ## Parada
 
-Cortes 1–7a cerrados. Siguiente **no** sin OK explícito.
+Cortes 1–7b cerrados. Siguiente **no** sin OK explícito.
 
 ## Siguiente (requiere OK)
 
 | # | Tipo | Idea |
 |---|------|------|
-| 7b | crítico×1 | viewer: pick-tolerance / `worldPerPixel` (afecta picking) — **Opus** |
-| 7c | crítico×1 | session: peels que toquen `applyCommand` / historial — **Opus** |
+| 7c | crítico×1 | session: `applyCommand` / historial → módulo con tests — **Opus** |
+| 7d | trivial×≤3 | viewer: materiales/escena (`clipMats`, grupos, dispose) a fábrica — **Composer** |
+| — | producto | ¿unificar umbrales de proximidad (14/14/12/16)? requiere decisión, no refactor |
