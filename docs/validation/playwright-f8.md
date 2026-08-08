@@ -60,5 +60,7 @@ pnpm test:e2e:update                    # solo regenerar capturas B (o1)
 | # | Criterio | OK |
 |---|----------|----|
 | 1 | `pnpm test:e2e` verde local (o1+o2) | x (2026-08-08) |
-| 2 | Workflow CI verde en `main` (o PR) | (tras push) |
-| 3 | Alcance o2 aceptado (hooks, no canvas) | autorizado |
+| 2 | Workflow CI verde en `main` (o PR) | x (2026-08-08, sin aviso Node 20) |
+| 3 | Alcance o2 aceptado (hooks, no canvas) | x |
+
+**Cerrado 2026-08-08** — F8-CI + oleada 2 aprobados.
