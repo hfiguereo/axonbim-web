@@ -43,6 +43,9 @@ jobs:
       - name: Documentation reachable from the AGENTS.md index
         run: pnpm check:docs
 
+      - name: Domain and viewer layer purity
+        run: pnpm check:layers
+
       - name: Typecheck
         run: pnpm typecheck
 
@@ -50,3 +53,7 @@ jobs:
         run: pnpm test
         env:
           CI: true
+
+      # Typecheck is not a build: bundling can fail on its own.
+      - name: Production build
+        run: pnpm build

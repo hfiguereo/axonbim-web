@@ -13,6 +13,7 @@
     "test": "pnpm -r --if-present test",
     "check:shortcuts": "node scripts/check-no-test-shortcuts.mjs",
     "check:docs": "node scripts/check-docs-indexed.mjs",
+    "check:layers": "node scripts/check-layer-purity.mjs",
     "test:e2e": "playwright test",
     "test:e2e:update": "playwright test --update-snapshots",
     "lint": "pnpm -r --if-present lint",
