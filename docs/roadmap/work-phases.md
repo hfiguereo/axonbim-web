@@ -72,9 +72,10 @@ Colocar cámara en planta; vista 3D ligada; props geométricas; navegador.
 IDs tras import, historial sin no-ops, parser `.axon`, tests (muros/puertas/**ventanas**).  
 Ver `f5-stabilization.md`. Gate humano cerrado.
 
-## F8 — Playwright oleada 1 (**autorizada** — 2026-08-07)
+## F8 — Playwright oleada 1 (**aprobado** — 2026-08-08)
 
-Humo A + capturas B (canvas mask). Local. Ver `docs/validation/playwright-f8.md`.
+Humo A + capturas B (canvas mask). Local. Ver `docs/validation/playwright-f8.md`.  
+Siguiente cola (requiere auth): F8-CI · F8 oleada 2.
 
 ## Parked
 

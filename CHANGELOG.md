@@ -28,10 +28,11 @@
 - Órbita también con clic medio/derecho; pivot **Modelo | Selección** en la barra de iconos
 - Picking con tolerancia al zoom (líneas/grips + proximidad en pantalla)
 
-### F8 — Playwright oleada 1 (autorizado)
+### F8 — Playwright oleada 1 — **aprobado 2026-08-08**
 
 - Humo A: carga, demo, nuevo, export/abrir `.axon`, undo tras borrar muro
 - Capturas B: layout con canvas enmascarado (`pnpm test:e2e`)
+- Config: no reutilizar Vite ajeno en 5173 (evita timeouts del menú Archivo)
 - Ver `docs/validation/playwright-f8.md`
 
 ### F5-S — estabilización (IDs, historial, `.axon`) — **aprobado 2026-08-07**
