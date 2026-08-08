@@ -1,49 +1,64 @@
-# F8 — Playwright oleada 1 (**aprobado** 2026-08-08)
+# F8 — Playwright
 
-## Autorización / cierre
+## Oleada 1 — **aprobado** 2026-08-08
 
 | Punto | Decisión |
 |-------|----------|
-| 1 Alcance | **Estrecho** (humo; no dibujo canvas / grips / gizmo) |
-| 2 Tipo | **A + B** — comportamiento y capturas UI |
-| 3 Dónde | **Solo local** (`pnpm test:e2e`) — CI no incluido aún |
-| 4 Fuera | IFC · OCCT · workplanes · PWA · refactor `sessionStore` |
-| **Cierre humano** | **2026-08-08** — checklist 1–5 OK (`pnpm test:e2e` verde + validación en app) |
+| Alcance | Estrecho (humo; no dibujo canvas / grips / gizmo) |
+| Tipo | A + B — comportamiento y capturas UI |
+| Dónde | Local (`pnpm test:e2e`) |
+| Cierre humano | Checklist 1–5 OK |
 
-## Qué cubre
+**A:** carga, Abrir demo, Nuevo, exportar/reabrir `.axon`, Deshacer tras borrar muro.  
+**B:** screenshots full-page con canvas enmascarado (`e2e/*-snapshots/`).
 
-**A (funcional):** carga, Abrir demo, Nuevo, exportar/reabrir `.axon`, Deshacer tras borrar muro (hook `__AXON_E2E__` no-prod).
+## Oleada 2 — **autorizada** 2026-08-08
 
-**B (visual):** screenshots full-page con **canvas enmascarado** (no comparamos píxeles WebGL). Baselines en `e2e/*-snapshots/`.
+| Punto | Decisión |
+|-------|----------|
+| Alcance | Puerta + ventana + cámara vía hooks `__AXON_E2E__` (sin gestos frágiles en canvas) |
+| Tipo | A (funcional) — sin capturas nuevas en o2 |
+| Fuera | Gizmo WebGL · crop grips · CI-only flakes de píxeles · IFC/OCCT/workplanes |
+
+**A o2:** demo → colocar puerta / ventana / cámara → contadores en status → Deshacer.
+
+## F8-CI — **autorizado** 2026-08-08
+
+GitHub Actions en `push`/`pull_request` a `main`: `pnpm test:e2e` (oleadas 1+2).  
+Workflow: `.github/workflows/e2e.yml`.
 
 ## Comandos
 
 ```bash
-pnpm exec playwright install chromium   # una vez
-# Si tienes `pnpm dev` en 5173, ciérralo antes (o deja que Playwright arranque el suyo)
-pnpm test:e2e                           # correr
-pnpm test:e2e:update                    # regenerar capturas B
+pnpm exec playwright install chromium   # una vez (local)
+# Cierra `pnpm dev` en 5173 antes, o deja que Playwright arranque el suyo
+pnpm test:e2e
+pnpm test:e2e:update                    # solo regenerar capturas B (o1)
 ```
 
-Si falla con timeout en el menú Archivo: suele ser un Vite viejo en el puerto 5173. Cierra ese `dev` y vuelve a correr.
-## Hooks UI
+## Hooks UI / E2E
 
-`data-testid`: `app-shell`, `file-menu`, `file-open-input`, `status-msg`, `status-meta`.
+`data-testid`: `app-shell`, `file-menu`, `file-open-input`, `status-msg`, `status-meta`  
+(`status-meta` incluye `walls` / `doors` / `windows` / `cameras`).
+
+`window.__AXON_E2E__` (solo no-production): muro, puerta, ventana, cámara, undo.
 
 ## Checklist humana — cierre F8 oleada 1
 
-Marca **aprobado** en `gates.md` solo si esto cuadra. No incluye CI ni oleada 2.
-
 | # | Qué ver / hacer | OK |
 |---|-----------------|----|
-| 1 | En el repo: `pnpm test:e2e` termina en verde (sin fallos) | x |
-| 2 | Entiendes el alcance: humo de **Archivo/demo/undo**, **no** dibujo en canvas ni puerta/ventana/gizmo/cámara | x |
-| 3 | Aceptas que las capturas B comparan **chrome UI** (canvas tapado), no la calidad del 3D | x |
-| 4 | Aceptas **solo local** por ahora (no GitHub Actions) | x |
-| 5 | Si algo del shell se ve raro en las PNG de `e2e/*-snapshots/`, lo dices antes de aprobar (o regeneras con `pnpm test:e2e:update` y revisas) | x |
+| 1 | `pnpm test:e2e` verde | x |
+| 2 | Alcance estrecho o1 entendido | x |
+| 3 | Capturas B = chrome, no 3D | x |
+| 4 | Solo local (antes de CI) | x |
+| 5 | Snapshots revisados o aceptados | x |
 
-**Fuera de este cierre:** F8-CI · F8 oleada 2 · IFC/OCCT/workplanes.
+**Cerrado 2026-08-08.**
 
-Cuando apruebes, dilo en el chat (p. ej. «apruebo F8 o1») y se actualiza el registro en `gates.md`.
+## Checklist — F8-CI + oleada 2 (tras implementar)
 
-**Cerrado 2026-08-08** — dueño: checklist 1–5 aprobado.
+| # | Criterio | OK |
+|---|----------|----|
+| 1 | `pnpm test:e2e` verde local (o1+o2) | x (2026-08-08) |
+| 2 | Workflow CI verde en `main` (o PR) | (tras push) |
+| 3 | Alcance o2 aceptado (hooks, no canvas) | autorizado |

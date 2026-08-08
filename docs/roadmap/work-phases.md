@@ -74,8 +74,12 @@ Ver `f5-stabilization.md`. Gate humano cerrado.
 
 ## F8 — Playwright oleada 1 (**aprobado** — 2026-08-08)
 
-Humo A + capturas B (canvas mask). Local. Ver `docs/validation/playwright-f8.md`.  
-Siguiente cola (requiere auth): F8-CI · F8 oleada 2.
+Humo A + capturas B (canvas mask). Local. Ver `docs/validation/playwright-f8.md`.
+
+## F8-CI + oleada 2 (**autorizado** — 2026-08-08)
+
+- CI: `.github/workflows/e2e.yml` en push/PR a `main`
+- Oleada 2: puerta / ventana / cámara vía `__AXON_E2E__` (sin gestos canvas)
 
 ## Parked
 

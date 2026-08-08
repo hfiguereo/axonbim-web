@@ -1,8 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
 /**
- * F8 oleada 1 — humo funcional (A) + capturas UI enmascarando canvas (B).
- * Local only; CI no autorizado aún.
+ * F8 Playwright — oleada 1 (humo A+B) + oleada 2 (puerta/ventana/cámara).
+ * CI autorizado: `.github/workflows/e2e.yml`.
  */
 export default defineConfig({
   testDir: "./e2e",
@@ -33,7 +33,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "pnpm --filter @axonbim/web dev -- --host 127.0.0.1 --port 5173",
+    command:
+      "pnpm --filter @axonbim/web exec vite --host 127.0.0.1 --port 5173 --strictPort",
     url: "http://127.0.0.1:5173",
     // Do not reuse a stray `pnpm dev` — stale servers caused F8 timeouts on file-menu.
     // Opt-in: PW_REUSE=1 pnpm test:e2e

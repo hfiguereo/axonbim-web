@@ -19,6 +19,7 @@ El agente y el desarrollo humano **se detienen** en cada gate. “Continúa con 
 - **Post-MVP código:** puertas (0010), ventanas (0011), gizmo→cámaras (0012)
 - **F5-S:** **aprobado** (2026-08-07) — validación técnica + humana; ver `f5-stabilization.md`
 - **F8 Playwright oleada 1:** **aprobado** (2026-08-08) — humo A+B local; checklist humana OK. Ver `docs/validation/playwright-f8.md`
+- **F8-CI + oleada 2:** **autorizado** (2026-08-08) — Actions en `main` + puerta/ventana/cámara vía hooks E2E
 - **Navegación 3D (ADR 0014):** **aprobado** 2026-08-08 — gizmo tríada ±ejes + ortho + pivot / hold-orbit
 - **Cámaras (ADR 0015):** **aprobado** 2026-08-08 — Vista → Cámara + vista 3D ligada
 - **Crop Region (ADR 0016):** **aprobado** 2026-08-08 — clip por vista; planta vs cámara independientes
@@ -41,6 +42,7 @@ El agente y el desarrollo humano **se detienen** en cada gate. “Continúa con 
 | **F5-S (cierre)** | **2026-08-07** | **aprobado** | Tests verdes + pruebas humanas; logs limpios |
 | **F8 Playwright o1** | **2026-08-07** | **autorizado** | Estrecho + A/B; local; sin CI |
 | **F8 Playwright o1 (cierre)** | **2026-08-08** | **aprobado** | `pnpm test:e2e` verde + checklist humana 1–5 OK |
+| **F8-CI + oleada 2** | **2026-08-08** | **autorizado** | CI en main; o2 puerta/ventana/cámara (hooks) |
 | **ADR 0014 gizmo** | **2026-08-08** | **aprobado** | Tríada ±ejes + hold-orbit |
 | **ADR 0015 cámaras** | **2026-08-08** | **aprobado** | Cámara geométrica + vista ligada |
 | **ADR 0016 crop** | **2026-08-08** | **aprobado** | Clip por vista; marco seleccionable en planta |

@@ -4,6 +4,9 @@ export function StatusBar() {
   const status = useSessionStore((s) => s.status);
   const tool = useSessionStore((s) => s.activeTool);
   const walls = useSessionStore((s) => s.document.walls.length);
+  const doors = useSessionStore((s) => s.document.doors.length);
+  const windows = useSessionStore((s) => s.document.windows.length);
+  const cameras = useSessionStore((s) => s.document.cameras.length);
   const snap = useSessionStore((s) => s.lastSnapKind);
   const snapEnabled = useSessionStore((s) => s.snapEnabled);
   const setSnapEnabled = useSessionStore((s) => s.setSnapEnabled);
@@ -27,7 +30,8 @@ export function StatusBar() {
           </button>
         </label>
         <span className="statusbar__meta" data-testid="status-meta">
-          tool:{tool} · walls:{walls} · snap:{snapEnabled ? snap : "off"}
+          tool:{tool} · walls:{walls} · doors:{doors} · windows:{windows} · cameras:{cameras} ·
+          snap:{snapEnabled ? snap : "off"}
         </span>
       </div>
     </footer>

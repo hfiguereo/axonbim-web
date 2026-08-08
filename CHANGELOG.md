@@ -35,6 +35,12 @@
 - Config: no reutilizar Vite ajeno en 5173 (evita timeouts del menú Archivo)
 - Ver `docs/validation/playwright-f8.md`
 
+### F8-CI + oleada 2 — **autorizado 2026-08-08**
+
+- GitHub Actions `e2e.yml` (push/PR → `main`)
+- Oleada 2: puerta / ventana / cámara + undo (`e2e/o2.spec.ts`, hooks `__AXON_E2E__`)
+- Status bar: contadores `doors` / `windows` / `cameras`
+
 ### F5-S — estabilización (IDs, historial, `.axon`) — **aprobado 2026-08-07**
 
 - `syncIdSequencesFromDocument` tras Nuevo / Demo / Abrir (evita colisión de IDs)
