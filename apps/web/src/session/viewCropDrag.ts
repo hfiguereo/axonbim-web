@@ -55,12 +55,9 @@ export function beginCornerCropDrag(input: {
   selectedCameraId: string | null;
   selectedCropFrameCameraId: string | null;
 }): CropDragStartState | null {
-  let baseline: ViewCrop | null = null;
-  if (input.cameraId) {
-    baseline = input.cameras.find((c) => c.id === input.cameraId)?.crop ?? null;
-  } else {
-    baseline = input.views.find((v) => v.id === input.activeViewId)?.crop ?? null;
-  }
+  const baseline: ViewCrop | null = input.cameraId
+    ? (input.cameras.find((c) => c.id === input.cameraId)?.crop ?? null)
+    : (input.views.find((v) => v.id === input.activeViewId)?.crop ?? null);
   if (!baseline?.enabled) return null;
   return {
     cropDragMeta: {
