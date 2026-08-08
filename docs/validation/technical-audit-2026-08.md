@@ -73,17 +73,20 @@ en los 47 documentos; y ningún test con más tests que aserciones.
 
 ### Pendientes vivos (no perder el hilo)
 
-| # | Pendiente | Origen | Estado |
-|---|-----------|--------|--------|
-| P1 | Meter `e2e/` en el typecheck | D3 | **hecho** 2026-08-08 |
-| P2 | Comprobación automática del índice de `AGENTS.md` | D1 | **hecho** 2026-08-08 |
-| P3 | Comprobación automática de pureza del dominio | D2 | **hecho** 2026-08-08 |
-| P4 | `pnpm build` en CI | D4 | **hecho** 2026-08-08 |
-| P5 | ESLint real + `pnpm lint` en CI | D-vecino | **hecho** 2026-08-08 |
-| P6 | Descomponer `sessionStore` / `createViewport` — **es el hilo de los cortes, no de auditoría** | B5 | **pausado** por decisión del dueño; requiere elegir objetivo (ver refactor doc) |
-| P7 | Unificar umbrales de proximidad de clic con criterio documentado | B2 | **abierto**, requiere decisión de producto |
-| P8 | Protección de rama en GitHub | D5 | **abierto**, requiere plan Pro o repo público |
-| P9 | Bundle de producción en 834 kB (aviso de Vite por >500 kB); nadie ha decidido si importa | observado al añadir P4 | **abierto**, sin autorizar |
+**Lista maestra ordenada por prioridad:** [`pending-work.md`](../roadmap/pending-work.md).
+
+Resumen 2026-08-08:
+
+| # | Pendiente | Hilo | Estado |
+|---|-----------|------|--------|
+| P1–P5 | Guardias + lint + build + e2e typecheck | A — Control | **hecho** |
+| **R1** | Elegir objetivo del refactor (testabilidad vs descomposición) | B — Refactor | **bloqueante · espera dueño** |
+| B5 / P6 | Monolitos `sessionStore` / `createViewport` | B — Refactor | **abierto**, subordinado a R1 |
+| P7 / C1 | Umbrales de clic unificados | C — Producto | abierto, decisión producto |
+| P8 / A1 | Protección de rama GitHub | A — Proceso | abierto, límite plan gratuito |
+| P9 / C2 | Bundle ~834 kB | C — Producto | abierto, sin autorizar |
+| 7d+ | Cortes triviales viewer | B — Refactor | **pausado** hasta R1 |
+| Parked | OCCT, IFC, workplanes, PWA… | C — Producto | gate no abierto |
 
 ### Lo que estos controles **no** atrapan
 
@@ -99,4 +102,5 @@ guardias de hoy (D1, D2, D3, D7) se validaron así.
 OCCT · IFC operativo · IndexedDB/OPFS/PWA · colaboración · migrar todo a UUID.
 
 Plan de corrección original: [`f5-stabilization.md`](../roadmap/f5-stabilization.md).
-Refactor en curso: [`refactor-session-viewer.md`](../roadmap/refactor-session-viewer.md).
+Refactor (pausado): [`refactor-session-viewer.md`](../roadmap/refactor-session-viewer.md).
+**Pendientes ordenados:** [`pending-work.md`](../roadmap/pending-work.md).

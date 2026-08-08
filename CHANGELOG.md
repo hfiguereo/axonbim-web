@@ -50,6 +50,14 @@
 - Política: 1 peel crítico / hasta 3 triviales; agente clasifica; Opus en críticos
 - ADR 0016: nota de producto — marcos de recorte cliqueables/editables (requisito, no extra)
 
+### Cola de pendientes ordenada (2026-08-08)
+
+- Nuevo [`pending-work.md`](pending-work.md): fuente de verdad con **tres hilos** (Control /
+  Refactor / Producto) y prioridad global de mayor a menor; desarrollo y features nuevas
+  al final de la cola
+- `AGENTS.md`, `gates.md`, `technical-audit-2026-08.md` y `refactor-session-viewer.md`
+  apuntan ahí para no duplicar listas divergentes
+
 ### Lint real y cierre de la auditoría (2026-08-08)
 
 - **P5:** `pnpm lint` ejecutaba **nada**; ahora es `eslint .` con `eslint.config.mjs` y está

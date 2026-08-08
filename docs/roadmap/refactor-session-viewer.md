@@ -155,9 +155,9 @@ Cortes 1–7c cerrados. Siguiente **no** sin OK explícito.
 
 ## Estado: PAUSADO (2026-08-08, dueño)
 
-Los cortes quedan **pausados** hasta cerrar la auditoría del sistema de control
-(serie D en [`technical-audit-2026-08.md`](../validation/technical-audit-2026-08.md)).
-Decisión del dueño tras la recapitulación: primero el control, después el código.
+Los cortes quedan **pausados**. La auditoría del control (serie D, P1–P5) está **cerrada**.
+Decisión del dueño: no mezclar más refactor con infraestructura hasta resolver **R1**
+(objetivo del refactor) en [`pending-work.md`](pending-work.md).
 
 ### Medición al pausar: los cortes compran testabilidad, no descomposición
 
@@ -183,10 +183,12 @@ Al reanudar hay que elegir entre dos objetivos, no confundirlos:
 
 ## Siguiente (requiere OK, pausado)
 
+**Cola y prioridad:** [`pending-work.md`](pending-work.md) · ítem **R1** bloqueante.
+
 | # | Tipo | Idea |
 |---|------|------|
 | 7d | trivial×≤3 | viewer: materiales/escena (`clipMats`, grupos, dispose) a fábrica — **Composer** |
-| — | diseño | decidir entre objetivo 1 y 2 de arriba antes de seguir acumulando cortes |
+| — | diseño | decidir **R1** (objetivo 1 vs 2) antes de seguir acumulando cortes |
 
 Resueltos desde la última edición de esta sección:
 

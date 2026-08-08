@@ -24,7 +24,8 @@ El agente y el desarrollo humano **se detienen** en cada gate. “Continúa con 
 - **Cámaras (ADR 0015):** **aprobado** 2026-08-08 — Vista → Cámara + vista 3D ligada
 - **Crop Region (ADR 0016):** **aprobado** 2026-08-08 — clip por vista; planta vs cámara independientes
 - **Parked:** paradigmas/workplanes, OCCT (ADR 0013)
-- **Refactor session/viewer:** cortes 1–7c **hechos**; 7d pausado — `refactor-session-viewer.md`
+- **Refactor session/viewer:** cortes 1–7c **hechos**; 7d+ **pausado** — `refactor-session-viewer.md`
+- **Pendientes (prioridad):** **`pending-work.md`**
 - **GitHub:** https://github.com/hfiguereo/axonbim-web
 
 ## Registro de aprobación

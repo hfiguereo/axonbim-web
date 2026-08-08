@@ -28,6 +28,7 @@ Punto de entrada para agentes de IA. Lee esto antes de cualquier cambio material
 | Validar / auditoría | `docs/validation/acceptance-matrix.md`, `technical-audit-2026-08.md`, `playwright-f8.md`, `navigation-3d-checklist.md` |
 | UI / layout | `docs/ui/interface-base.md`, `reference-shell-baseline.md`, `axonbim-shell-v0.md` |
 | Fase / gates | `docs/roadmap/work-phases.md`, `gates.md`, **`f5-stabilization.md`** |
+| **Pendientes y prioridad (hilo único)** | **`docs/roadmap/pending-work.md`** |
 | Refactor session/viewer | `docs/roadmap/refactor-session-viewer.md` |
 | Remoto GitHub / git vs PR | `docs/roadmap/github.md` |
 | Navegación 3D / gizmo | ADR 0014, `docs/validation/navigation-3d-checklist.md` |
@@ -58,3 +59,5 @@ pnpm typecheck
 ## Paradas obligatorias
 
 Tras F0, F1, Etapa 0, Etapa 1, MVP y F5-S: detenerse para evaluación humana. Ver `docs/roadmap/gates.md`. Playwright y expansiones parked requieren autorización nueva.
+
+**Cola de trabajo:** lo abierto y su prioridad viven en **`docs/roadmap/pending-work.md`** — consultar antes de proponer la «siguiente tarea».
