@@ -22,9 +22,12 @@ Punto de entrada para agentes de IA. Lee esto antes de cualquier cambio material
 | Paradigmas edición / workplanes | `docs/architecture/editing-paradigms.md`, `docs/roadmap/workplanes-roadmap.md` (**parked**) |
 | Comandos / historial | `docs/architecture/commands-and-history.md` |
 | Legado desktop | `docs/migration/legacy-inventory.md`, `migration-rules.md` |
-| Validar / auditoría | `docs/validation/acceptance-matrix.md`, `technical-audit-2026-08.md`, `playwright-f8.md` |
-| UI / layout | `docs/ui/interface-base.md`, `revit-lt-baseline.md`, `axonbim-shell-v0.md` |
+| Validar / auditoría | `docs/validation/acceptance-matrix.md`, `technical-audit-2026-08.md`, `playwright-f8.md`, `navigation-3d-checklist.md` |
+| UI / layout | `docs/ui/interface-base.md`, `reference-shell-baseline.md`, `axonbim-shell-v0.md` |
 | Fase / gates | `docs/roadmap/work-phases.md`, `gates.md`, **`f5-stabilization.md`** |
+| Navegación 3D / gizmo | ADR 0014, `docs/validation/navigation-3d-checklist.md` |
+| Cámaras geométricas | ADR 0015 |
+| Región de recorte de vista | ADR 0016 |
 
 ## Prohibiciones
 

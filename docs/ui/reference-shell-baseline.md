@@ -1,7 +1,7 @@
-# Base de interfaz — panorama Revit LT
+# Base de interfaz — panorama de producto de referencia
 
 **Estado:** aprobado como base de producto (2026-08-06).  
-Los elementos se moverán o simplificarán según avance el desarrollo. No implica paridad de features con Autodesk Revit LT.
+Los elementos se moverán o simplificarán según avance el desarrollo. No implica paridad de features con ningún producto comercial de terceros.
 
 ## Regiones de la ventana
 
@@ -27,7 +27,7 @@ Ver detalle aprobado: [interface-base.md](interface-base.md).
 ## Ribbon (pestañas objetivo a largo plazo)
 
 Architecture · Insert · Annotate · View · Manage · Modify (con Dibujar/Cadena al trazar)  
-Structure / Analyze / Collaborate: fuera del núcleo web inicial (como en LT reducido).
+Structure / Analyze / Collaborate: fuera del núcleo web inicial (como en un LT reducido).
 
 ## View Control Bar (inferior de vista / fijo de app en v0)
 

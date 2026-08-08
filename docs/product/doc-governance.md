@@ -9,6 +9,7 @@ Complementa `AGENTS.md`. Detalle de proceso: no inventar contratos documentados.
 3. Si código, tests, docs o ADR discrepan: señalar la discrepancia antes de cambiar arquitectura.
 4. Documentación permanente nueva/movida/renombrada/eliminada → actualizar el índice en la misma tarea.
 5. Rules cortas; detalle en `docs/`.
+6. En docs y UI visible: no nombrar marcas de terceros; usar **producto(s) de referencia** o **inspirado en** cuando haga falta aludir a hábitos de software BIM comercial.
 
 ## Índice vivo
 

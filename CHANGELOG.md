@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+### Región de recorte de vista (ADR 0016) — **aprobado 2026-08-08**
+
+- Tipo `ViewCrop` (AABB); `Camera.crop` en `.axon`; crop de sesión independiente en planta/perspectiva
+- Planta: crop de sesión con **máscara + clip**; cámaras: cono + marco solo si la cámara está seleccionada
+- Seleccionar el **marco** de cámara → grips y arrastre (mueve cámara+crop juntos)
+- Vista cámara: clip + marco en pantalla; el crop de cámara no clipea la planta
+- Props **Viewport** (sin selección / con cámara); convención «producto(s) de referencia»; baseline → `reference-shell-baseline.md`
+
+### Cámaras geométricas (ADR 0015) — **aprobado 2026-08-08**
+
+- Herramienta **Vista → Cámara**: colocar en planta (ojo → mira)
+- Entidad `Camera` (eye, target, FOV, crop); vista 3D ligada e independiente de Perspectiva 3D
+- Navegador: grupo **Cámaras**; props: nombre, altura ojo, FOV, recorte
+- Persistencia en `.axon` (`cameras[]`)
+
+### Navegación 3D — gizmo tríada, ortho y pivot (ADR 0014) — **aprobado 2026-08-08**
+
+- Gizmo: ejes ±X/±Y/±Z (vistas orto) + hub isométrica; **hold/arrastre** = órbita del modelo
+- Órbita también con clic medio/derecho; pivot **Modelo | Selección** en la barra de iconos
+- Picking con tolerancia al zoom (líneas/grips + proximidad en pantalla)
+
 ### F8 — Playwright oleada 1 (autorizado)
 
 - Humo A: carga, demo, nuevo, export/abrir `.axon`, undo tras borrar muro
@@ -47,7 +68,7 @@
 
 ### Etapa 0 (G-E0)
 
-- Shell Revit LT, compositor, visor, `.axon` v1
+- Shell (inspirado en productos de referencia), compositor, visor, `.axon` v1
 
 ### Licencia / fundación
 

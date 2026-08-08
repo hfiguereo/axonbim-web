@@ -24,7 +24,7 @@ Cerrado en documentación:
 ## F2 — Etapa 0 visible (hecho)
 
 Scaffold: pnpm workspace, Vite, React, Three.js, paquetes de dominio.  
-Entrega: app abrible (`pnpm dev`), maqueta UI Revit LT, compositor de paneles, cinta/Modificar/Cadena, visor, `.axon` stub.
+Entrega: app abrible (`pnpm dev`), maqueta UI (productos de referencia), compositor de paneles, cinta/Modificar/Cadena, visor, `.axon` stub.
 
 **Criterio:** evaluable visualmente → **G-E0 aprobado** (2026-08-06). Base: `docs/ui/interface-base.md`.
 
@@ -58,6 +58,14 @@ Mismo patrón hosted: hueco + marco con antepecho + vidrio/hoja + planta + grips
 ## F7 — Gizmo → cámaras reales (implementado — ADR 0012)
 
 Presets Top/Front/Right/Iso desde el gizmo 3D.
+
+## F7b — Gizmo tríada / ortho / pivot (ADR 0014)
+
+Tríada ±ejes + hub iso; hold-orbit; pivot Modelo|Selección; picking con zoom lejano.
+
+## F9 — Cámaras geométricas (ADR 0015)
+
+Colocar cámara en planta; vista 3D ligada; props geométricas; navegador.
 
 ## F5-S — Estabilización (**aprobado** — 2026-08-07)
 

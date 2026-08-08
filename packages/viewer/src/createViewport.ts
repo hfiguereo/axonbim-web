@@ -6,10 +6,13 @@ import {
   wallMeshWithOpenings,
   windowAssemblyMeshes,
   windowPlanSymbol,
+  cameraPlanSymbol,
+  cameraVisionConeLines,
   type MeshBuffer,
   type PlanFlipControl,
 } from "@axonbim/geometry";
-import type { Door, Wall, Window } from "@axonbim/model";
+import type { Camera, Door, ViewCrop, Wall, Window } from "@axonbim/model";
+import { viewCropCorners, viewCropPlanLines } from "@axonbim/model";
 import {
   AmbientLight,
   AxesHelper,
@@ -23,10 +26,12 @@ import {
   LineBasicMaterial,
   LineSegments,
   Mesh,
+  MeshBasicMaterial,
   MeshLambertMaterial,
   OrthographicCamera,
   PerspectiveCamera,
   Plane,
+  PlaneGeometry,
   Raycaster,
   Scene,
   SphereGeometry,
@@ -42,6 +47,12 @@ export type FlipPick = {
   entityType: "door" | "window";
   entityId: string;
   kind: PlanFlipControl["kind"];
+};
+
+export type CropGripPick = {
+  corner: 0 | 1 | 2 | 3;
+  /** Camera entity id, or null for session ProjectView.crop */
+  cameraId: string | null;
 };
 
 /** Named camera poses for the 3D (perspective) viewport. */
@@ -61,16 +72,38 @@ export type ViewportHandle = {
   fitEmpty: () => void;
   fitWalls: (walls: Wall[]) => void;
   setProjection: (mode: ViewProjection) => void;
-  /** Apply a standard view (perspective mode only). */
+  /**
+   * Named view for the 3D tab. Non-iso → orthographic 3D; iso → perspective.
+   * Orbit remains enabled around the current pivot.
+   */
   setCameraPreset: (preset: CameraPreset) => void;
+  /** Orbit the 3D camera by screen delta (px). No-op in plan. */
+  orbitByDelta: (dx: number, dy: number) => void;
+  /** Pose the 3D perspective camera from a model Camera entity. */
+  applyModelCamera: (cam: {
+    eye: { x: number; y: number; z: number };
+    target: { x: number; y: number; z: number };
+    fov: number;
+  }) => void;
+  /** World-space orbit / look-at pivot for the 3D cameras. */
+  setOrbitPivot: (point: { x: number; y: number; z: number }) => void;
+  getOrbitPivot: () => { x: number; y: number; z: number };
   syncWalls: (
     walls: Wall[],
     doors: Door[],
     windows: Window[],
+    cameras: Camera[],
     selectedWallId: string | null,
     selectedDoorId: string | null,
     selectedWindowId: string | null,
+    selectedCameraId: string | null,
+    /** Session crop for plan/perspective (not camera entity). */
+    sessionCrop?: ViewCrop | null,
+    /** Camera whose crop frame is selected (grips + move) in plan. */
+    selectedCropFrameCameraId?: string | null,
   ) => void;
+  /** Apply AABB clipping in 3D (no-op / disabled in plan). */
+  setClippingCrop: (crop: ViewCrop | null) => void;
   setPreviewSegment: (
     p1: { x: number; y: number; z: number } | null,
     p2: { x: number; y: number; z: number } | null,
@@ -90,8 +123,13 @@ export type ViewportHandle = {
   pickWallId: (clientX: number, clientY: number) => string | null;
   pickDoorId: (clientX: number, clientY: number) => string | null;
   pickWindowId: (clientX: number, clientY: number) => string | null;
+  pickCameraId: (clientX: number, clientY: number) => string | null;
   /** Plan orientation grips (swing / hinge) — reusable for hosted elements. */
   pickFlipControl: (clientX: number, clientY: number) => FlipPick | null;
+  /** Crop region corner grips. */
+  pickCropGrip: (clientX: number, clientY: number) => CropGripPick | null;
+  /** Pick camera crop frame body (not session crop). */
+  pickCropFrame: (clientX: number, clientY: number) => { cameraId: string } | null;
 };
 
 export type CreateViewportOptions = {
@@ -115,6 +153,7 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
 
   const renderer = new WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.localClippingEnabled = true;
 
   const scene = new Scene();
   scene.background = new Color(background);
@@ -126,15 +165,29 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
   const persp = new PerspectiveCamera(45, 1, 0.05, 500);
   persp.up.set(0, 0, 1);
 
+  /** Plan-tab orthographic camera (looking down −Z). */
   const ortho = new OrthographicCamera(-10, 10, 10, -10, 0.05, 500);
   ortho.up.set(0, 1, 0);
   let orthoHalfH = 10;
-  let perspTarget = new Vector3(0, 0, 0);
+
+  /** 3D-tab orthographic camera (Top/Front/… presets). */
+  const ortho3d = new OrthographicCamera(-10, 10, 10, -10, 0.05, 500);
+  ortho3d.up.set(0, 0, 1);
+  let ortho3dHalfH = 10;
+
+  /** Shared orbit / look-at pivot for 3D cameras. */
+  const orbitTarget = new Vector3(0, 0, 0);
+  /** When true (and mode is 3D), render with ortho3d instead of persp. */
+  let useOrtho3d = false;
+
+  const ORBIT_SENS = 0.009;
 
   const applyPerspPose = () => {
+    useOrtho3d = false;
     persp.position.set(8, -10, 7);
-    perspTarget.set(0, 0, 0);
-    persp.lookAt(perspTarget);
+    orbitTarget.set(0, 0, 0);
+    persp.up.set(0, 0, 1);
+    persp.lookAt(orbitTarget);
   };
 
   const applyPlanPose = () => {
@@ -200,6 +253,33 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
   scene.add(doorsGroup);
   const windowsGroup = new Group();
   scene.add(windowsGroup);
+  const camerasGroup = new Group();
+  scene.add(camerasGroup);
+  const cropGroup = new Group();
+  scene.add(cropGroup);
+
+  const cameraLineMat = new LineBasicMaterial({ color: 0xc8a45a });
+  const cameraLineSelectedMat = new LineBasicMaterial({ color: 0xffd080 });
+  const cameraConeSelectedMat = new LineBasicMaterial({ color: 0xe8c888 });
+  const cropLineMat = new LineBasicMaterial({ color: 0x6ec6ff });
+  const cropLineSelectedMat = new LineBasicMaterial({ color: 0xa8e0ff });
+  const cropGripMat = new MeshLambertMaterial({
+    color: 0x6ec6ff,
+    emissive: 0x103040,
+  });
+  const cameraPickGeom = new SphereGeometry(1, 10, 8);
+  const cameraPickMat = new MeshLambertMaterial({
+    color: 0xc8a45a,
+    transparent: true,
+    opacity: 0.01,
+    depthWrite: false,
+  });
+  const cameraPickSelectedMat = new MeshLambertMaterial({
+    color: 0xffd080,
+    transparent: true,
+    opacity: 0.15,
+    depthWrite: false,
+  });
 
   const windowFrameMat = new MeshLambertMaterial({
     color: 0x6a7a88,
@@ -249,6 +329,111 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
   const flipControlsGroup = new Group();
   scene.add(flipControlsGroup);
 
+  const clipMats: Array<MeshLambertMaterial | LineBasicMaterial> = [
+    wallMat,
+    wallSelectedMat,
+    doorMat,
+    doorSelectedMat,
+    doorFrameMat,
+    doorFrameSelectedMat,
+    doorHardwareMat,
+    doorHardwareSelectedMat,
+    windowFrameMat,
+    windowFrameSelectedMat,
+    windowSashMat,
+    windowSashSelectedMat,
+    windowGlassMat,
+    windowGlassSelectedMat,
+    planDoorLineMat,
+    planDoorLineSelectedMat,
+  ];
+  const clipPlanePool = [
+    new Plane(),
+    new Plane(),
+    new Plane(),
+    new Plane(),
+    new Plane(),
+    new Plane(),
+  ];
+  let currentClipCrop: ViewCrop | null = null;
+
+  /** Solid masks outside plan crop AABB (reliable hide in top view). */
+  const cropMaskGroup = new Group();
+  scene.add(cropMaskGroup);
+  const bgColor =
+    scene.background instanceof Color ? scene.background.getHex() : 0x1c2228;
+  const cropMaskMat = new MeshBasicMaterial({
+    color: bgColor,
+    depthTest: true,
+    depthWrite: true,
+    side: DoubleSide,
+  });
+  const PLAN_MASK_BIG = 400;
+  const PLAN_MASK_Z = 12;
+
+  const clearCropMask = () => {
+    while (cropMaskGroup.children.length) {
+      const child = cropMaskGroup.children[0]!;
+      cropMaskGroup.remove(child);
+      if (child instanceof Mesh) child.geometry.dispose();
+    }
+  };
+
+  const rebuildPlanCropMask = (crop: ViewCrop | null) => {
+    clearCropMask();
+    if (!crop?.enabled || mode !== "plan") {
+      cropMaskGroup.visible = false;
+      return;
+    }
+    cropMaskGroup.visible = true;
+    const { minX, minY, maxX, maxY } = crop;
+    const big = PLAN_MASK_BIG;
+    const addBand = (cx: number, cy: number, w: number, d: number) => {
+      if (w < 1e-4 || d < 1e-4) return;
+      const mesh = new Mesh(new PlaneGeometry(w, d), cropMaskMat);
+      mesh.position.set(cx, cy, PLAN_MASK_Z);
+      mesh.raycast = () => {};
+      cropMaskGroup.add(mesh);
+    };
+    // West / East full-height bands
+    addBand((-big + minX) / 2, 0, minX + big, 2 * big);
+    addBand((maxX + big) / 2, 0, big - maxX, 2 * big);
+    // South / North between minX–maxX
+    addBand((minX + maxX) / 2, (-big + minY) / 2, maxX - minX, minY + big);
+    addBand((minX + maxX) / 2, (maxY + big) / 2, maxX - minX, big - maxY);
+  };
+
+  const applyClippingState = () => {
+    const crop = currentClipCrop;
+    if (!crop?.enabled) {
+      renderer.localClippingEnabled = true;
+      for (const mat of clipMats) {
+        mat.clippingPlanes = [];
+        mat.clipIntersection = false;
+        mat.needsUpdate = true;
+      }
+      rebuildPlanCropMask(null);
+      return;
+    }
+    clipPlanePool[0]!.setComponents(1, 0, 0, -crop.minX);
+    clipPlanePool[1]!.setComponents(-1, 0, 0, crop.maxX);
+    clipPlanePool[2]!.setComponents(0, 1, 0, -crop.minY);
+    clipPlanePool[3]!.setComponents(0, -1, 0, crop.maxY);
+    let planes = clipPlanePool.slice(0, 4);
+    if (crop.minZ !== undefined && crop.maxZ !== undefined) {
+      clipPlanePool[4]!.setComponents(0, 0, 1, -crop.minZ);
+      clipPlanePool[5]!.setComponents(0, 0, -1, crop.maxZ);
+      planes = clipPlanePool.slice(0, 6);
+    }
+    renderer.localClippingEnabled = true;
+    for (const mat of clipMats) {
+      mat.clippingPlanes = planes;
+      mat.clipIntersection = false;
+      mat.needsUpdate = true;
+    }
+    rebuildPlanCropMask(crop);
+  };
+
   const previewGeom = new BufferGeometry();
   previewGeom.setAttribute(
     "position",
@@ -292,7 +477,10 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
   const groundPlane = new Plane(new Vector3(0, 0, 1), 0);
   const hit = new Vector3();
 
-  const activeCamera = () => (mode === "plan" ? ortho : persp);
+  const activeCamera = () => {
+    if (mode === "plan") return ortho;
+    return useOrtho3d ? ortho3d : persp;
+  };
 
   const updateOrthoFrustum = (halfH = orthoHalfH) => {
     orthoHalfH = halfH;
@@ -305,13 +493,46 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
     ortho.updateProjectionMatrix();
   };
 
+  const updateOrtho3dFrustum = (halfH = ortho3dHalfH) => {
+    ortho3dHalfH = halfH;
+    const aspect = width / Math.max(height, 1);
+    const halfW = halfH * aspect;
+    ortho3d.left = -halfW;
+    ortho3d.right = halfW;
+    ortho3d.top = halfH;
+    ortho3d.bottom = -halfH;
+    ortho3d.updateProjectionMatrix();
+  };
+
+  /** World units ≈ one screen pixel at the orbit pivot (for pick tolerance). */
+  const worldPerPixelAtPivot = (): number => {
+    const cam = activeCamera();
+    const h = Math.max(height, 1);
+    if (cam instanceof OrthographicCamera) {
+      const half = mode === "plan" ? orthoHalfH : ortho3dHalfH;
+      return (half * 2) / h;
+    }
+    const dist = Math.max(0.5, cam.position.distanceTo(orbitTarget));
+    const vFov = ((cam as PerspectiveCamera).fov * Math.PI) / 180;
+    return (2 * dist * Math.tan(vFov / 2)) / h;
+  };
+
+  const applyPickThreshold = () => {
+    const wpp = worldPerPixelAtPivot();
+    const px = 10;
+    raycaster.params.Line = { threshold: Math.max(0.08, wpp * px) };
+    raycaster.params.Points = { threshold: Math.max(0.08, wpp * px) };
+  };
+
   const syncSceneForMode = () => {
     axes.visible = mode !== "plan";
     sun.visible = mode !== "plan";
     planDoorsGroup.visible = mode === "plan";
     flipControlsGroup.visible = mode === "plan";
-    // In plan, keep 3D door solids subtle under the symbol
+    camerasGroup.visible = mode === "plan";
+    cropGroup.visible = mode === "plan";
     doorsGroup.visible = true;
+    applyClippingState();
   };
   syncSceneForMode();
 
@@ -321,19 +542,31 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
     ndc.y = -(((clientY - rect.top) / Math.max(rect.height, 1)) * 2 - 1);
   };
 
+  const clientFromWorld = (wx: number, wy: number, wz: number) => {
+    const v = new Vector3(wx, wy, wz).project(activeCamera());
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: rect.left + (v.x * 0.5 + 0.5) * rect.width,
+      y: rect.top + (-v.y * 0.5 + 0.5) * rect.height,
+      behind: v.z > 1,
+    };
+  };
+
   const onWheel = (e: WheelEvent) => {
     e.preventDefault();
     const direction = Math.sign(e.deltaY);
     const factor = direction > 0 ? 1.12 : 1 / 1.12;
     if (mode === "plan") {
       updateOrthoFrustum(Math.min(80, Math.max(1.5, orthoHalfH * factor)));
+    } else if (useOrtho3d) {
+      updateOrtho3dFrustum(Math.min(80, Math.max(1.5, ortho3dHalfH * factor)));
     } else {
-      const offset = persp.position.clone().sub(perspTarget);
+      const offset = persp.position.clone().sub(orbitTarget);
       const dist = offset.length();
       const nextDist = Math.min(120, Math.max(2, dist * factor));
       offset.setLength(nextDist);
-      persp.position.copy(perspTarget).add(offset);
-      persp.lookAt(perspTarget);
+      persp.position.copy(orbitTarget).add(offset);
+      persp.lookAt(orbitTarget);
     }
   };
   canvas.addEventListener("wheel", onWheel, { passive: false });
@@ -356,6 +589,23 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
     canvas.setPointerCapture(e.pointerId);
   };
 
+  const orbit3dCamera = (dx: number, dy: number) => {
+    const cam = useOrtho3d ? ortho3d : persp;
+    offsetVec.copy(cam.position).sub(orbitTarget);
+    spherical.setFromVector3(offsetVec);
+    spherical.theta -= dx * ORBIT_SENS;
+    spherical.phi -= dy * ORBIT_SENS;
+    spherical.phi = Math.max(0.08, Math.min(Math.PI - 0.08, spherical.phi));
+    offsetVec.setFromSpherical(spherical);
+    cam.position.copy(orbitTarget).add(offsetVec);
+    cam.up.set(0, 0, 1);
+    // Keep sensible up for near-top views
+    if (Math.abs(spherical.phi) < 0.2 || Math.abs(spherical.phi - Math.PI) < 0.2) {
+      cam.up.set(0, 1, 0);
+    }
+    cam.lookAt(orbitTarget);
+  };
+
   const onPointerMove = (e: PointerEvent) => {
     if (!navActive) return;
     const dx = e.clientX - lastX;
@@ -369,15 +619,7 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
       ortho.position.y += dy * scale;
       ortho.lookAt(ortho.position.x, ortho.position.y, 0);
     } else {
-      offsetVec.copy(persp.position).sub(perspTarget);
-      spherical.setFromVector3(offsetVec);
-      spherical.theta -= dx * 0.005;
-      spherical.phi -= dy * 0.005;
-      spherical.phi = Math.max(0.08, Math.min(Math.PI - 0.08, spherical.phi));
-      offsetVec.setFromSpherical(spherical);
-      persp.position.copy(perspTarget).add(offsetVec);
-      persp.up.set(0, 0, 1);
-      persp.lookAt(perspTarget);
+      orbit3dCamera(dx, dy);
     }
   };
 
@@ -408,6 +650,64 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
   };
   render();
 
+  const pickEntityId = (
+    clientX: number,
+    clientY: number,
+    group: Group,
+    key: string,
+  ): string | null => {
+    applyPickThreshold();
+    toNdc(clientX, clientY);
+    raycaster.setFromCamera(ndc, activeCamera());
+    const hits = raycaster.intersectObjects(group.children, true);
+    for (const h of hits) {
+      let o: typeof h.object | null = h.object;
+      while (o) {
+        const id = o.userData?.[key];
+        if (typeof id === "string") return id;
+        o = o.parent as typeof o;
+        if (o === group) break;
+      }
+    }
+    // Screen-space proximity when zoomed out
+    const maxPx = 14;
+    let bestId: string | null = null;
+    let bestD = maxPx;
+    const seen = new Set<string>();
+    for (const child of group.children) {
+      const id = child.userData?.[key];
+      if (typeof id !== "string" || seen.has(id)) continue;
+      seen.add(id);
+      child.updateWorldMatrix(true, false);
+      const geom = (child as Mesh).geometry;
+      if (geom) {
+        if (!geom.boundingSphere) geom.computeBoundingSphere();
+        const bs = geom.boundingSphere;
+        if (bs) {
+          const c = bs.center.clone().applyMatrix4(child.matrixWorld);
+          const scr = clientFromWorld(c.x, c.y, c.z);
+          if (scr.behind) continue;
+          const d = Math.hypot(scr.x - clientX, scr.y - clientY);
+          if (d < bestD) {
+            bestD = d;
+            bestId = id;
+          }
+          continue;
+        }
+      }
+      const wp = new Vector3();
+      child.getWorldPosition(wp);
+      const scr = clientFromWorld(wp.x, wp.y, wp.z);
+      if (scr.behind) continue;
+      const d = Math.hypot(scr.x - clientX, scr.y - clientY);
+      if (d < bestD) {
+        bestD = d;
+        bestId = id;
+      }
+    }
+    return bestId;
+  };
+
   return {
     canvas,
     resize(w: number, h: number) {
@@ -418,11 +718,13 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
       persp.aspect = w / h;
       persp.updateProjectionMatrix();
       updateOrthoFrustum();
+      updateOrtho3dFrustum();
     },
     fitEmpty() {
       if (mode === "plan") applyPlanPose();
       else applyPerspPose();
       updateOrthoFrustum(10);
+      updateOrtho3dFrustum(10);
     },
     fitWalls(walls) {
       if (walls.length === 0) {
@@ -433,11 +735,13 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
       let maxX = -Infinity;
       let minY = Infinity;
       let maxY = -Infinity;
+      let maxH = 2.7;
       for (const w of walls) {
         minX = Math.min(minX, w.p1.x, w.p2.x);
         maxX = Math.max(maxX, w.p1.x, w.p2.x);
         minY = Math.min(minY, w.p1.y, w.p2.y);
         maxY = Math.max(maxY, w.p1.y, w.p2.y);
+        maxH = Math.max(maxH, w.height);
       }
       const cx = (minX + maxX) / 2;
       const cy = (minY + maxY) / 2;
@@ -447,43 +751,103 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
         ortho.lookAt(cx, cy, 0);
         updateOrthoFrustum(span);
       } else {
-        perspTarget.set(cx, cy, 1);
+        orbitTarget.set(cx, cy, maxH * 0.35);
+        useOrtho3d = false;
         persp.position.set(cx + span, cy - span * 1.2, span * 0.9);
-        persp.lookAt(perspTarget);
+        persp.up.set(0, 0, 1);
+        persp.lookAt(orbitTarget);
+        updateOrtho3dFrustum(span);
       }
     },
     setProjection(next: ViewProjection) {
       mode = next;
-      if (mode === "plan") applyPlanPose();
-      else applyPerspPose();
+      if (mode === "plan") {
+        applyPlanPose();
+      } else if (!useOrtho3d) {
+        // Keep current 3D pose; ensure persp looks at pivot
+        persp.lookAt(orbitTarget);
+      }
       updateOrthoFrustum(orthoHalfH);
+      updateOrtho3dFrustum(ortho3dHalfH);
       syncSceneForMode();
+    },
+    setOrbitPivot(point) {
+      const cam = useOrtho3d ? ortho3d : persp;
+      offsetVec.copy(cam.position).sub(orbitTarget);
+      orbitTarget.set(point.x, point.y, point.z);
+      cam.position.copy(orbitTarget).add(offsetVec);
+      cam.lookAt(orbitTarget);
+    },
+    getOrbitPivot() {
+      return { x: orbitTarget.x, y: orbitTarget.y, z: orbitTarget.z };
     },
     setCameraPreset(preset: CameraPreset) {
       if (mode === "plan") return;
-      const dist = Math.max(3, persp.position.distanceTo(perspTarget));
-      const unit: Record<CameraPreset, { d: [number, number, number]; up: [number, number, number] }> =
-        {
-          top: { d: [0, 0, 1], up: [0, 1, 0] },
-          bottom: { d: [0, 0, -1], up: [0, 1, 0] },
-          front: { d: [0, -1, 0], up: [0, 0, 1] },
-          back: { d: [0, 1, 0], up: [0, 0, 1] },
-          right: { d: [1, 0, 0], up: [0, 0, 1] },
-          left: { d: [-1, 0, 0], up: [0, 0, 1] },
-          iso: { d: [0.75, -0.9, 0.65], up: [0, 0, 1] },
-        };
+      const dist = Math.max(
+        3,
+        useOrtho3d
+          ? ortho3d.position.distanceTo(orbitTarget)
+          : persp.position.distanceTo(orbitTarget),
+      );
+      const unit: Record<
+        CameraPreset,
+        { d: [number, number, number]; up: [number, number, number] }
+      > = {
+        top: { d: [0, 0, 1], up: [0, 1, 0] },
+        bottom: { d: [0, 0, -1], up: [0, 1, 0] },
+        front: { d: [0, -1, 0], up: [0, 0, 1] },
+        back: { d: [0, 1, 0], up: [0, 0, 1] },
+        right: { d: [1, 0, 0], up: [0, 0, 1] },
+        left: { d: [-1, 0, 0], up: [0, 0, 1] },
+        iso: { d: [0.75, -0.9, 0.65], up: [0, 0, 1] },
+      };
       const u = unit[preset];
       const len = Math.hypot(u.d[0], u.d[1], u.d[2]) || 1;
-      persp.position.set(
-        perspTarget.x + (u.d[0] / len) * dist,
-        perspTarget.y + (u.d[1] / len) * dist,
-        perspTarget.z + (u.d[2] / len) * dist,
-      );
-      persp.up.set(u.up[0], u.up[1], u.up[2]);
-      persp.lookAt(perspTarget);
+      const px = orbitTarget.x + (u.d[0] / len) * dist;
+      const py = orbitTarget.y + (u.d[1] / len) * dist;
+      const pz = orbitTarget.z + (u.d[2] / len) * dist;
+
+      if (preset === "iso") {
+        useOrtho3d = false;
+        persp.position.set(px, py, pz);
+        persp.up.set(u.up[0], u.up[1], u.up[2]);
+        persp.lookAt(orbitTarget);
+        persp.updateProjectionMatrix();
+      } else {
+        useOrtho3d = true;
+        ortho3d.position.set(px, py, pz);
+        ortho3d.up.set(u.up[0], u.up[1], u.up[2]);
+        ortho3d.lookAt(orbitTarget);
+        // Apparent size ≈ prior distance framing
+        updateOrtho3dFrustum(Math.max(2, dist * 0.55));
+      }
+    },
+    orbitByDelta(dx, dy) {
+      if (mode === "plan") return;
+      orbit3dCamera(dx, dy);
+    },
+    applyModelCamera(cam) {
+      if (mode === "plan") return;
+      useOrtho3d = false;
+      orbitTarget.set(cam.target.x, cam.target.y, cam.target.z);
+      persp.position.set(cam.eye.x, cam.eye.y, cam.eye.z);
+      persp.up.set(0, 0, 1);
+      persp.fov = Math.min(120, Math.max(10, cam.fov));
+      persp.lookAt(orbitTarget);
       persp.updateProjectionMatrix();
     },
-    syncWalls(walls, doors, windows, selectedWallId, selectedDoorId, selectedWindowId) {
+    syncWalls(
+      walls,
+      doors,
+      windows,
+      cameras,
+      selectedWallId,
+      selectedDoorId,
+      selectedWindowId,
+      selectedCameraId,
+      sessionCrop = null,
+      selectedCropFrameCameraId = null,
+    ) {
       while (wallsGroup.children.length) {
         const child = wallsGroup.children[0]!;
         wallsGroup.remove(child);
@@ -508,6 +872,56 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
         const child = flipControlsGroup.children[0]!;
         flipControlsGroup.remove(child);
       }
+      while (camerasGroup.children.length) {
+        const child = camerasGroup.children[0]!;
+        camerasGroup.remove(child);
+        if (child instanceof LineSegments || child instanceof Mesh) {
+          child.geometry.dispose();
+        }
+      }
+      while (cropGroup.children.length) {
+        const child = cropGroup.children[0]!;
+        cropGroup.remove(child);
+        if (child instanceof LineSegments || child instanceof Mesh) {
+          child.geometry.dispose();
+        }
+      }
+
+      const addCropOverlay = (
+        crop: ViewCrop,
+        selected: boolean,
+        cameraId: string | null,
+      ) => {
+        if (!crop.enabled) return;
+        // Above plan crop masks (z=12) so the frame stays visible
+        const frameZ = 12.2;
+        const geom = new BufferGeometry();
+        geom.setAttribute(
+          "position",
+          new BufferAttribute(viewCropPlanLines(crop, frameZ), 3),
+        );
+        const lines = new LineSegments(
+          geom,
+          selected ? cropLineSelectedMat : cropLineMat,
+        );
+        if (cameraId) {
+          lines.userData.cropFrame = true;
+          lines.userData.cameraId = cameraId;
+        }
+        cropGroup.add(lines);
+        if (!selected) return;
+        for (const c of viewCropCorners(crop, frameZ + 0.05)) {
+          const grip = new Mesh(flipSphereGeom, cropGripMat);
+          grip.position.set(c.x, c.y, c.z);
+          const minR = Math.max(0.12, ((orthoHalfH * 2) / Math.max(height, 1)) * 10);
+          grip.scale.setScalar(minR);
+          grip.userData.cropGrip = true;
+          grip.userData.corner = c.corner;
+          grip.userData.cameraId = cameraId;
+          cropGroup.add(grip);
+        }
+      };
+
       const joins = computeWallJoinDirs(walls);
       for (const wall of walls) {
         const j = joins.get(wall.id);
@@ -563,7 +977,11 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
                 ctrl.kind === "swing" ? flipSwingMat : flipHingeMat,
               );
               grip.position.set(ctrl.x, ctrl.y, ctrl.z);
-              grip.scale.setScalar(ctrl.hitRadius);
+              const minR = Math.max(
+                ctrl.hitRadius,
+                ((orthoHalfH * 2) / Math.max(height, 1)) * 12,
+              );
+              grip.scale.setScalar(minR);
               grip.userData.flipControl = true;
               grip.userData.entityType = ctrl.entityType;
               grip.userData.entityId = ctrl.entityId;
@@ -606,7 +1024,11 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
                 ctrl.kind === "swing" ? flipSwingMat : flipHingeMat,
               );
               grip.position.set(ctrl.x, ctrl.y, ctrl.z);
-              grip.scale.setScalar(ctrl.hitRadius);
+              const minR = Math.max(
+                ctrl.hitRadius,
+                ((orthoHalfH * 2) / Math.max(height, 1)) * 12,
+              );
+              grip.scale.setScalar(minR);
               grip.userData.flipControl = true;
               grip.userData.entityType = ctrl.entityType;
               grip.userData.entityId = ctrl.entityId;
@@ -616,6 +1038,51 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
           }
         }
       }
+      for (const cam of cameras) {
+        const selected = cam.id === selectedCameraId;
+        const symbol = cameraPlanSymbol(cam);
+        const geom = new BufferGeometry();
+        geom.setAttribute("position", new BufferAttribute(symbol.lines, 3));
+        const lines = new LineSegments(
+          geom,
+          selected ? cameraLineSelectedMat : cameraLineMat,
+        );
+        lines.userData.cameraId = cam.id;
+        camerasGroup.add(lines);
+
+        // Plan: cone + crop frame when camera selected; grips when frame selected
+        if (selected && cam.crop?.enabled) {
+          const coneGeom = new BufferGeometry();
+          coneGeom.setAttribute(
+            "position",
+            new BufferAttribute(cameraVisionConeLines(cam), 3),
+          );
+          const cone = new LineSegments(coneGeom, cameraConeSelectedMat);
+          cone.userData.cameraId = cam.id;
+          camerasGroup.add(cone);
+
+          const frameSelected = selectedCropFrameCameraId === cam.id;
+          addCropOverlay(cam.crop, frameSelected, cam.id);
+        }
+
+        const pick = new Mesh(
+          cameraPickGeom,
+          selected ? cameraPickSelectedMat : cameraPickMat,
+        );
+        pick.position.set(symbol.pick.x, symbol.pick.y, symbol.pick.z);
+        const r = Math.max(0.25, ((orthoHalfH * 2) / Math.max(height, 1)) * 14);
+        pick.scale.setScalar(r);
+        pick.userData.cameraId = cam.id;
+        camerasGroup.add(pick);
+      }
+      // Independent plan/presentation crop (clips geometry only via getClippingCrop)
+      if (sessionCrop?.enabled) {
+        addCropOverlay(sessionCrop, !selectedCameraId && !selectedCropFrameCameraId, null);
+      }
+    },
+    setClippingCrop(crop) {
+      currentClipCrop = crop;
+      applyClippingState();
     },
     setPreviewSegment(p1, p2) {
       if (!p1 || !p2) {
@@ -676,6 +1143,7 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
       }
     },
     pickGround(clientX, clientY, elevation = 0) {
+      applyPickThreshold();
       toNdc(clientX, clientY);
       raycaster.setFromCamera(ndc, activeCamera());
       groundPlane.constant = -elevation;
@@ -684,43 +1152,142 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
       return { x: hit.x, y: hit.y, z: elevation };
     },
     pickWallId(clientX, clientY) {
-      toNdc(clientX, clientY);
-      raycaster.setFromCamera(ndc, activeCamera());
-      const hits = raycaster.intersectObjects(wallsGroup.children, false);
-      const first = hits[0]?.object;
-      const id = first?.userData?.wallId;
-      return typeof id === "string" ? id : null;
+      return pickEntityId(clientX, clientY, wallsGroup, "wallId");
     },
     pickDoorId(clientX, clientY) {
-      toNdc(clientX, clientY);
-      raycaster.setFromCamera(ndc, activeCamera());
-      const hits = raycaster.intersectObjects(doorsGroup.children, false);
-      const first = hits[0]?.object;
-      const id = first?.userData?.doorId;
-      return typeof id === "string" ? id : null;
+      const fromSolid = pickEntityId(clientX, clientY, doorsGroup, "doorId");
+      if (fromSolid) return fromSolid;
+      if (mode === "plan") {
+        return pickEntityId(clientX, clientY, planDoorsGroup, "doorId");
+      }
+      return null;
     },
     pickWindowId(clientX, clientY) {
-      toNdc(clientX, clientY);
-      raycaster.setFromCamera(ndc, activeCamera());
-      const hits = raycaster.intersectObjects(windowsGroup.children, false);
-      const first = hits[0]?.object;
-      const id = first?.userData?.windowId;
-      return typeof id === "string" ? id : null;
+      const fromSolid = pickEntityId(clientX, clientY, windowsGroup, "windowId");
+      if (fromSolid) return fromSolid;
+      if (mode === "plan") {
+        return pickEntityId(clientX, clientY, planDoorsGroup, "windowId");
+      }
+      return null;
+    },
+    pickCameraId(clientX, clientY) {
+      if (mode !== "plan") return null;
+      return pickEntityId(clientX, clientY, camerasGroup, "cameraId");
     },
     pickFlipControl(clientX, clientY) {
       if (mode !== "plan" || !flipControlsGroup.visible) return null;
+      applyPickThreshold();
       toNdc(clientX, clientY);
       raycaster.setFromCamera(ndc, activeCamera());
       const hits = raycaster.intersectObjects(flipControlsGroup.children, false);
-      const obj = hits[0]?.object;
+      let obj: (typeof flipControlsGroup.children)[number] | undefined =
+        hits[0]?.object;
+      if (!obj?.userData?.flipControl) {
+        // Proximity fallback for tiny grips when zoomed out
+        const maxPx = 16;
+        let bestD = maxPx;
+        let best: (typeof flipControlsGroup.children)[number] | undefined;
+        for (const child of flipControlsGroup.children) {
+          if (!child.userData?.flipControl) continue;
+          const wp = new Vector3();
+          child.getWorldPosition(wp);
+          const scr = clientFromWorld(wp.x, wp.y, wp.z);
+          if (scr.behind) continue;
+          const d = Math.hypot(scr.x - clientX, scr.y - clientY);
+          if (d < bestD) {
+            bestD = d;
+            best = child;
+          }
+        }
+        obj = best;
+      }
       if (!obj?.userData?.flipControl) return null;
       const entityId = obj.userData.entityId;
       const kind = obj.userData.kind;
       const entityType = obj.userData.entityType;
-      if (typeof entityId !== "string") return null;
-      if (kind !== "swing" && kind !== "hinge") return null;
-      if (entityType !== "door" && entityType !== "window") return null;
+      if (
+        (entityType !== "door" && entityType !== "window") ||
+        typeof entityId !== "string" ||
+        (kind !== "swing" && kind !== "hinge")
+      ) {
+        return null;
+      }
       return { entityType, entityId, kind };
+    },
+    pickCropGrip(clientX, clientY) {
+      if (mode !== "plan" || !cropGroup.visible) return null;
+      toNdc(clientX, clientY);
+      applyPickThreshold();
+      raycaster.setFromCamera(ndc, activeCamera());
+      const hits = raycaster.intersectObjects(cropGroup.children, false);
+      for (const hit of hits) {
+        const obj = hit.object;
+        if (!obj.userData?.cropGrip) continue;
+        const corner = obj.userData.corner;
+        if (corner !== 0 && corner !== 1 && corner !== 2 && corner !== 3) continue;
+        const cameraId =
+          typeof obj.userData.cameraId === "string" ? obj.userData.cameraId : null;
+        return { corner, cameraId };
+      }
+      // Proximity fallback
+      const wpp = worldPerPixelAtPivot();
+      const maxPx = 14;
+      let best: CropGripPick | null = null;
+      let bestD = maxPx;
+      for (const child of cropGroup.children) {
+        if (!child.userData?.cropGrip) continue;
+        const corner = child.userData.corner;
+        if (corner !== 0 && corner !== 1 && corner !== 2 && corner !== 3) continue;
+        const scr = clientFromWorld(child.position.x, child.position.y, child.position.z);
+        if (scr.behind) continue;
+        const d = Math.hypot(scr.x - clientX, scr.y - clientY);
+        if (d < bestD) {
+          bestD = d;
+          best = {
+            corner,
+            cameraId:
+              typeof child.userData.cameraId === "string"
+                ? child.userData.cameraId
+                : null,
+          };
+        }
+      }
+      void wpp;
+      return best;
+    },
+    pickCropFrame(clientX, clientY) {
+      if (mode !== "plan" || !cropGroup.visible) return null;
+      toNdc(clientX, clientY);
+      applyPickThreshold();
+      raycaster.setFromCamera(ndc, activeCamera());
+      const hits = raycaster.intersectObjects(cropGroup.children, false);
+      for (const hit of hits) {
+        const obj = hit.object;
+        if (!obj.userData?.cropFrame) continue;
+        if (typeof obj.userData.cameraId !== "string") continue;
+        return { cameraId: obj.userData.cameraId };
+      }
+      // Screen-proximity to frame corners/edges (thin lines)
+      const maxPx = 12;
+      let bestId: string | null = null;
+      let bestD = maxPx;
+      for (const child of cropGroup.children) {
+        if (!child.userData?.cropFrame) continue;
+        if (typeof child.userData.cameraId !== "string") continue;
+        if (!(child instanceof LineSegments)) continue;
+        const pos = child.geometry.getAttribute("position");
+        if (!pos) continue;
+        for (let i = 0; i < pos.count; i++) {
+          const scr = clientFromWorld(pos.getX(i), pos.getY(i), pos.getZ(i));
+          if (scr.behind) continue;
+          const d = Math.hypot(scr.x - clientX, scr.y - clientY);
+          if (d < bestD) {
+            bestD = d;
+            bestId = child.userData.cameraId;
+          }
+        }
+      }
+      return bestId ? { cameraId: bestId } : null;
     },
     dispose() {
       cancelAnimationFrame(raf);
@@ -750,6 +1317,17 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
       windowGlassSelectedMat.dispose();
       planDoorLineMat.dispose();
       planDoorLineSelectedMat.dispose();
+      cameraLineMat.dispose();
+      cameraLineSelectedMat.dispose();
+      cameraConeSelectedMat.dispose();
+      cropLineMat.dispose();
+      cropLineSelectedMat.dispose();
+      cropGripMat.dispose();
+      cropMaskMat.dispose();
+      clearCropMask();
+      cameraPickMat.dispose();
+      cameraPickSelectedMat.dispose();
+      cameraPickGeom.dispose();
       flipSwingMat.dispose();
       flipHingeMat.dispose();
       flipSphereGeom.dispose();
@@ -781,6 +1359,20 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
       }
       while (flipControlsGroup.children.length) {
         flipControlsGroup.remove(flipControlsGroup.children[0]!);
+      }
+      while (camerasGroup.children.length) {
+        const child = camerasGroup.children[0]!;
+        camerasGroup.remove(child);
+        if (child instanceof LineSegments || child instanceof Mesh) {
+          child.geometry.dispose();
+        }
+      }
+      while (cropGroup.children.length) {
+        const child = cropGroup.children[0]!;
+        cropGroup.remove(child);
+        if (child instanceof LineSegments || child instanceof Mesh) {
+          child.geometry.dispose();
+        }
       }
       renderer.dispose();
     },

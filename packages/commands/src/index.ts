@@ -29,4 +29,16 @@ export {
   createWindowId,
   resetWindowIdSeq,
 } from "./windows";
+export {
+  CreateCameraCommand,
+  DeleteCameraCommand,
+  SetCameraNameCommand,
+  SetCameraFovCommand,
+  SetCameraEyeHeightCommand,
+  SetCameraTargetCommand,
+  SetCameraCropCommand,
+  TranslateCameraPlanCommand,
+  createCameraId,
+  resetCameraIdSeq,
+} from "./cameras";
 export { syncIdSequencesFromDocument, maxNumericSuffix } from "./ids";

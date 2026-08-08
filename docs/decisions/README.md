@@ -14,3 +14,6 @@
 | [0011](0011-windows-slice.md) | Ventanas — segundo corte post-MVP |
 | [0012](0012-gizmo-real-cameras.md) | Gizmo → cámaras reales (Top/Front/…) |
 | [0013](0013-geometry-api-occt-candidate.md) | Geometry API propia; OCCT candidato (parked) |
+| [0014](0014-view-cube-orbit-pivot.md) | Gizmo tríada ±ejes, ortho 3D, pivot / hold-orbit |
+| [0015](0015-geometric-cameras.md) | Cámaras geométricas (vista 3D ligada) |
+| [0016](0016-view-crop-region.md) | Región de recorte de vista (Crop Region) |

@@ -24,4 +24,4 @@ AxonBIM Web **no migra ese código**. Reconstruye el producto sobre comportamien
 
 ## Fuera de la visión inmediata
 
-Competir con Revit completo, MEP, worksharing, render fotorrealista o entrega normativa MIVED en el primer ciclo.
+Competir con suites BIM comerciales completas, MEP, worksharing, render fotorrealista o entrega normativa MIVED en el primer ciclo.

@@ -1,11 +1,18 @@
 import {
+  CreateCameraCommand,
   CreateDoorCommand,
   CreateWallCommand,
   CreateWindowCommand,
+  DeleteCameraCommand,
   DeleteDoorCommand,
   DeleteWallCommand,
   DeleteWindowCommand,
   HistoryStack,
+  SetCameraCropCommand,
+  SetCameraEyeHeightCommand,
+  SetCameraFovCommand,
+  SetCameraNameCommand,
+  TranslateCameraPlanCommand,
   SetDoorFamilyCommand,
   SetDoorHingeCommand,
   SetDoorLeafStateCommand,
@@ -17,6 +24,7 @@ import {
   SetWindowHingeCommand,
   SetWindowLeafStateCommand,
   SetWindowSwingCommand,
+  createCameraId,
   createDoorId,
   createWallId,
   createWindowId,
@@ -25,22 +33,35 @@ import {
 } from "@axonbim/commands";
 import { doorFamilyById, familyById, windowFamilyById } from "@axonbim/families";
 import {
+  cloneViewCrop,
   createDemoDocument,
   createEmptyDocument,
+  defaultCameraCrop,
+  normalizeViewCrop,
+  resizeViewCropCorner,
   type AxonDocument,
+  type Camera,
+  type CropCorner,
   type Door,
   type DoorLeafState,
   type DoorSwing,
+  type ViewCrop,
   type Wall,
   type Window,
 } from "@axonbim/model";
 import { parseDocument, serializeDocument } from "@axonbim/persistence";
 import { MIN_WALL_LENGTH } from "@axonbim/shared";
 import type { DrawMode, SnapKind, ToolId } from "@axonbim/tools";
-import { collectEndpoints, isSketchTool, snapWallPoint } from "@axonbim/tools";
+import { collectEndpoints, isCameraTool, isSketchTool, snapWallPoint } from "@axonbim/tools";
 import { projectPointOnWall } from "@axonbim/geometry";
 import type { CameraPreset } from "@axonbim/viewer";
 import { create } from "zustand";
+
+export type OrbitPivotMode = "model" | "selection";
+
+/** Default eye height for new cameras (m). */
+export const DEFAULT_CAMERA_EYE_Z = 1.7;
+export const DEFAULT_CAMERA_FOV = 45;
 
 export type RibbonTab =
   | "architecture"
@@ -55,10 +76,10 @@ export type RibbonTab =
   | "modify"
   | "contextual"
   | "project"; // legacy alias unused in tabs
-export type ViewKind = "plan" | "perspective";
+export type ViewKind = "plan" | "perspective" | "camera";
 export type VisualStyle = "wireframe" | "hiddenLine" | "shaded";
 export type DetailLevel = "coarse" | "medium" | "fine";
-/** Revit-like: docked to app edge or floating over drawing area. */
+/** Docked to app edge or floating over drawing area (reference-product habit). */
 export type DockSide = "left" | "right" | "float";
 export type PanelId = "browser" | "properties";
 export type FloatPos = { x: number; y: number };
@@ -68,7 +89,45 @@ export type ProjectView = {
   name: string;
   kind: ViewKind;
   open: boolean;
+  /** When kind === "camera", links to AxonDocument.cameras[].id */
+  cameraId?: string;
+  /**
+   * Session-only crop for plan / free perspective (ADR 0016).
+   * Camera views use Camera.crop instead.
+   */
+  crop?: ViewCrop;
 };
+
+/** Default session crop when the user first enables viewport crop. */
+function defaultSessionViewCrop(walls: Wall[]): ViewCrop {
+  if (walls.length === 0) {
+    return normalizeViewCrop({
+      enabled: true,
+      minX: -5,
+      minY: -5,
+      maxX: 5,
+      maxY: 5,
+    });
+  }
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (const w of walls) {
+    minX = Math.min(minX, w.p1.x, w.p2.x);
+    maxX = Math.max(maxX, w.p1.x, w.p2.x);
+    minY = Math.min(minY, w.p1.y, w.p2.y);
+    maxY = Math.max(maxY, w.p1.y, w.p2.y);
+  }
+  const pad = 1;
+  return normalizeViewCrop({
+    enabled: true,
+    minX: minX - pad,
+    minY: minY - pad,
+    maxX: maxX + pad,
+    maxY: maxY + pad,
+  });
+}
 
 type SessionState = {
   document: AxonDocument;
@@ -77,9 +136,9 @@ type SessionState = {
   activeViewId: string;
   ribbonTab: RibbonTab;
   activeTool: ToolId;
-  /** Draw panel mode (Revit) while a sketch tool is active. */
+  /** Draw panel mode while a sketch tool is active. */
   drawMode: DrawMode;
-  /** Wall placement: chain consecutive segments (Revit default on). */
+  /** Wall placement: chain consecutive segments (default on). */
   wallChain: boolean;
   /** Active wall family for new walls. */
   activeFamilyId: string;
@@ -89,6 +148,31 @@ type SessionState = {
   selectedWallId: string | null;
   selectedDoorId: string | null;
   selectedWindowId: string | null;
+  selectedCameraId: string | null;
+  /**
+   * Camera whose crop frame is selected in plan (grips + move).
+   * Only for camera crops — not session plan crop.
+   */
+  selectedCropFrameCameraId: string | null;
+  /** Live crop while dragging a plan grip (not yet committed to history). */
+  cropDragLive: ViewCrop | null;
+  cropDragMeta: {
+    cameraId: string | null;
+    viewId: string;
+    mode: "corner" | "move";
+    corner: CropCorner;
+    baseline: ViewCrop;
+    startX: number;
+    startY: number;
+    baselineEye?: { x: number; y: number; z: number };
+    baselineTarget?: { x: number; y: number; z: number };
+  } | null;
+  /** Live camera pose while dragging the crop frame (move mode). */
+  cameraPoseDragLive: {
+    cameraId: string;
+    eye: { x: number; y: number; z: number };
+    target: { x: number; y: number; z: number };
+  } | null;
   /** Active door family for placement. */
   activeDoorFamilyId: string;
   /** Active window family for placement. */
@@ -112,7 +196,11 @@ type SessionState = {
   fitViewRequest: number;
   cameraPresetRequest: number;
   cameraPreset: CameraPreset | null;
-  /** Default like Revit: both stacked on the left. */
+  /** Orbit pivot: model bbox center vs selected element. */
+  orbitPivotMode: OrbitPivotMode;
+  /** Bumps when pivot should be re-applied to the viewer. */
+  orbitPivotRequest: number;
+  /** Default: both stacked on the left. */
   browserDock: DockSide;
   propertiesDock: DockSide;
   browserFloat: FloatPos;
@@ -149,6 +237,8 @@ type SessionState = {
   setSelectedWallId: (id: string | null) => void;
   setSelectedDoorId: (id: string | null) => void;
   setSelectedWindowId: (id: string | null) => void;
+  setSelectedCameraId: (id: string | null) => void;
+  setSelectedCropFrameCameraId: (id: string | null) => void;
   setActiveDoorFamilyId: (id: string) => void;
   setActiveWindowFamilyId: (id: string) => void;
   /** Place door on wall at world point (projected to axis). */
@@ -158,12 +248,36 @@ type SessionState = {
   setWallHover: (p: { x: number; y: number; z: number } | null, forceOrtho?: boolean) => void;
   /** Pointer click in viewport while wall tool is active. */
   wallClick: (p: { x: number; y: number; z: number }, forceOrtho?: boolean) => void;
+  /** Camera tool: eye (1st click) → target (2nd click) in plan. */
+  cameraClick: (p: { x: number; y: number; z: number }) => void;
   cancelWallDraw: () => void;
   runUndo: () => void;
   runRedo: () => void;
   deleteSelectedWall: () => void;
   deleteSelectedDoor: () => void;
   deleteSelectedWindow: () => void;
+  deleteSelectedCamera: () => void;
+  setSelectedCameraName: (name: string) => void;
+  setSelectedCameraFov: (fov: number) => void;
+  setSelectedCameraEyeHeight: (z: number) => void;
+  setSelectedCameraCrop: (crop: ViewCrop) => void;
+  /** Crop shown/edited in props (camera if selected or camera view; else session). */
+  getActiveViewCrop: () => ViewCrop | null;
+  /**
+   * Crop that actually clips geometry for the active view.
+   * Plan/perspective → session ProjectView.crop only.
+   * Camera view → that Camera.crop. Never clips plan with a camera crop.
+   */
+  getClippingCrop: () => ViewCrop | null;
+  setActiveViewCropEnabled: (enabled: boolean) => void;
+  setActiveViewCropSize: (width: number, depth: number) => void;
+  setActiveViewCrop: (crop: ViewCrop) => void;
+  resizeActiveViewCropCorner: (corner: CropCorner, x: number, y: number) => void;
+  beginCropDrag: (cameraId: string | null, corner: CropCorner) => void;
+  beginCameraFrameMove: (cameraId: string, x: number, y: number) => void;
+  updateCropDrag: (x: number, y: number) => void;
+  commitCropDrag: () => void;
+  cancelCropDrag: () => void;
   setSelectedDoorLeafState: (state: DoorLeafState) => void;
   setSelectedDoorSwing: (swing: DoorSwing) => void;
   flipSelectedDoorSwing: () => void;
@@ -187,6 +301,9 @@ type SessionState = {
   setGraphicScale: (scale: string) => void;
   requestFitView: () => void;
   requestCameraPreset: (preset: CameraPreset) => void;
+  setOrbitPivotMode: (mode: OrbitPivotMode) => void;
+  /** Recompute and push orbit pivot to the 3D viewport. */
+  syncOrbitPivot: () => void;
   setPanelDock: (id: PanelId, side: DockSide) => void;
   setPanelFloat: (id: PanelId, pos: FloatPos) => void;
   setPanelVisible: (id: PanelId, visible: boolean) => void;
@@ -263,6 +380,11 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   selectedWallId: null,
   selectedDoorId: null,
   selectedWindowId: null,
+  selectedCameraId: null,
+  selectedCropFrameCameraId: null,
+  cropDragLive: null,
+  cropDragMeta: null,
+  cameraPoseDragLive: null,
   activeDoorFamilyId: "family.door-90",
   activeWindowFamilyId: "family.window-90x120",
   wallPending: null,
@@ -278,6 +400,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   fitViewRequest: 0,
   cameraPresetRequest: 0,
   cameraPreset: null,
+  orbitPivotMode: "model",
+  orbitPivotRequest: 0,
   browserDock: "left",
   propertiesDock: "left",
   browserFloat: { x: 72, y: 140 },
@@ -403,10 +527,27 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         selectedWallId: null,
         selectedDoorId: null,
         selectedWindowId: null,
+        selectedCameraId: null,
         wallPending: null,
         wallChainOrigin: null,
         wallHover: null,
         status: "Colocar ventana — clic en un muro",
+      });
+      return;
+    }
+    if (isCameraTool(activeTool)) {
+      set({
+        activeTool,
+        ribbonTab: "view",
+        selectedWallId: null,
+        selectedDoorId: null,
+        selectedWindowId: null,
+        selectedCameraId: null,
+        wallPending: null,
+        wallChainOrigin: null,
+        wallHover: null,
+        lastSnapKind: "none",
+        status: "Cámara — clic 1: ojo · clic 2: mira (en planta)",
       });
       return;
     }
@@ -419,6 +560,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         selectedWallId: null,
         selectedDoorId: null,
         selectedWindowId: null,
+        selectedCameraId: null,
         wallPending: null,
         wallChainOrigin: null,
         wallHover: null,
@@ -500,29 +642,67 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
   setWallHeight: (wallHeight) => set({ wallHeight }),
 
-  setSelectedWallId: (selectedWallId) =>
+  setSelectedWallId: (selectedWallId) => {
     set({
       selectedWallId,
       selectedDoorId: null,
       selectedWindowId: null,
+      selectedCameraId: null,
+      selectedCropFrameCameraId: null,
       status: selectedWallId ? `Seleccionado: ${selectedWallId}` : "Sin selección",
-    }),
+    });
+    get().syncOrbitPivot();
+  },
 
-  setSelectedDoorId: (selectedDoorId) =>
+  setSelectedDoorId: (selectedDoorId) => {
     set({
       selectedDoorId,
       selectedWallId: null,
       selectedWindowId: null,
+      selectedCameraId: null,
+      selectedCropFrameCameraId: null,
       status: selectedDoorId ? `Puerta: ${selectedDoorId}` : "Sin selección",
-    }),
+    });
+    get().syncOrbitPivot();
+  },
 
-  setSelectedWindowId: (selectedWindowId) =>
+  setSelectedWindowId: (selectedWindowId) => {
     set({
       selectedWindowId,
       selectedWallId: null,
       selectedDoorId: null,
+      selectedCameraId: null,
+      selectedCropFrameCameraId: null,
       status: selectedWindowId ? `Ventana: ${selectedWindowId}` : "Sin selección",
-    }),
+    });
+    get().syncOrbitPivot();
+  },
+
+  setSelectedCameraId: (selectedCameraId) => {
+    set({
+      selectedCameraId,
+      selectedCropFrameCameraId: null,
+      selectedWallId: null,
+      selectedDoorId: null,
+      selectedWindowId: null,
+      status: selectedCameraId ? `Cámara: ${selectedCameraId}` : "Sin selección",
+    });
+  },
+
+  setSelectedCropFrameCameraId: (id) => {
+    if (!id) {
+      set({ selectedCropFrameCameraId: null });
+      return;
+    }
+    set({
+      selectedCropFrameCameraId: id,
+      selectedCameraId: id,
+      selectedWallId: null,
+      selectedDoorId: null,
+      selectedWindowId: null,
+      status: `Marco de recorte: ${id} — arrastra marco o grips`,
+    });
+  },
 
   setActiveDoorFamilyId: (activeDoorFamilyId) => {
     const fam = doorFamilyById(activeDoorFamilyId);
@@ -745,14 +925,75 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     }
   },
 
+  cameraClick: (p) => {
+    const s = get();
+    if (!isCameraTool(s.activeTool)) return;
+    const eyeZ = DEFAULT_CAMERA_EYE_Z;
+
+    if (!s.wallPending) {
+      set({
+        wallPending: { x: p.x, y: p.y, z: eyeZ },
+        wallHover: { x: p.x, y: p.y, z: eyeZ },
+        status: "Cámara — clic 2: dirección de mira",
+      });
+      return;
+    }
+
+    const eye = s.wallPending;
+    const dist = Math.hypot(p.x - eye.x, p.y - eye.y);
+    if (dist < 0.2) {
+      set({ status: "Mira demasiado cerca del ojo — elige otro punto" });
+      return;
+    }
+
+    const n = s.document.cameras.length + 1;
+    const id = createCameraId();
+    const eyePos = { x: eye.x, y: eye.y, z: eyeZ };
+    const targetPos = { x: p.x, y: p.y, z: eyeZ };
+    const camera: Camera = {
+      id,
+      name: `Cámara ${n}`,
+      eye: eyePos,
+      target: targetPos,
+      fov: DEFAULT_CAMERA_FOV,
+      crop: defaultCameraCrop(eyePos, targetPos, DEFAULT_CAMERA_FOV),
+    };
+    applyCommand(get, set, new CreateCameraCommand(camera), `Cámara creada: ${camera.name}`);
+
+    const viewId = `view.camera.${id}`;
+    const view: ProjectView = {
+      id: viewId,
+      name: camera.name,
+      kind: "camera",
+      open: true,
+      cameraId: id,
+    };
+    set({
+      views: [...get().views.filter((v) => v.id !== viewId), view],
+      activeViewId: viewId,
+      selectedCameraId: id,
+      selectedWallId: null,
+      selectedDoorId: null,
+      selectedWindowId: null,
+      wallPending: null,
+      wallHover: null,
+      activeTool: "none",
+      status: `${camera.name} — vista 3D abierta (independiente de Perspectiva 3D)`,
+    });
+  },
+
   cancelWallDraw: () => {
-    if (get().activeTool !== "wall") return;
+    const tool = get().activeTool;
+    if (tool !== "wall" && tool !== "camera") return;
     set({
       wallPending: null,
       wallChainOrigin: null,
       wallHover: null,
       lastSnapKind: "none",
-      status: "Trazado cancelado — clic para nuevo P1",
+      status:
+        tool === "camera"
+          ? "Cámara cancelada — clic 1 para ojo"
+          : "Trazado cancelado — clic para nuevo P1",
     });
   },
 
@@ -805,6 +1046,327 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     if (!id) return;
     applyCommand(get, set, new DeleteWindowCommand(id), `Ventana eliminada ${id}`);
     set({ selectedWindowId: null });
+  },
+
+  deleteSelectedCamera: () => {
+    const id = get().selectedCameraId;
+    if (!id) return;
+    applyCommand(get, set, new DeleteCameraCommand(id), `Cámara eliminada ${id}`);
+    const views = get().views.filter((v) => v.cameraId !== id);
+    const activeGone = !views.some((v) => v.id === get().activeViewId);
+    set({
+      selectedCameraId: null,
+      views,
+      activeViewId: activeGone ? (views[0]?.id ?? "view.plan.level1") : get().activeViewId,
+    });
+  },
+
+  setSelectedCameraName: (name) => {
+    const id = get().selectedCameraId;
+    if (!id || !name.trim()) return;
+    applyCommand(get, set, new SetCameraNameCommand(id, name.trim()), `Nombre → ${name.trim()}`);
+    set({
+      views: get().views.map((v) =>
+        v.cameraId === id ? { ...v, name: name.trim() } : v,
+      ),
+    });
+  },
+
+  setSelectedCameraFov: (fov) => {
+    const id = get().selectedCameraId;
+    if (!id) return;
+    const clamped = Math.min(120, Math.max(10, fov));
+    applyCommand(get, set, new SetCameraFovCommand(id, clamped), `FOV → ${clamped}°`);
+  },
+
+  setSelectedCameraEyeHeight: (z) => {
+    const id = get().selectedCameraId;
+    if (!id) return;
+    applyCommand(get, set, new SetCameraEyeHeightCommand(id, z), `Altura ojo → ${z.toFixed(2)} m`);
+  },
+
+  setSelectedCameraCrop: (crop) => {
+    const id = get().selectedCameraId;
+    if (!id) return;
+    applyCommand(
+      get,
+      set,
+      new SetCameraCropCommand(id, crop),
+      crop.enabled ? "Recorte de cámara actualizado" : "Recorte de cámara desactivado",
+    );
+  },
+
+  getActiveViewCrop: () => {
+    const s = get();
+    if (s.cropDragLive) return s.cropDragLive;
+    const view = s.views.find((v) => v.id === s.activeViewId);
+    if (!view) return null;
+    if (view.kind === "camera" && view.cameraId) {
+      return s.document.cameras.find((c) => c.id === view.cameraId)?.crop ?? null;
+    }
+    // On plan: selecting a camera edits that camera's crop (props / grips), not session clip
+    if (s.selectedCameraId) {
+      return s.document.cameras.find((c) => c.id === s.selectedCameraId)?.crop ?? null;
+    }
+    return view.crop ?? null;
+  },
+
+  getClippingCrop: () => {
+    const s = get();
+    const view = s.views.find((v) => v.id === s.activeViewId);
+    if (!view) return null;
+
+    // Live drag: only affects clip if it matches what this view clips
+    if (s.cropDragLive && s.cropDragMeta) {
+      if (s.cropDragMeta.cameraId) {
+        if (view.kind === "camera" && view.cameraId === s.cropDragMeta.cameraId) {
+          return s.cropDragLive;
+        }
+        // Dragging camera crop while on plan/perspective → do not clip the plan
+      } else if (view.kind === "plan" || view.kind === "perspective") {
+        return s.cropDragLive;
+      }
+    }
+
+    if (view.kind === "camera" && view.cameraId) {
+      return s.document.cameras.find((c) => c.id === view.cameraId)?.crop ?? null;
+    }
+    // Plan and free 3D: independent session crop only
+    return view.crop ?? null;
+  },
+
+  setActiveViewCropEnabled: (enabled) => {
+    const s = get();
+    const view = s.views.find((v) => v.id === s.activeViewId);
+    if (!view) return;
+
+    if (view.kind === "camera" && view.cameraId) {
+      const cam = s.document.cameras.find((c) => c.id === view.cameraId);
+      if (!cam) return;
+      const next = cloneViewCrop(cam.crop);
+      next.enabled = enabled;
+      applyCommand(
+        get,
+        set,
+        new SetCameraCropCommand(view.cameraId, next),
+        enabled ? "Recortar vista: sí" : "Recortar vista: no",
+      );
+      return;
+    }
+
+    if (s.selectedCameraId && view.kind === "plan") {
+      const cam = s.document.cameras.find((c) => c.id === s.selectedCameraId);
+      if (cam) {
+        const next = cloneViewCrop(cam.crop);
+        next.enabled = enabled;
+        applyCommand(
+          get,
+          set,
+          new SetCameraCropCommand(cam.id, next),
+          enabled ? "Recortar vista: sí" : "Recortar vista: no",
+        );
+        return;
+      }
+    }
+
+    const base =
+      view.crop ??
+      defaultSessionViewCrop(s.document.walls);
+    const next = normalizeViewCrop({ ...base, enabled });
+    set({
+      views: s.views.map((v) => (v.id === view.id ? { ...v, crop: next } : v)),
+      status: enabled ? "Recortar vista: sí" : "Recortar vista: no",
+    });
+  },
+
+  setActiveViewCropSize: (width, depth) => {
+    const w = Math.max(0.5, width);
+    const d = Math.max(0.5, depth);
+    const crop = get().getActiveViewCrop();
+    if (!crop) {
+      get().setActiveViewCropEnabled(true);
+    }
+    const cur = get().getActiveViewCrop();
+    if (!cur) return;
+    const cx = (cur.minX + cur.maxX) / 2;
+    const cy = (cur.minY + cur.maxY) / 2;
+    get().setActiveViewCrop(
+      normalizeViewCrop({
+        ...cur,
+        enabled: true,
+        minX: cx - w / 2,
+        maxX: cx + w / 2,
+        minY: cy - d / 2,
+        maxY: cy + d / 2,
+      }),
+    );
+  },
+
+  setActiveViewCrop: (crop) => {
+    const s = get();
+    const view = s.views.find((v) => v.id === s.activeViewId);
+    if (!view) return;
+    const next = normalizeViewCrop(crop);
+
+    if (view.kind === "camera" && view.cameraId) {
+      applyCommand(get, set, new SetCameraCropCommand(view.cameraId, next), "Recorte actualizado");
+      return;
+    }
+    if (s.selectedCameraId && view.kind === "plan") {
+      applyCommand(
+        get,
+        set,
+        new SetCameraCropCommand(s.selectedCameraId, next),
+        "Recorte de cámara actualizado",
+      );
+      return;
+    }
+    set({
+      views: s.views.map((v) => (v.id === view.id ? { ...v, crop: next } : v)),
+      status: "Recorte de vista actualizado",
+    });
+  },
+
+  resizeActiveViewCropCorner: (corner, x, y) => {
+    const crop = get().getActiveViewCrop();
+    if (!crop?.enabled) return;
+    get().setActiveViewCrop(resizeViewCropCorner(crop, corner, x, y));
+  },
+
+  beginCropDrag: (cameraId, corner) => {
+    const s = get();
+    let baseline: ViewCrop | null = null;
+    if (cameraId) {
+      baseline = s.document.cameras.find((c) => c.id === cameraId)?.crop ?? null;
+    } else {
+      baseline = s.views.find((v) => v.id === s.activeViewId)?.crop ?? null;
+    }
+    if (!baseline?.enabled) return;
+    set({
+      cropDragMeta: {
+        cameraId,
+        viewId: s.activeViewId,
+        mode: "corner",
+        corner,
+        baseline: cloneViewCrop(baseline),
+        startX: 0,
+        startY: 0,
+      },
+      cropDragLive: cloneViewCrop(baseline),
+      cameraPoseDragLive: null,
+      selectedCameraId: cameraId ?? s.selectedCameraId,
+      selectedCropFrameCameraId: cameraId ?? s.selectedCropFrameCameraId,
+      status: "Redimensionando recorte…",
+    });
+  },
+
+  beginCameraFrameMove: (cameraId, x, y) => {
+    const cam = get().document.cameras.find((c) => c.id === cameraId);
+    if (!cam?.crop?.enabled) return;
+    set({
+      cropDragMeta: {
+        cameraId,
+        viewId: get().activeViewId,
+        mode: "move",
+        corner: 0,
+        baseline: cloneViewCrop(cam.crop),
+        startX: x,
+        startY: y,
+        baselineEye: { ...cam.eye },
+        baselineTarget: { ...cam.target },
+      },
+      cropDragLive: cloneViewCrop(cam.crop),
+      cameraPoseDragLive: {
+        cameraId,
+        eye: { ...cam.eye },
+        target: { ...cam.target },
+      },
+      selectedCameraId: cameraId,
+      selectedCropFrameCameraId: cameraId,
+      status: "Moviendo cámara + marco…",
+    });
+  },
+
+  updateCropDrag: (x, y) => {
+    const meta = get().cropDragMeta;
+    if (!meta) return;
+    if (meta.mode === "move" && meta.cameraId && meta.baselineEye && meta.baselineTarget) {
+      const dx = x - meta.startX;
+      const dy = y - meta.startY;
+      set({
+        cropDragLive: normalizeViewCrop({
+          ...meta.baseline,
+          minX: meta.baseline.minX + dx,
+          maxX: meta.baseline.maxX + dx,
+          minY: meta.baseline.minY + dy,
+          maxY: meta.baseline.maxY + dy,
+        }),
+        cameraPoseDragLive: {
+          cameraId: meta.cameraId,
+          eye: {
+            x: meta.baselineEye.x + dx,
+            y: meta.baselineEye.y + dy,
+            z: meta.baselineEye.z,
+          },
+          target: {
+            x: meta.baselineTarget.x + dx,
+            y: meta.baselineTarget.y + dy,
+            z: meta.baselineTarget.z,
+          },
+        },
+      });
+      return;
+    }
+    set({
+      cropDragLive: resizeViewCropCorner(meta.baseline, meta.corner, x, y),
+    });
+  },
+
+  commitCropDrag: () => {
+    const s = get();
+    const meta = s.cropDragMeta;
+    const live = s.cropDragLive;
+    if (!meta || !live) {
+      set({ cropDragMeta: null, cropDragLive: null, cameraPoseDragLive: null });
+      return;
+    }
+    if (meta.mode === "move" && meta.cameraId) {
+      const dx = live.minX - meta.baseline.minX;
+      const dy = live.minY - meta.baseline.minY;
+      set({ cropDragMeta: null, cropDragLive: null, cameraPoseDragLive: null });
+      applyCommand(
+        get,
+        set,
+        new TranslateCameraPlanCommand(meta.cameraId, dx, dy),
+        "Cámara movida en planta",
+      );
+      return;
+    }
+    set({ cropDragMeta: null, cropDragLive: null, cameraPoseDragLive: null });
+    if (meta.cameraId) {
+      applyCommand(
+        get,
+        set,
+        new SetCameraCropCommand(meta.cameraId, live),
+        "Recorte redimensionado",
+      );
+      return;
+    }
+    set({
+      views: get().views.map((v) =>
+        v.id === meta.viewId ? { ...v, crop: cloneViewCrop(live) } : v,
+      ),
+      status: "Recorte de vista redimensionado",
+    });
+  },
+
+  cancelCropDrag: () => {
+    set({
+      cropDragMeta: null,
+      cropDragLive: null,
+      cameraPoseDragLive: null,
+      status: "Recorte cancelado",
+    });
   },
 
   setSelectedDoorLeafState: (leafState) => {
@@ -1026,16 +1588,26 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     set({
       activeViewId: id,
       views: get().views.map((v) => (v.id === id ? { ...v, open: true } : v)),
+      selectedCameraId: view.cameraId ?? get().selectedCameraId,
       status:
         view.kind === "plan"
           ? `Vista ortogonal: ${view.name}`
-          : `Vista activa: ${view.name}`,
+          : view.kind === "camera"
+            ? `Vista cámara: ${view.name}`
+            : `Vista 3D: ${view.name}`,
     });
   },
 
   ensureViewOpen: (id) => get().setActiveView(id),
 
   addView: (kind) => {
+    if (kind === "camera") {
+      get().setTool("camera");
+      // Prefer plan for placement
+      const plan = get().views.find((v) => v.kind === "plan");
+      if (plan) get().setActiveView(plan.id);
+      return;
+    }
     const n = get().views.filter((v) => v.kind === kind).length + 1;
     const id = `view.${kind}.${n}`;
     const name = kind === "plan" ? `Planta ${n}` : `3D ${n}`;
@@ -1054,19 +1626,32 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   requestFitView: () => set({ fitViewRequest: get().fitViewRequest + 1 }),
   requestCameraPreset: (preset) => {
     const labels: Record<CameraPreset, string> = {
-      top: "Superior",
-      bottom: "Inferior",
-      front: "Frontal",
-      back: "Posterior",
-      left: "Izquierda",
-      right: "Derecha",
-      iso: "Isométrica",
+      top: "Superior (orto)",
+      bottom: "Inferior (orto)",
+      front: "Frontal (orto)",
+      back: "Posterior (orto)",
+      left: "Izquierda (orto)",
+      right: "Derecha (orto)",
+      iso: "Isométrica (perspectiva)",
     };
     set({
       cameraPreset: preset,
       cameraPresetRequest: get().cameraPresetRequest + 1,
       status: `Vista 3D: ${labels[preset]}`,
     });
+  },
+  setOrbitPivotMode: (orbitPivotMode) => {
+    set({
+      orbitPivotMode,
+      status:
+        orbitPivotMode === "selection"
+          ? "Órbita: pivot en selección (sin selección → modelo)"
+          : "Órbita: pivot en centro del modelo",
+    });
+    get().syncOrbitPivot();
+  },
+  syncOrbitPivot: () => {
+    set({ orbitPivotRequest: get().orbitPivotRequest + 1 });
   },
 
   setPanelDock: (id, side) => {

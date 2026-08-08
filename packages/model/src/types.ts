@@ -72,6 +72,35 @@ export const DOOR_LEAF_ANGLE_RAD: Record<DoorLeafState, number> = {
   open: Math.PI / 2, // 90°
 };
 
+/**
+ * Axis-aligned view crop in world XY (m). Optional Z for 3D clipping.
+ * See ADR 0016.
+ */
+export type ViewCrop = {
+  enabled: boolean;
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+  /** Optional vertical clip (3D). Omit = no Z crop. */
+  minZ?: number;
+  maxZ?: number;
+};
+
+/** Geometric camera — view frustum params only (no render materials). */
+export type Camera = {
+  id: string;
+  name: string;
+  /** Eye / camera position (m). */
+  eye: Vec3;
+  /** Look-at target (m). */
+  target: Vec3;
+  /** Vertical field of view in degrees. */
+  fov: number;
+  /** Plan/3D crop region (ADR 0016). */
+  crop: ViewCrop;
+};
+
 export type AxonDocument = {
   meta: ProjectMeta;
   storeys: Storey[];
@@ -81,4 +110,5 @@ export type AxonDocument = {
   walls: Wall[];
   doors: Door[];
   windows: Window[];
+  cameras: Camera[];
 };

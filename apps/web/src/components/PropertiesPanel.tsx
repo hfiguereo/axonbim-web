@@ -6,6 +6,76 @@ import {
 import { FloatingPanel } from "./FloatingPanel";
 import { useSessionStore } from "../sessionStore";
 
+function ViewportCropBlock() {
+  const crop = useSessionStore((s) => {
+    void s.documentRev;
+    void s.views;
+    void s.activeViewId;
+    void s.selectedCameraId;
+    void s.cropDragLive;
+    return s.getActiveViewCrop();
+  });
+  const setEnabled = useSessionStore((s) => s.setActiveViewCropEnabled);
+  const setSize = useSessionStore((s) => s.setActiveViewCropSize);
+
+  const enabled = crop?.enabled ?? false;
+  const width = crop ? crop.maxX - crop.minX : 0;
+  const depth = crop ? crop.maxY - crop.minY : 0;
+
+  return (
+    <div className="props-viewport">
+      <h3 className="props-viewport__title">Viewport</h3>
+      <label className="type-selector">
+        <span>Recortar vista</span>
+        <input
+          type="checkbox"
+          checked={enabled}
+          onChange={(e) => setEnabled(e.target.checked)}
+        />
+      </label>
+      {enabled && (
+        <dl className="props">
+          <div>
+            <dt>Ancho (m)</dt>
+            <dd>
+              <input
+                className="props__input"
+                type="number"
+                min={0.5}
+                step={0.1}
+                value={Number(width.toFixed(2))}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  if (Number.isFinite(v) && v > 0) setSize(v, depth || 1);
+                }}
+              />
+            </dd>
+          </div>
+          <div>
+            <dt>Fondo (m)</dt>
+            <dd>
+              <input
+                className="props__input"
+                type="number"
+                min={0.5}
+                step={0.1}
+                value={Number(depth.toFixed(2))}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  if (Number.isFinite(v) && v > 0) setSize(width || 1, v);
+                }}
+              />
+            </dd>
+          </div>
+        </dl>
+      )}
+      <p className="props-hint">
+        Planta: crop propio (oculta fuera). Cámara: selecciona el marco azul para grips/mover la cámara.
+      </p>
+    </div>
+  );
+}
+
 export function PropertiesPanel({ flexGrow = 1 }: { flexGrow?: number }) {
   const doc = useSessionStore((s) => s.document);
   const activeTool = useSessionStore((s) => s.activeTool);
@@ -19,6 +89,7 @@ export function PropertiesPanel({ flexGrow = 1 }: { flexGrow?: number }) {
   const selectedWallId = useSessionStore((s) => s.selectedWallId);
   const selectedDoorId = useSessionStore((s) => s.selectedDoorId);
   const selectedWindowId = useSessionStore((s) => s.selectedWindowId);
+  const selectedCameraId = useSessionStore((s) => s.selectedCameraId);
   const activeFamilyId = useSessionStore((s) => s.activeFamilyId);
   const activeDoorFamilyId = useSessionStore((s) => s.activeDoorFamilyId);
   const activeWindowFamilyId = useSessionStore((s) => s.activeWindowFamilyId);
@@ -34,6 +105,9 @@ export function PropertiesPanel({ flexGrow = 1 }: { flexGrow?: number }) {
   const setSelectedWindowFamily = useSessionStore((s) => s.setSelectedWindowFamily);
   const setSelectedWindowSwing = useSessionStore((s) => s.setSelectedWindowSwing);
   const setSelectedWindowHinge = useSessionStore((s) => s.setSelectedWindowHinge);
+  const setSelectedCameraName = useSessionStore((s) => s.setSelectedCameraName);
+  const setSelectedCameraFov = useSessionStore((s) => s.setSelectedCameraFov);
+  const setSelectedCameraEyeHeight = useSessionStore((s) => s.setSelectedCameraEyeHeight);
   const setWallHeight = useSessionStore((s) => s.setWallHeight);
   const setSelectedWallHeight = useSessionStore((s) => s.setSelectedWallHeight);
   const setSelectedWallThickness = useSessionStore((s) => s.setSelectedWallThickness);
@@ -48,6 +122,9 @@ export function PropertiesPanel({ flexGrow = 1 }: { flexGrow?: number }) {
   const selectedWindow = selectedWindowId
     ? doc.windows.find((w) => w.id === selectedWindowId)
     : undefined;
+  const selectedCamera = selectedCameraId
+    ? doc.cameras.find((c) => c.id === selectedCameraId)
+    : undefined;
 
   return (
     <FloatingPanel
@@ -59,7 +136,73 @@ export function PropertiesPanel({ flexGrow = 1 }: { flexGrow?: number }) {
       flexGrow={flexGrow}
       className="float-panel--properties"
     >
-      {selectedWindow ? (
+      {selectedCamera ? (
+        <>
+          <dl className="props">
+            <div>
+              <dt>Nombre</dt>
+              <dd>
+                <input
+                  className="props__input"
+                  type="text"
+                  value={selectedCamera.name}
+                  onChange={(e) => setSelectedCameraName(e.target.value)}
+                />
+              </dd>
+            </div>
+            <div>
+              <dt>Altura ojo (m)</dt>
+              <dd>
+                <input
+                  className="props__input"
+                  type="number"
+                  min={0.1}
+                  step={0.05}
+                  value={selectedCamera.eye.z}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    if (Number.isFinite(v) && v > 0) setSelectedCameraEyeHeight(v);
+                  }}
+                />
+              </dd>
+            </div>
+            <div>
+              <dt>FOV (°)</dt>
+              <dd>
+                <input
+                  className="props__input"
+                  type="number"
+                  min={10}
+                  max={120}
+                  step={1}
+                  value={selectedCamera.fov}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    if (Number.isFinite(v)) setSelectedCameraFov(v);
+                  }}
+                />
+              </dd>
+            </div>
+            <div>
+              <dt>Ojo XY</dt>
+              <dd>
+                {selectedCamera.eye.x.toFixed(2)}, {selectedCamera.eye.y.toFixed(2)}
+              </dd>
+            </div>
+            <div>
+              <dt>Mira XY</dt>
+              <dd>
+                {selectedCamera.target.x.toFixed(2)}, {selectedCamera.target.y.toFixed(2)}
+              </dd>
+            </div>
+            <div>
+              <dt>Id</dt>
+              <dd>{selectedCamera.id}</dd>
+            </div>
+          </dl>
+          <ViewportCropBlock />
+        </>
+      ) : selectedWindow ? (
         <>
           <label className="type-selector">
             <span>Familia</span>
@@ -360,7 +503,13 @@ export function PropertiesPanel({ flexGrow = 1 }: { flexGrow?: number }) {
             </div>
             <div>
               <dt>Proyección</dt>
-              <dd>{view?.kind === "plan" ? "Ortogonal" : "Perspectiva"}</dd>
+              <dd>
+                {view?.kind === "plan"
+                  ? "Ortogonal"
+                  : view?.kind === "camera"
+                    ? "Perspectiva (cámara)"
+                    : "Perspectiva"}
+              </dd>
             </div>
             <div>
               <dt>Escala</dt>
@@ -379,10 +528,15 @@ export function PropertiesPanel({ flexGrow = 1 }: { flexGrow?: number }) {
               <dd>{doc.doors.length}</dd>
             </div>
             <div>
+              <dt>Cámaras</dt>
+              <dd>{doc.cameras.length}</dd>
+            </div>
+            <div>
               <dt>Ventanas</dt>
               <dd>{doc.windows.length}</dd>
             </div>
           </dl>
+          <ViewportCropBlock />
         </>
       )}
     </FloatingPanel>

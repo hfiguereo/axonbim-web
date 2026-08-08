@@ -26,6 +26,7 @@ export function createEmptyDocument(name = "Sin título"): AxonDocument {
     walls: [],
     doors: [],
     windows: [],
+    cameras: [],
   };
 }
 

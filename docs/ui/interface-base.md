@@ -3,11 +3,11 @@
 **Estado:** aprobada como base de la interfaz futura (2026-08-06).  
 **Alcance de producto:** la maqueta valida UX; no implica implementar todas las herramientas stub en Etapa 0–1.
 
-Fuente viva del shell: `apps/web`. Referencia conceptual: [revit-lt-baseline.md](revit-lt-baseline.md). Detalle operativo v0: [axonbim-shell-v0.md](axonbim-shell-v0.md).
+Fuente viva del shell: `apps/web`. Referencia conceptual: [reference-shell-baseline.md](reference-shell-baseline.md). Detalle operativo v0: [axonbim-shell-v0.md](axonbim-shell-v0.md).
 
 ## Principios
 
-1. Inspiración **Revit LT** (distribución y hábitos), no paridad de features Autodesk.
+1. Inspiración en **productos de referencia** BIM (distribución y hábitos), no paridad de features con terceros.
 2. Cinta **compacta** (altura fija, iconos + tip corto al hover).
 3. Paneles **acoplables** izq./der./flotante con compositor usable.
 4. Herramientas de **trazado** abren **Modificar + Dibujar**; inserción puntual no.

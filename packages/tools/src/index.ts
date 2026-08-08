@@ -1,8 +1,8 @@
 /** Interaction tools — wall draw, snapping (MVP). */
 
-export type ToolId = "select" | "wall" | "door" | "window" | "none";
+export type ToolId = "select" | "wall" | "door" | "window" | "camera" | "none";
 
-/** Revit-like Draw panel modes while a sketch/placement tool is active. */
+/** Draw panel modes while a sketch/placement tool is active. */
 export type DrawMode =
   | "line"
   | "rectangle"
@@ -19,6 +19,11 @@ export type ToolSession = {
 /** Tools that sketch geometry (open Modify + Draw), not one-click insert. */
 export function isSketchTool(tool: ToolId): boolean {
   return tool === "wall";
+}
+
+/** Two-click placement on plan (eye → target). */
+export function isCameraTool(tool: ToolId): boolean {
+  return tool === "camera";
 }
 
 /** One-click host placement (door/window on wall). */

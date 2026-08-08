@@ -86,6 +86,10 @@ Semántica (oráculo conceptual del legado `WallSpec`):
 
 Hospedadas en `wallId`. Ver ADR 0010 / 0011. Al borrar el muro se eliminan y el undo las restaura.
 
+### Camera (post-MVP — ADR 0015 + ADR 0016)
+
+Cámara geométrica: `eye`, `target`, `fov`, `crop` (`ViewCrop`). Colocable en planta; genera vista 3D de sesión ligada (`kind: "camera"`). Sin render. El crop AABB limita lo visible; por defecto activo al crear.
+
 ### AxonDocument (en memoria)
 
 ```ts
@@ -98,6 +102,7 @@ Hospedadas en `wallId`. Ver ADR 0010 / 0011. Al borrar el muro se eliminan y el 
   walls: Wall[],
   doors: Door[],
   windows: Window[],
+  cameras: Camera[],
   selection?: { wallIds: string[] }  // opcional; puede vivir en capa UI — ver nota
 }
 ```
@@ -129,7 +134,8 @@ Archivo JSON UTF-8, extensión `.axon` (también acepta `.json` con el mismo esq
   "windowFamilies": [],
   "walls": [],
   "doors": [],
-  "windows": []
+  "windows": [],
+  "cameras": []
 }
 ```
 

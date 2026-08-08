@@ -33,10 +33,12 @@ export function ViewIconBar() {
   const graphicScale = useSessionStore((s) => s.graphicScale);
   const visualStyle = useSessionStore((s) => s.visualStyle);
   const detailLevel = useSessionStore((s) => s.detailLevel);
+  const orbitPivotMode = useSessionStore((s) => s.orbitPivotMode);
   const cycleGraphicScale = useSessionStore((s) => s.cycleGraphicScale);
   const cycleVisualStyle = useSessionStore((s) => s.cycleVisualStyle);
   const cycleDetailLevel = useSessionStore((s) => s.cycleDetailLevel);
   const requestFitView = useSessionStore((s) => s.requestFitView);
+  const setOrbitPivotMode = useSessionStore((s) => s.setOrbitPivotMode);
   const setStatus = useSessionStore((s) => s.setStatus);
 
   const styleGlyph =
@@ -58,6 +60,29 @@ export function ViewIconBar() {
       >
         <IconFit />
         <span className="icon-bar__mini">Fit</span>
+      </button>
+      <button
+        type="button"
+        className={
+          orbitPivotMode === "selection"
+            ? "icon-bar__btn icon-bar__btn--on"
+            : "icon-bar__btn"
+        }
+        title={
+          orbitPivotMode === "selection"
+            ? "Órbita: pivot en selección (clic para modelo)"
+            : "Órbita: pivot en modelo (clic para selección)"
+        }
+        aria-label="Modo pivot de órbita"
+        aria-pressed={orbitPivotMode === "selection"}
+        onClick={() =>
+          setOrbitPivotMode(orbitPivotMode === "model" ? "selection" : "model")
+        }
+      >
+        <span className="icon-bar__glyph">{orbitPivotMode === "selection" ? "◎" : "◉"}</span>
+        <span className="icon-bar__mini">
+          {orbitPivotMode === "selection" ? "Sel" : "Mod"}
+        </span>
       </button>
       <button
         type="button"

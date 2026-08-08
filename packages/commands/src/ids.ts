@@ -1,4 +1,5 @@
 import type { AxonDocument } from "@axonbim/model";
+import { resetCameraIdSeq } from "./cameras";
 import { resetDoorIdSeq } from "./doors";
 import { resetWallIdSeq } from "./walls";
 import { resetWindowIdSeq } from "./windows";
@@ -24,4 +25,5 @@ export function syncIdSequencesFromDocument(doc: AxonDocument): void {
   resetWallIdSeq(maxNumericSuffix(doc.walls.map((w) => w.id), "wall."));
   resetDoorIdSeq(maxNumericSuffix(doc.doors.map((d) => d.id), "door."));
   resetWindowIdSeq(maxNumericSuffix(doc.windows.map((w) => w.id), "window."));
+  resetCameraIdSeq(maxNumericSuffix((doc.cameras ?? []).map((c) => c.id), "camera."));
 }

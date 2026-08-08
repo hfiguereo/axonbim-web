@@ -224,7 +224,7 @@ export function Ribbon() {
         {ribbonTab === "insert" && (
           <>
             <Group title="Vínculo">
-              <Stub tips={tips} icon="link" label="Vincular Revit" tip="Vincular Revit" />
+              <Stub tips={tips} icon="link" label="Vincular" tip="Vincular (stub)" />
               <Stub tips={tips} icon="link" label="Vincular CAD" tip="Vincular CAD" />
               <Stub tips={tips} icon="cloud" label="Nube de puntos" tip="Nube de puntos" />
             </Group>
@@ -301,7 +301,14 @@ export function Ribbon() {
               <Stub tips={tips} icon="sheet" label="Leyenda" tip="Leyenda" />
               <Stub tips={tips} icon="sheet" label="Tabla de planificación" tip="Tabla" />
               <Stub tips={tips} icon="sheet" label="Plano / Sheet" tip="Plano" />
-              <Stub tips={tips} icon="camera" label="Cámara" tip="Cámara" />
+              <Tool
+                tips={tips}
+                icon="camera"
+                label="Cámara"
+                tip="Colocar cámara geométrica en planta"
+                active={activeTool === "camera"}
+                onClick={() => setTool("camera")}
+              />
             </Group>
             <Group title="Gráficos">
               <Stub tips={tips} icon="vg" label="Visibilidad/Gráficos" tip="Visibilidad" />

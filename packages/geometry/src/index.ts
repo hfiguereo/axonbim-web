@@ -31,3 +31,5 @@ export {
 } from "./windowGeometry";
 export type { WindowMeshes, WindowPlanSymbol } from "./windowGeometry";
 export type { PlanFlipControl } from "./planControls";
+export { cameraPlanSymbol, cameraVisionConeLines } from "./cameraSymbol";
+export type { CameraPlanSymbol } from "./cameraSymbol";

@@ -24,7 +24,7 @@ export function SystemBrowserStub() {
         </button>
       </div>
       <div className="float-panel__body">
-        <p className="stub-note">Maqueta Revit LT — panel stub (fuera de Etapa 0–1).</p>
+        <p className="stub-note">Maqueta de shell — panel stub (fuera de Etapa 0–1).</p>
       </div>
     </aside>
   );

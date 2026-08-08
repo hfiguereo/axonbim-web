@@ -1,4 +1,5 @@
-import type { AxonDocument, Door, Wall, Window } from "@axonbim/model";
+import type { AxonDocument, Camera, Door, ViewCrop, Wall, Window } from "@axonbim/model";
+import { defaultCameraCrop, normalizeViewCrop } from "@axonbim/model";
 import { MIN_WALL_LENGTH } from "@axonbim/shared";
 
 const DEFAULT_DOOR_FAMILIES: AxonDocument["doorFamilies"] = [
@@ -28,6 +29,7 @@ export type AxonFileV1 = {
   walls: AxonDocument["walls"];
   doors?: Door[];
   windows?: Window[];
+  cameras?: Camera[];
 };
 
 function fail(msg: string): never {
@@ -90,6 +92,48 @@ function validateWindow(
   if (!isFiniteNum(w.sill) || w.sill < 0) fail(`window ${w.id}: invalid sill`);
 }
 
+function validateViewCrop(crop: ViewCrop, label: string): void {
+  if (typeof crop.enabled !== "boolean") fail(`${label}: enabled required`);
+  if (
+    !isFiniteNum(crop.minX) ||
+    !isFiniteNum(crop.minY) ||
+    !isFiniteNum(crop.maxX) ||
+    !isFiniteNum(crop.maxY)
+  ) {
+    fail(`${label}: bounds must be finite`);
+  }
+  if (crop.maxX <= crop.minX || crop.maxY <= crop.minY) {
+    fail(`${label}: max must be greater than min`);
+  }
+  if (crop.minZ !== undefined && !isFiniteNum(crop.minZ)) fail(`${label}: invalid minZ`);
+  if (crop.maxZ !== undefined && !isFiniteNum(crop.maxZ)) fail(`${label}: invalid maxZ`);
+  if (
+    crop.minZ !== undefined &&
+    crop.maxZ !== undefined &&
+    crop.maxZ <= crop.minZ
+  ) {
+    fail(`${label}: maxZ must be greater than minZ`);
+  }
+}
+
+function validateCamera(c: Camera): void {
+  if (!c.id || typeof c.id !== "string") fail("camera.id required");
+  if (!c.name || typeof c.name !== "string") fail(`camera ${c.id}: name required`);
+  assertVec3(c.eye, `camera ${c.id}.eye`);
+  assertVec3(c.target, `camera ${c.id}.target`);
+  if (!isFiniteNum(c.fov) || c.fov < 10 || c.fov > 120) {
+    fail(`camera ${c.id}: fov must be 10–120`);
+  }
+  const dist = Math.hypot(
+    c.target.x - c.eye.x,
+    c.target.y - c.eye.y,
+    c.target.z - c.eye.z,
+  );
+  if (dist < 0.05) fail(`camera ${c.id}: eye and target too close`);
+  if (!c.crop || typeof c.crop !== "object") fail(`camera ${c.id}: crop required`);
+  validateViewCrop(c.crop, `camera ${c.id}.crop`);
+}
+
 export function serializeDocument(doc: AxonDocument): string {
   const file: AxonFileV1 = {
     format: "axon",
@@ -106,6 +150,7 @@ export function serializeDocument(doc: AxonDocument): string {
     walls: doc.walls,
     doors: doc.doors,
     windows: doc.windows,
+    cameras: doc.cameras ?? [],
   };
   return `${JSON.stringify(file, null, 2)}\n`;
 }
@@ -144,6 +189,20 @@ export function parseDocument(text: string): AxonDocument {
     hinge: w.hinge ?? "start",
     sill: w.sill ?? 0.9,
   })) as Window[];
+  const cameras = (data.cameras ?? []).map((c) => {
+    const fov = c.fov ?? 45;
+    const eye = c.eye;
+    const target = c.target;
+    const crop =
+      c.crop && typeof c.crop === "object"
+        ? normalizeViewCrop(c.crop as ViewCrop)
+        : defaultCameraCrop(eye, target, fov);
+    return {
+      ...c,
+      fov,
+      crop,
+    };
+  }) as Camera[];
 
   const storeyIds = new Set(storeys.map((s) => s.id));
   const familyIds = new Set(families.map((f) => f.id));
@@ -154,10 +213,12 @@ export function parseDocument(text: string): AxonDocument {
   if (wallIds.size !== walls.length) fail("duplicate wall ids");
   if (new Set(doors.map((d) => d.id)).size !== doors.length) fail("duplicate door ids");
   if (new Set(windows.map((w) => w.id)).size !== windows.length) fail("duplicate window ids");
+  if (new Set(cameras.map((c) => c.id)).size !== cameras.length) fail("duplicate camera ids");
 
   for (const w of walls) validateWall(w, storeyIds, familyIds);
   for (const d of doors) validateDoor(d, wallIds, doorFamilyIds);
   for (const w of windows) validateWindow(w, wallIds, windowFamilyIds);
+  for (const c of cameras) validateCamera(c);
 
   return {
     meta: {
@@ -174,5 +235,6 @@ export function parseDocument(text: string): AxonDocument {
     walls,
     doors,
     windows,
+    cameras,
   };
 }

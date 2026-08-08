@@ -12,7 +12,7 @@ Fuente adaptada 2026-08-07. Separar claramente:
 
 ## Principio
 
-Work planes / referencias espaciales = infraestructura inteligente (inferir cuando sea inequívoco; mostrar; permitir fijar). No burocracia constante tipo Revit, ni ambigüedad total.
+Work planes / referencias espaciales = infraestructura inteligente (inferir cuando sea inequívoco; mostrar; permitir fijar). No burocracia constante tipo productos de referencia rígidos, ni ambigüedad total.
 
 Push & Pull pertenece a **Edit Mode**, no a Parametric Edit.
 
