@@ -2,7 +2,7 @@
 
 ## Autorización
 
-**2026-08-08** — dueño: refactor controlado · corte 2 · **corte 3**.
+**2026-08-08** — dueño: refactor controlado · cortes 1–4.
 
 ## Principio
 
@@ -22,12 +22,18 @@ No reescribir `sessionStore` ni `createViewport` de un golpe. No IFC/OCCT/workpl
 - `session/sessionTypes.ts`: `ProjectView`, docks, ribbon, estilos, orbit, constantes de cámara
 - `sessionStore` reexporta por compatibilidad; UI importa tipos desde `sessionTypes`
 
+## Corte 4 (**hecho** 2026-08-08) — clip/máscara del viewer
+
+- `packages/viewer/src/viewCropClip.ts`: planos GPU, máscara de planta, `applyViewCropClipping`
+- `viewCropClip.test.ts` (2) — ecuaciones AABB → planos
+- `createViewport` delega clip/máscara; vitest en `@axonbim/viewer`
+
 ## Parada
 
-Cortes 1–3 cerrados. Corte 4 **no** sin OK explícito.
+Cortes 1–4 cerrados. Corte 5 **no** sin OK explícito.
 
 ## Siguiente (requiere OK)
 
 | # | Idea |
 |---|------|
-| 4 | Primer corte viewer: clip/máscara fuera de `createViewport` |
+| 5 | (proponer) más extracción de `createViewport` o peels de `sessionStore` |

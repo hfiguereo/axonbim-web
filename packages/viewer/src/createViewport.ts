@@ -26,12 +26,10 @@ import {
   LineBasicMaterial,
   LineSegments,
   Mesh,
-  MeshBasicMaterial,
   MeshLambertMaterial,
   OrthographicCamera,
   PerspectiveCamera,
   Plane,
-  PlaneGeometry,
   Raycaster,
   Scene,
   SphereGeometry,
@@ -40,6 +38,12 @@ import {
   Vector3,
   WebGLRenderer,
 } from "three";
+import {
+  applyViewCropClipping,
+  clearGroupMeshes,
+  createClipPlanePool,
+  createPlanCropMaskMaterial,
+} from "./viewCropClip.js";
 
 export type ViewProjection = "perspective" | "plan";
 
@@ -347,14 +351,7 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
     planDoorLineMat,
     planDoorLineSelectedMat,
   ];
-  const clipPlanePool = [
-    new Plane(),
-    new Plane(),
-    new Plane(),
-    new Plane(),
-    new Plane(),
-    new Plane(),
-  ];
+  const clipPlanePool = createClipPlanePool();
   let currentClipCrop: ViewCrop | null = null;
 
   /** Solid masks outside plan crop AABB (reliable hide in top view). */
@@ -362,76 +359,18 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
   scene.add(cropMaskGroup);
   const bgColor =
     scene.background instanceof Color ? scene.background.getHex() : 0x1c2228;
-  const cropMaskMat = new MeshBasicMaterial({
-    color: bgColor,
-    depthTest: true,
-    depthWrite: true,
-    side: DoubleSide,
-  });
-  const PLAN_MASK_BIG = 400;
-  const PLAN_MASK_Z = 12;
-
-  const clearCropMask = () => {
-    while (cropMaskGroup.children.length) {
-      const child = cropMaskGroup.children[0]!;
-      cropMaskGroup.remove(child);
-      if (child instanceof Mesh) child.geometry.dispose();
-    }
-  };
-
-  const rebuildPlanCropMask = (crop: ViewCrop | null) => {
-    clearCropMask();
-    if (!crop?.enabled || mode !== "plan") {
-      cropMaskGroup.visible = false;
-      return;
-    }
-    cropMaskGroup.visible = true;
-    const { minX, minY, maxX, maxY } = crop;
-    const big = PLAN_MASK_BIG;
-    const addBand = (cx: number, cy: number, w: number, d: number) => {
-      if (w < 1e-4 || d < 1e-4) return;
-      const mesh = new Mesh(new PlaneGeometry(w, d), cropMaskMat);
-      mesh.position.set(cx, cy, PLAN_MASK_Z);
-      mesh.raycast = () => {};
-      cropMaskGroup.add(mesh);
-    };
-    // West / East full-height bands
-    addBand((-big + minX) / 2, 0, minX + big, 2 * big);
-    addBand((maxX + big) / 2, 0, big - maxX, 2 * big);
-    // South / North between minX–maxX
-    addBand((minX + maxX) / 2, (-big + minY) / 2, maxX - minX, minY + big);
-    addBand((minX + maxX) / 2, (maxY + big) / 2, maxX - minX, big - maxY);
-  };
+  const cropMaskMat = createPlanCropMaskMaterial(bgColor);
 
   const applyClippingState = () => {
-    const crop = currentClipCrop;
-    if (!crop?.enabled) {
-      renderer.localClippingEnabled = true;
-      for (const mat of clipMats) {
-        mat.clippingPlanes = [];
-        mat.clipIntersection = false;
-        mat.needsUpdate = true;
-      }
-      rebuildPlanCropMask(null);
-      return;
-    }
-    clipPlanePool[0]!.setComponents(1, 0, 0, -crop.minX);
-    clipPlanePool[1]!.setComponents(-1, 0, 0, crop.maxX);
-    clipPlanePool[2]!.setComponents(0, 1, 0, -crop.minY);
-    clipPlanePool[3]!.setComponents(0, -1, 0, crop.maxY);
-    let planes = clipPlanePool.slice(0, 4);
-    if (crop.minZ !== undefined && crop.maxZ !== undefined) {
-      clipPlanePool[4]!.setComponents(0, 0, 1, -crop.minZ);
-      clipPlanePool[5]!.setComponents(0, 0, -1, crop.maxZ);
-      planes = clipPlanePool.slice(0, 6);
-    }
-    renderer.localClippingEnabled = true;
-    for (const mat of clipMats) {
-      mat.clippingPlanes = planes;
-      mat.clipIntersection = false;
-      mat.needsUpdate = true;
-    }
-    rebuildPlanCropMask(crop);
+    applyViewCropClipping({
+      crop: currentClipCrop,
+      renderer,
+      materials: clipMats,
+      planePool: clipPlanePool,
+      maskGroup: cropMaskGroup,
+      maskMaterial: cropMaskMat,
+      isPlan: mode === "plan",
+    });
   };
 
   const previewGeom = new BufferGeometry();
@@ -1324,7 +1263,7 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
       cropLineSelectedMat.dispose();
       cropGripMat.dispose();
       cropMaskMat.dispose();
-      clearCropMask();
+      clearGroupMeshes(cropMaskGroup);
       cameraPickMat.dispose();
       cameraPickSelectedMat.dispose();
       cameraPickGeom.dispose();
