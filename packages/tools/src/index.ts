@@ -1,4 +1,4 @@
-/** Interaction tools — wall draw, snapping (MVP). */
+/** Interaction tools — wall draw, snapping (MVP + LR1 SnapSession). */
 
 export type ToolId = "select" | "wall" | "door" | "window" | "camera" | "none";
 
@@ -40,11 +40,21 @@ export type WallDrawState = {
 };
 
 export {
+  applyAxisLock,
+  axisAngleFromHorizontal,
+  clearSnapSession,
   collectEndpoints,
+  emptySnapSession,
   orthoFrom,
   snapWallPoint,
   ORTHO_ANGLE_DEG,
+  ORTHO_ENTER_ANGLE_DEG,
+  ORTHO_HOLD_ANGLE_DEG,
+  type AxisLock,
   type SnapContext,
   type SnapKind,
   type SnapResult,
+  type SnapSession,
 } from "./snap";
+
+export { restartChainAt, type WallChainDrawState } from "./wallChain";
