@@ -1,5 +1,5 @@
 import type { AxonDocument } from "@axonbim/model";
-import type { Command } from "./types";
+import { didChange, type Command, type CommandResult } from "./types";
 
 export class HistoryStack {
   private undoStack: Command[] = [];
@@ -13,13 +13,16 @@ export class HistoryStack {
     return this.redoStack.length > 0;
   }
 
-  /** @returns true if the command mutated and was recorded. */
-  push(cmd: Command, doc: AxonDocument): boolean {
-    const mutated = cmd.execute(doc);
-    if (!mutated) return false;
+  /**
+   * Records the command only if it mutated. A no-op and a rejection both leave
+   * the stacks untouched — in particular neither one clears redo (F5-S).
+   */
+  push(cmd: Command, doc: AxonDocument): CommandResult {
+    const result = cmd.execute(doc);
+    if (!didChange(result)) return result;
     this.undoStack.push(cmd);
     this.redoStack = [];
-    return true;
+    return result;
   }
 
   undo(doc: AxonDocument): void {
@@ -32,8 +35,7 @@ export class HistoryStack {
   redo(doc: AxonDocument): void {
     const cmd = this.redoStack.pop();
     if (!cmd) return;
-    const mutated = cmd.execute(doc);
-    if (!mutated) {
+    if (!didChange(cmd.execute(doc))) {
       // Should not happen for recorded commands; keep redo stack consistent
       this.redoStack.push(cmd);
       return;

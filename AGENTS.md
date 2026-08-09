@@ -23,9 +23,11 @@ Punto de entrada para agentes de IA. Lee esto antes de cualquier cambio material
 | Geometría | `docs/architecture/geometry-policy.md`; OCCT parked: ADR 0013 |
 | Paradigmas edición / workplanes | `docs/architecture/editing-paradigms.md`, `docs/roadmap/workplanes-roadmap.md` (**parked**) |
 | Comandos / historial | `docs/architecture/commands-and-history.md` |
+| Invariantes: dominio vs UI | ADR 0017 + `docs/roadmap/domain-invariants-plan.md` (**F9-E, propuesto**) |
 | **Plan maestro (fuente fundacional)** | **`docs/migration/plan-maestro-resumen.md`** → completo en `docs/migration/plan-maestro-axonbim-web.pdf` |
 | Legado desktop | `docs/migration/legacy-inventory.md`, `migration-rules.md` |
 | Validar / auditoría | `docs/validation/acceptance-matrix.md`, `technical-audit-2026-08.md`, `playwright-f8.md`, `navigation-3d-checklist.md` |
+| **Auditoría externa 2026-08-08** | **`docs/validation/external-audit-2026-08-08.md`** (P0/P1 de integridad) |
 | UI / layout | `docs/ui/interface-base.md`, `reference-shell-baseline.md`, `axonbim-shell-v0.md` |
 | Fase / gates | `docs/roadmap/work-phases.md`, `gates.md`, **`f5-stabilization.md`** |
 | **Pendientes y prioridad (hilo único)** | **`docs/roadmap/pending-work.md`** |

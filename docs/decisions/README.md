@@ -18,3 +18,4 @@
 | [0014](0014-view-cube-orbit-pivot.md) | Gizmo tríada ±ejes, ortho 3D, pivot / hold-orbit |
 | [0015](0015-geometric-cameras.md) | Cámaras geométricas (vista 3D ligada) |
 | [0016](0016-view-crop-region.md) | Región de recorte de vista (Crop Region) |
+| [0017](0017-domain-invariants-in-commands.md) | Invariantes del documento en dominio, no en la UI (**propuesto**) |

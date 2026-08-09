@@ -52,7 +52,7 @@
 
 ### Cola de pendientes ordenada (2026-08-08)
 
-- Nuevo [`pending-work.md`](pending-work.md): fuente de verdad con **tres hilos** (Control /
+- Nuevo [`pending-work.md`](docs/roadmap/pending-work.md): fuente de verdad con **tres hilos** (Control /
   Refactor / Producto) y prioridad global de mayor a menor; desarrollo y features nuevas
   al final de la cola
 - `AGENTS.md`, `gates.md`, `technical-audit-2026-08.md` y `refactor-session-viewer.md`

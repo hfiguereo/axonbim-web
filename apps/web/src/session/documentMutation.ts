@@ -1,9 +1,30 @@
-import type { Command, HistoryStack } from "@axonbim/commands";
+import type { Command, CommandResult, HistoryStack } from "@axonbim/commands";
 import type { AxonDocument } from "@axonbim/model";
 import { touchDoc } from "./touchDoc";
 
 /** Status shown when a command ran but decided nothing changed (F5-S). */
 export const NO_MUTATION_STATUS = "Sin cambios (operación no aplicada)";
+
+/**
+ * Spanish copy for the domain rules a user can actually hit (ADR 0017).
+ * Unmapped codes fall back to the technical message rather than hiding it.
+ */
+const REJECTION_TEXT: Record<string, string> = {
+  "wall.height.min": "Altura de muro por debajo del mínimo (0,05 m)",
+  "wall.thickness.min": "Espesor de muro por debajo del mínimo (0,05 m)",
+  "wall.length.min": "Muro demasiado corto (mínimo 0,05 m)",
+  "wall.family.unknown": "Esa familia de muro no existe en el documento",
+  "wall.storey.unknown": "Ese nivel no existe en el documento",
+  "door.family.unknown": "Esa familia de puerta no existe en el documento",
+  "window.family.unknown": "Esa familia de ventana no existe en el documento",
+  "camera.fov.range": "El campo de visión debe estar entre 10° y 120°",
+  "camera.eyeTarget.tooClose": "La cámara y su punto de mira están demasiado juntos",
+  "camera.name.required": "La cámara necesita un nombre",
+};
+
+export function rejectionStatus(code: string, message: string): string {
+  return REJECTION_TEXT[code] ?? `Operación rechazada: ${message}`;
+}
 
 /** The parts of session state a document mutation reads. */
 export type DocumentSnapshot = {
@@ -17,24 +38,32 @@ export type DocumentPatch = DocumentSnapshot & { status: string };
 
 export type CommandOutcome =
   | { mutated: true; patch: DocumentPatch }
-  | { mutated: false; patch: { status: string } };
+  | { mutated: false; rejected: boolean; patch: { status: string } };
 
 /**
  * Run a command through the history stack.
  *
  * Commands mutate the document in place (that is the SoT contract), so the
  * returned `document` is a fresh shallow clone purely so React sees a new
- * reference. A command that reports no mutation is not recorded and must not
- * bump `documentRev` nor clear the redo stack.
+ * reference. Neither a no-op nor a rejection is recorded, and neither may bump
+ * `documentRev` nor clear the redo stack. They differ in what the user is told:
+ * a no-op is not a problem, a rejection names the rule that stopped it.
  */
 export function applyCommandToSession(
   snapshot: DocumentSnapshot,
   cmd: Command,
   status: string,
 ): CommandOutcome {
-  const mutated = snapshot.history.push(cmd, snapshot.document);
-  if (!mutated) {
-    return { mutated: false, patch: { status: NO_MUTATION_STATUS } };
+  const result: CommandResult = snapshot.history.push(cmd, snapshot.document);
+  if (!result.ok) {
+    return {
+      mutated: false,
+      rejected: true,
+      patch: { status: rejectionStatus(result.code, result.message) },
+    };
+  }
+  if (!result.changed) {
+    return { mutated: false, rejected: false, patch: { status: NO_MUTATION_STATUS } };
   }
   return { mutated: true, patch: nextPatch(snapshot, status) };
 }

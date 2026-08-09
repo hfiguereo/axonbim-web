@@ -56,7 +56,10 @@ describe("F5-S IDs", () => {
     syncIdSequencesFromDocument(doc);
     const id = createWallId();
     expect(id).toBe("wall.1");
-    expect(new CreateWallCommand(wall({ id })).execute(doc)).toBe(true);
+    expect(new CreateWallCommand(wall({ id })).execute(doc)).toEqual({
+      ok: true,
+      changed: true,
+    });
     expect(doc.walls.map((w) => w.id)).toEqual(["wall.1"]);
   });
 
@@ -91,7 +94,10 @@ describe("F5-S DeleteWall undo", () => {
     doc.doors = [door({ id: "door.1", wallId: "wall.1" })];
     doc.windows = [window({ id: "window.1", wallId: "wall.1" })];
     const hist = new HistoryStack();
-    expect(hist.push(new DeleteWallCommand("wall.1"), doc)).toBe(true);
+    expect(hist.push(new DeleteWallCommand("wall.1"), doc)).toEqual({
+      ok: true,
+      changed: true,
+    });
     expect(doc.walls).toHaveLength(0);
     expect(doc.doors).toHaveLength(0);
     expect(doc.windows).toHaveLength(0);
@@ -121,7 +127,8 @@ describe("F5-S history no-op", () => {
     const doc = createEmptyDocument();
     doc.walls = [wall({ id: "wall.1" })];
     const hist = new HistoryStack();
-    expect(hist.push(new CreateWallCommand(wall({ id: "wall.1" })), doc)).toBe(false);
+    const result = hist.push(new CreateWallCommand(wall({ id: "wall.1" })), doc);
+    expect(result.ok).toBe(false);
     expect(hist.canUndo).toBe(false);
   });
 });

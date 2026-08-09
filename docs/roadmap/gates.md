@@ -25,7 +25,9 @@ El agente y el desarrollo humano **se detienen** en cada gate. “Continúa con 
 - **Crop Region (ADR 0016):** **aprobado** 2026-08-08 — clip por vista; planta vs cámara independientes
 - **Parked:** paradigmas/workplanes, OCCT (ADR 0013)
 - **Refactor session/viewer:** desacople real Fases 0–3 **cerradas** (2026-08-08); checklist humana OK; ver `refactor-session-viewer.md`
-- **Fase 4:** **autorizada** (cola parked) — primer ítem pendiente de elegir en `pending-work.md`
+- **Fase 4:** **autorizada, en espera** — recomendado después de F9-E1/E2 (ver `pending-work.md`)
+- **F9-E integridad del documento (ADR 0017):** **propuesto** — auditoría externa 2026-08-08 con 2 P0 + 4 P1 verificados; fases E1–E6 en `domain-invariants-plan.md`; **sin autorizar**
+- **Auditoría externa:** `docs/validation/external-audit-2026-08-08.md` — base arquitectónica aprobada; integridad de modelo y frontera `.axon` no aprobadas para ampliar alcance
 - **Pendientes (prioridad):** **`pending-work.md`**
 - **GitHub:** https://github.com/hfiguereo/axonbim-web (público + branch protection)
 
@@ -74,3 +76,6 @@ El agente y el desarrollo humano **se detienen** en cada gate. “Continúa con 
 | **Fase 0 protección remota** | **2026-08-08** | **hecho** | Repo público + branch protection; `check:history` en CI |
 | **Checklist Fases 1–3** | **2026-08-08** | **aprobado** | A/B/E ready; C ready c/obs; D aprobado c/obs D4 |
 | **Fase 4 (cola)** | **2026-08-08** | **autorizada** | Elegir primer ítem; no implementar sin gate/ADR |
+| **B6 invariantes al dominio** | **2026-08-08** | **propuesto** | ADR 0017 rev.1; superado por F9-E |
+| **Auditoría externa** | **2026-08-08** | **recibida** | 2 P0 + 4 P1 de integridad; todos verificados en código; A4 **reabierto** |
+| **F9-E estabilización** | **2026-08-08** | **propuesta** | Fases E1–E6; **ninguna autorizada**; 3 decisiones de producto pendientes (familias, cámaras, política de rechazo `.axon`) |

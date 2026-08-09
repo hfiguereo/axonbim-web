@@ -1,6 +1,11 @@
 import type { AxonDocument, Camera, ViewCrop } from "@axonbim/model";
-import { cloneViewCrop, defaultCameraCrop, normalizeViewCrop } from "@axonbim/model";
-import type { Command } from "./types";
+import {
+  cloneViewCrop,
+  defaultCameraCrop,
+  normalizeViewCrop,
+  validateCamera,
+} from "@axonbim/model";
+import { CHANGED, NOOP, rejected, type Command, type CommandResult } from "./types";
 
 let cameraSeq = 0;
 
@@ -27,6 +32,16 @@ function ensureCrop(camera: Camera): ViewCrop {
   return defaultCameraCrop(camera.eye, camera.target, camera.fov);
 }
 
+function notFound(cameraId: string): CommandResult {
+  return rejected({ code: "camera.notFound", message: `camera ${cameraId}: not found` });
+}
+
+/** Validates the camera as it would look after the change. */
+function checkCamera(candidate: Camera): CommandResult | null {
+  const issue = validateCamera(candidate);
+  return issue ? rejected(issue) : null;
+}
+
 export class CreateCameraCommand implements Command {
   readonly id: string;
   readonly type = "camera.create";
@@ -34,16 +49,24 @@ export class CreateCameraCommand implements Command {
     this.id = `cmd.create.${camera.id}`;
   }
 
-  execute(doc: AxonDocument): boolean {
-    if (doc.cameras.some((c) => c.id === this.camera.id)) return false;
-    doc.cameras.push({
+  execute(doc: AxonDocument): CommandResult {
+    if (doc.cameras.some((c) => c.id === this.camera.id)) {
+      return rejected({
+        code: "camera.duplicateId",
+        message: `camera ${this.camera.id}: id already exists`,
+      });
+    }
+    const next: Camera = {
       ...this.camera,
       eye: { ...this.camera.eye },
       target: { ...this.camera.target },
       crop: ensureCrop(this.camera),
-    });
+    };
+    const invalid = checkCamera(next);
+    if (invalid) return invalid;
+    doc.cameras.push(next);
     doc.meta.updatedAt = new Date().toISOString();
-    return true;
+    return CHANGED;
   }
 
   undo(doc: AxonDocument): void {
@@ -61,13 +84,13 @@ export class DeleteCameraCommand implements Command {
     this.id = `cmd.delete.${cameraId}`;
   }
 
-  execute(doc: AxonDocument): boolean {
+  execute(doc: AxonDocument): CommandResult {
     const found = doc.cameras.find((c) => c.id === this.cameraId);
-    if (!found) return false;
+    if (!found) return notFound(this.cameraId);
     this.snapshot = snapshotCamera(found);
     doc.cameras = doc.cameras.filter((c) => c.id !== this.cameraId);
     doc.meta.updatedAt = new Date().toISOString();
-    return true;
+    return CHANGED;
   }
 
   undo(doc: AxonDocument): void {
@@ -91,13 +114,16 @@ export class SetCameraNameCommand implements Command {
     this.id = `cmd.camera.name.${cameraId}`;
   }
 
-  execute(doc: AxonDocument): boolean {
+  execute(doc: AxonDocument): CommandResult {
     const c = doc.cameras.find((x) => x.id === this.cameraId);
-    if (!c || c.name === this.name) return false;
+    if (!c) return notFound(this.cameraId);
+    if (c.name === this.name) return NOOP;
+    const invalid = checkCamera({ ...c, name: this.name });
+    if (invalid) return invalid;
     this.prev = c.name;
     c.name = this.name;
     doc.meta.updatedAt = new Date().toISOString();
-    return true;
+    return CHANGED;
   }
 
   undo(doc: AxonDocument): void {
@@ -120,13 +146,16 @@ export class SetCameraFovCommand implements Command {
     this.id = `cmd.camera.fov.${cameraId}`;
   }
 
-  execute(doc: AxonDocument): boolean {
+  execute(doc: AxonDocument): CommandResult {
     const c = doc.cameras.find((x) => x.id === this.cameraId);
-    if (!c || c.fov === this.fov) return false;
+    if (!c) return notFound(this.cameraId);
+    if (c.fov === this.fov) return NOOP;
+    const invalid = checkCamera({ ...c, fov: this.fov });
+    if (invalid) return invalid;
     this.prev = c.fov;
     c.fov = this.fov;
     doc.meta.updatedAt = new Date().toISOString();
-    return true;
+    return CHANGED;
   }
 
   undo(doc: AxonDocument): void {
@@ -149,13 +178,16 @@ export class SetCameraEyeHeightCommand implements Command {
     this.id = `cmd.camera.eyeZ.${cameraId}`;
   }
 
-  execute(doc: AxonDocument): boolean {
+  execute(doc: AxonDocument): CommandResult {
     const c = doc.cameras.find((x) => x.id === this.cameraId);
-    if (!c || c.eye.z === this.eyeZ) return false;
+    if (!c) return notFound(this.cameraId);
+    if (c.eye.z === this.eyeZ) return NOOP;
+    const invalid = checkCamera({ ...c, eye: { ...c.eye, z: this.eyeZ } });
+    if (invalid) return invalid;
     this.prevZ = c.eye.z;
     c.eye = { ...c.eye, z: this.eyeZ };
     doc.meta.updatedAt = new Date().toISOString();
-    return true;
+    return CHANGED;
   }
 
   undo(doc: AxonDocument): void {
@@ -178,20 +210,22 @@ export class SetCameraTargetCommand implements Command {
     this.id = `cmd.camera.target.${cameraId}`;
   }
 
-  execute(doc: AxonDocument): boolean {
+  execute(doc: AxonDocument): CommandResult {
     const c = doc.cameras.find((x) => x.id === this.cameraId);
-    if (!c) return false;
+    if (!c) return notFound(this.cameraId);
     if (
       c.target.x === this.target.x &&
       c.target.y === this.target.y &&
       c.target.z === this.target.z
     ) {
-      return false;
+      return NOOP;
     }
+    const invalid = checkCamera({ ...c, target: { ...this.target } });
+    if (invalid) return invalid;
     this.prev = { ...c.target };
     c.target = { ...this.target };
     doc.meta.updatedAt = new Date().toISOString();
-    return true;
+    return CHANGED;
   }
 
   undo(doc: AxonDocument): void {
@@ -214,9 +248,9 @@ export class SetCameraCropCommand implements Command {
     this.id = `cmd.camera.crop.${cameraId}`;
   }
 
-  execute(doc: AxonDocument): boolean {
+  execute(doc: AxonDocument): CommandResult {
     const c = doc.cameras.find((x) => x.id === this.cameraId);
-    if (!c) return false;
+    if (!c) return notFound(this.cameraId);
     const next = normalizeViewCrop(this.crop);
     const cur = c.crop;
     if (
@@ -229,12 +263,14 @@ export class SetCameraCropCommand implements Command {
       cur.minZ === next.minZ &&
       cur.maxZ === next.maxZ
     ) {
-      return false;
+      return NOOP;
     }
+    const invalid = checkCamera({ ...c, crop: next });
+    if (invalid) return invalid;
     this.prev = cloneViewCrop(c.crop);
     c.crop = cloneViewCrop(next);
     doc.meta.updatedAt = new Date().toISOString();
-    return true;
+    return CHANGED;
   }
 
   undo(doc: AxonDocument): void {
@@ -261,24 +297,29 @@ export class TranslateCameraPlanCommand implements Command {
     this.id = `cmd.camera.translatePlan.${cameraId}`;
   }
 
-  execute(doc: AxonDocument): boolean {
+  execute(doc: AxonDocument): CommandResult {
     const c = doc.cameras.find((x) => x.id === this.cameraId);
-    if (!c) return false;
-    if (this.dx === 0 && this.dy === 0) return false;
-    this.prevEye = { ...c.eye };
-    this.prevTarget = { ...c.target };
-    this.prevCrop = cloneViewCrop(c.crop);
-    c.eye = { ...c.eye, x: c.eye.x + this.dx, y: c.eye.y + this.dy };
-    c.target = { ...c.target, x: c.target.x + this.dx, y: c.target.y + this.dy };
-    c.crop = normalizeViewCrop({
+    if (!c) return notFound(this.cameraId);
+    if (this.dx === 0 && this.dy === 0) return NOOP;
+    const eye = { ...c.eye, x: c.eye.x + this.dx, y: c.eye.y + this.dy };
+    const target = { ...c.target, x: c.target.x + this.dx, y: c.target.y + this.dy };
+    const crop = normalizeViewCrop({
       ...c.crop,
       minX: c.crop.minX + this.dx,
       maxX: c.crop.maxX + this.dx,
       minY: c.crop.minY + this.dy,
       maxY: c.crop.maxY + this.dy,
     });
+    const invalid = checkCamera({ ...c, eye, target, crop });
+    if (invalid) return invalid;
+    this.prevEye = { ...c.eye };
+    this.prevTarget = { ...c.target };
+    this.prevCrop = cloneViewCrop(c.crop);
+    c.eye = eye;
+    c.target = target;
+    c.crop = crop;
     doc.meta.updatedAt = new Date().toISOString();
-    return true;
+    return CHANGED;
   }
 
   undo(doc: AxonDocument): void {

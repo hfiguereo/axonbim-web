@@ -1,4 +1,5 @@
-export type { Command } from "./types";
+export type { Command, CommandResult } from "./types";
+export { CHANGED, NOOP, didChange, rejected } from "./types";
 export { HistoryStack } from "./history";
 export {
   CreateWallCommand,

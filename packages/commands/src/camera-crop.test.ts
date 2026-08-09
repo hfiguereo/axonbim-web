@@ -32,7 +32,10 @@ describe("camera crop (ADR 0016)", () => {
       fov: 45,
       crop: defaultCameraCrop(eye, target, 45),
     };
-    expect(new CreateCameraCommand(camera).execute(doc)).toBe(true);
+    expect(new CreateCameraCommand(camera).execute(doc)).toEqual({
+      ok: true,
+      changed: true,
+    });
     expect(doc.cameras[0]!.crop.enabled).toBe(true);
 
     const prevMaxY = doc.cameras[0]!.crop.maxY;
@@ -43,7 +46,7 @@ describe("camera crop (ADR 0016)", () => {
       maxX: 2,
       maxY: 3,
     });
-    expect(cmd.execute(doc)).toBe(true);
+    expect(cmd.execute(doc)).toEqual({ ok: true, changed: true });
     expect(doc.cameras[0]!.crop.maxY).toBe(3);
     cmd.undo(doc);
     expect(doc.cameras[0]!.crop.maxY).toBe(prevMaxY);

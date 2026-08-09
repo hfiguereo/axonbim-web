@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { HistoryStack, type Command } from "@axonbim/commands";
+import { CHANGED, HistoryStack, NOOP, type Command } from "@axonbim/commands";
 import { createEmptyDocument, type AxonDocument } from "@axonbim/model";
 import {
   NO_MUTATION_STATUS,
   applyCommandToSession,
   redoInSession,
+  rejectionStatus,
   undoInSession,
 } from "./documentMutation";
 
@@ -14,7 +15,7 @@ function fakeCommand(id: string, mutates = true): Command {
     id,
     type: "test.fake",
     execute(doc: AxonDocument) {
-      if (!mutates) return false;
+      if (!mutates) return NOOP;
       doc.walls.push({
         id,
         storeyId: "storey.default",
@@ -24,11 +25,23 @@ function fakeCommand(id: string, mutates = true): Command {
         height: 2.7,
         thickness: 0.15,
       });
-      return true;
+      return CHANGED;
     },
     undo(doc: AxonDocument) {
       doc.walls = doc.walls.filter((w) => w.id !== id);
     },
+  };
+}
+
+/** Models a command stopped by a domain invariant (ADR 0017). */
+function rejectingCommand(code: string, message: string): Command {
+  return {
+    id: "rejected",
+    type: "test.rejected",
+    execute() {
+      return { ok: false, code, message };
+    },
+    undo() {},
   };
 }
 
@@ -73,6 +86,44 @@ describe("documentMutation (corte 7c)", () => {
     expect(history.canRedo).toBe(true);
 
     applyCommandToSession(snapshot(doc, history, 2), fakeCommand("noop", false), "Hecho");
+    expect(history.canRedo).toBe(true);
+  });
+
+  it("reports the rule that rejected a command instead of «sin cambios»", () => {
+    const doc = createEmptyDocument();
+    const history = new HistoryStack();
+    const out = applyCommandToSession(
+      snapshot(doc, history, 4),
+      rejectingCommand("wall.height.min", "wall w1: height must be at least 0.05 m"),
+      "Hecho",
+    );
+
+    expect(out.mutated).toBe(false);
+    if (out.mutated) return;
+    expect(out.rejected).toBe(true);
+    expect(out.patch.status).not.toBe(NO_MUTATION_STATUS);
+    expect(out.patch.status).toBe("Altura de muro por debajo del mínimo (0,05 m)");
+    expect(history.canUndo).toBe(false);
+  });
+
+  it("falls back to the technical message for unmapped rejection codes", () => {
+    expect(rejectionStatus("some.new.rule", "wall w1: nope")).toBe(
+      "Operación rechazada: wall w1: nope",
+    );
+  });
+
+  it("keeps redo available when a command is rejected", () => {
+    const doc = createEmptyDocument();
+    const history = new HistoryStack();
+    applyCommandToSession(snapshot(doc, history), fakeCommand("a"), "Hecho");
+    undoInSession(snapshot(doc, history, 1), "Deshacer");
+    expect(history.canRedo).toBe(true);
+
+    applyCommandToSession(
+      snapshot(doc, history, 2),
+      rejectingCommand("wall.length.min", "wall w1: axis shorter than 0.05 m"),
+      "Hecho",
+    );
     expect(history.canRedo).toBe(true);
   });
 

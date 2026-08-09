@@ -1,5 +1,6 @@
 import type { AxonDocument, Door, DoorLeafState, DoorSwing } from "@axonbim/model";
-import type { Command } from "./types";
+import { documentRefs, validateDoor } from "@axonbim/model";
+import { CHANGED, NOOP, rejected, type Command, type CommandResult } from "./types";
 
 let doorSeq = 0;
 
@@ -12,6 +13,16 @@ export function createDoorId(): string {
   return `door.${doorSeq}`;
 }
 
+function notFound(doorId: string): CommandResult {
+  return rejected({ code: "door.notFound", message: `door ${doorId}: not found` });
+}
+
+/** Validates the door as it would look after the change. */
+function checkDoor(doc: AxonDocument, candidate: Door): CommandResult | null {
+  const issue = validateDoor(candidate, documentRefs(doc));
+  return issue ? rejected(issue) : null;
+}
+
 export class CreateDoorCommand implements Command {
   readonly id: string;
   readonly type = "door.create";
@@ -19,12 +30,18 @@ export class CreateDoorCommand implements Command {
     this.id = `cmd.door.create.${door.id}`;
   }
 
-  execute(doc: AxonDocument): boolean {
-    if (doc.doors.some((d) => d.id === this.door.id)) return false;
-    if (!doc.walls.some((w) => w.id === this.door.wallId)) return false;
+  execute(doc: AxonDocument): CommandResult {
+    if (doc.doors.some((d) => d.id === this.door.id)) {
+      return rejected({
+        code: "door.duplicateId",
+        message: `door ${this.door.id}: id already exists`,
+      });
+    }
+    const invalid = checkDoor(doc, this.door);
+    if (invalid) return invalid;
     doc.doors.push({ ...this.door });
     doc.meta.updatedAt = new Date().toISOString();
-    return true;
+    return CHANGED;
   }
 
   undo(doc: AxonDocument): void {
@@ -42,13 +59,13 @@ export class DeleteDoorCommand implements Command {
     this.id = `cmd.door.delete.${doorId}`;
   }
 
-  execute(doc: AxonDocument): boolean {
+  execute(doc: AxonDocument): CommandResult {
     const found = doc.doors.find((d) => d.id === this.doorId);
-    if (!found) return false;
+    if (!found) return notFound(this.doorId);
     this.snapshot = { ...found };
     doc.doors = doc.doors.filter((d) => d.id !== this.doorId);
     doc.meta.updatedAt = new Date().toISOString();
-    return true;
+    return CHANGED;
   }
 
   undo(doc: AxonDocument): void {
@@ -70,15 +87,17 @@ export class SetDoorLeafStateCommand implements Command {
     this.id = `cmd.door.leaf.${doorId}.${leafState}`;
   }
 
-  execute(doc: AxonDocument): boolean {
+  execute(doc: AxonDocument): CommandResult {
     const d = doc.doors.find((x) => x.id === this.doorId);
-    if (!d) return false;
+    if (!d) return notFound(this.doorId);
     const cur = d.leafState ?? "open";
-    if (cur === this.leafState) return false;
+    if (cur === this.leafState) return NOOP;
+    const invalid = checkDoor(doc, { ...d, leafState: this.leafState });
+    if (invalid) return invalid;
     this.prev = cur;
     d.leafState = this.leafState;
     doc.meta.updatedAt = new Date().toISOString();
-    return true;
+    return CHANGED;
   }
 
   undo(doc: AxonDocument): void {
@@ -101,15 +120,17 @@ export class SetDoorSwingCommand implements Command {
     this.id = `cmd.door.swing.${doorId}.${swing}`;
   }
 
-  execute(doc: AxonDocument): boolean {
+  execute(doc: AxonDocument): CommandResult {
     const d = doc.doors.find((x) => x.id === this.doorId);
-    if (!d) return false;
+    if (!d) return notFound(this.doorId);
     const cur = d.swing ?? "positive";
-    if (cur === this.swing) return false;
+    if (cur === this.swing) return NOOP;
+    const invalid = checkDoor(doc, { ...d, swing: this.swing });
+    if (invalid) return invalid;
     this.prev = cur;
     d.swing = this.swing;
     doc.meta.updatedAt = new Date().toISOString();
-    return true;
+    return CHANGED;
   }
 
   undo(doc: AxonDocument): void {
@@ -132,14 +153,16 @@ export class SetDoorHingeCommand implements Command {
     this.id = `cmd.door.hinge.${doorId}.${hinge}`;
   }
 
-  execute(doc: AxonDocument): boolean {
+  execute(doc: AxonDocument): CommandResult {
     const d = doc.doors.find((x) => x.id === this.doorId);
-    if (!d) return false;
-    if (d.hinge === this.hinge) return false;
+    if (!d) return notFound(this.doorId);
+    if (d.hinge === this.hinge) return NOOP;
+    const invalid = checkDoor(doc, { ...d, hinge: this.hinge });
+    if (invalid) return invalid;
     this.prev = d.hinge;
     d.hinge = this.hinge;
     doc.meta.updatedAt = new Date().toISOString();
-    return true;
+    return CHANGED;
   }
 
   undo(doc: AxonDocument): void {
@@ -166,16 +189,23 @@ export class SetDoorFamilyCommand implements Command {
     this.id = `cmd.door.family.${doorId}.${familyId}`;
   }
 
-  execute(doc: AxonDocument): boolean {
+  execute(doc: AxonDocument): CommandResult {
     const d = doc.doors.find((x) => x.id === this.doorId);
-    if (!d) return false;
+    if (!d) return notFound(this.doorId);
     if (
       d.familyId === this.familyId &&
       d.width === this.width &&
       d.height === this.height
     ) {
-      return false;
+      return NOOP;
     }
+    const invalid = checkDoor(doc, {
+      ...d,
+      familyId: this.familyId,
+      width: this.width,
+      height: this.height,
+    });
+    if (invalid) return invalid;
     this.prevFamily = d.familyId;
     this.prevWidth = d.width;
     this.prevHeight = d.height;
@@ -183,7 +213,7 @@ export class SetDoorFamilyCommand implements Command {
     d.width = this.width;
     d.height = this.height;
     doc.meta.updatedAt = new Date().toISOString();
-    return true;
+    return CHANGED;
   }
 
   undo(doc: AxonDocument): void {

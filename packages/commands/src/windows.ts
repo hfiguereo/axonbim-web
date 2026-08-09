@@ -1,5 +1,6 @@
 import type { AxonDocument, DoorLeafState, DoorSwing, Window } from "@axonbim/model";
-import type { Command } from "./types";
+import { documentRefs, validateWindow } from "@axonbim/model";
+import { CHANGED, NOOP, rejected, type Command, type CommandResult } from "./types";
 
 let windowSeq = 0;
 
@@ -12,6 +13,16 @@ export function createWindowId(): string {
   return `window.${windowSeq}`;
 }
 
+function notFound(windowId: string): CommandResult {
+  return rejected({ code: "window.notFound", message: `window ${windowId}: not found` });
+}
+
+/** Validates the window as it would look after the change. */
+function checkWindow(doc: AxonDocument, candidate: Window): CommandResult | null {
+  const issue = validateWindow(candidate, documentRefs(doc));
+  return issue ? rejected(issue) : null;
+}
+
 export class CreateWindowCommand implements Command {
   readonly id: string;
   readonly type = "window.create";
@@ -19,12 +30,18 @@ export class CreateWindowCommand implements Command {
     this.id = `cmd.window.create.${window.id}`;
   }
 
-  execute(doc: AxonDocument): boolean {
-    if (doc.windows.some((w) => w.id === this.window.id)) return false;
-    if (!doc.walls.some((w) => w.id === this.window.wallId)) return false;
+  execute(doc: AxonDocument): CommandResult {
+    if (doc.windows.some((w) => w.id === this.window.id)) {
+      return rejected({
+        code: "window.duplicateId",
+        message: `window ${this.window.id}: id already exists`,
+      });
+    }
+    const invalid = checkWindow(doc, this.window);
+    if (invalid) return invalid;
     doc.windows.push({ ...this.window });
     doc.meta.updatedAt = new Date().toISOString();
-    return true;
+    return CHANGED;
   }
 
   undo(doc: AxonDocument): void {
@@ -42,13 +59,13 @@ export class DeleteWindowCommand implements Command {
     this.id = `cmd.window.delete.${windowId}`;
   }
 
-  execute(doc: AxonDocument): boolean {
+  execute(doc: AxonDocument): CommandResult {
     const found = doc.windows.find((w) => w.id === this.windowId);
-    if (!found) return false;
+    if (!found) return notFound(this.windowId);
     this.snapshot = { ...found };
     doc.windows = doc.windows.filter((w) => w.id !== this.windowId);
     doc.meta.updatedAt = new Date().toISOString();
-    return true;
+    return CHANGED;
   }
 
   undo(doc: AxonDocument): void {
@@ -70,15 +87,17 @@ export class SetWindowLeafStateCommand implements Command {
     this.id = `cmd.window.leaf.${windowId}.${leafState}`;
   }
 
-  execute(doc: AxonDocument): boolean {
+  execute(doc: AxonDocument): CommandResult {
     const w = doc.windows.find((x) => x.id === this.windowId);
-    if (!w) return false;
+    if (!w) return notFound(this.windowId);
     const cur = w.leafState ?? "closed";
-    if (cur === this.leafState) return false;
+    if (cur === this.leafState) return NOOP;
+    const invalid = checkWindow(doc, { ...w, leafState: this.leafState });
+    if (invalid) return invalid;
     this.prev = cur;
     w.leafState = this.leafState;
     doc.meta.updatedAt = new Date().toISOString();
-    return true;
+    return CHANGED;
   }
 
   undo(doc: AxonDocument): void {
@@ -101,15 +120,17 @@ export class SetWindowSwingCommand implements Command {
     this.id = `cmd.window.swing.${windowId}.${swing}`;
   }
 
-  execute(doc: AxonDocument): boolean {
+  execute(doc: AxonDocument): CommandResult {
     const w = doc.windows.find((x) => x.id === this.windowId);
-    if (!w) return false;
+    if (!w) return notFound(this.windowId);
     const cur = w.swing ?? "positive";
-    if (cur === this.swing) return false;
+    if (cur === this.swing) return NOOP;
+    const invalid = checkWindow(doc, { ...w, swing: this.swing });
+    if (invalid) return invalid;
     this.prev = cur;
     w.swing = this.swing;
     doc.meta.updatedAt = new Date().toISOString();
-    return true;
+    return CHANGED;
   }
 
   undo(doc: AxonDocument): void {
@@ -132,14 +153,16 @@ export class SetWindowHingeCommand implements Command {
     this.id = `cmd.window.hinge.${windowId}.${hinge}`;
   }
 
-  execute(doc: AxonDocument): boolean {
+  execute(doc: AxonDocument): CommandResult {
     const w = doc.windows.find((x) => x.id === this.windowId);
-    if (!w) return false;
-    if (w.hinge === this.hinge) return false;
+    if (!w) return notFound(this.windowId);
+    if (w.hinge === this.hinge) return NOOP;
+    const invalid = checkWindow(doc, { ...w, hinge: this.hinge });
+    if (invalid) return invalid;
     this.prev = w.hinge;
     w.hinge = this.hinge;
     doc.meta.updatedAt = new Date().toISOString();
-    return true;
+    return CHANGED;
   }
 
   undo(doc: AxonDocument): void {
@@ -168,17 +191,25 @@ export class SetWindowFamilyCommand implements Command {
     this.id = `cmd.window.family.${windowId}.${familyId}`;
   }
 
-  execute(doc: AxonDocument): boolean {
+  execute(doc: AxonDocument): CommandResult {
     const w = doc.windows.find((x) => x.id === this.windowId);
-    if (!w) return false;
+    if (!w) return notFound(this.windowId);
     if (
       w.familyId === this.familyId &&
       w.width === this.width &&
       w.height === this.height &&
       w.sill === this.sill
     ) {
-      return false;
+      return NOOP;
     }
+    const invalid = checkWindow(doc, {
+      ...w,
+      familyId: this.familyId,
+      width: this.width,
+      height: this.height,
+      sill: this.sill,
+    });
+    if (invalid) return invalid;
     this.prevFamily = w.familyId;
     this.prevWidth = w.width;
     this.prevHeight = w.height;
@@ -188,7 +219,7 @@ export class SetWindowFamilyCommand implements Command {
     w.height = this.height;
     w.sill = this.sill;
     doc.meta.updatedAt = new Date().toISOString();
-    return true;
+    return CHANGED;
   }
 
   undo(doc: AxonDocument): void {

@@ -1,5 +1,6 @@
 import type { AxonDocument, Wall } from "@axonbim/model";
-import type { Command } from "./types";
+import { documentRefs, validateWall } from "@axonbim/model";
+import { CHANGED, NOOP, rejected, type Command, type CommandResult } from "./types";
 
 export type { Command } from "./types";
 export { HistoryStack } from "./history";
@@ -15,6 +16,16 @@ export function createWallId(): string {
   return `wall.${wallSeq}`;
 }
 
+function notFound(wallId: string): CommandResult {
+  return rejected({ code: "wall.notFound", message: `wall ${wallId}: not found` });
+}
+
+/** Validates the wall as it would look after the change. */
+function checkWall(doc: AxonDocument, candidate: Wall): CommandResult | null {
+  const issue = validateWall(candidate, documentRefs(doc));
+  return issue ? rejected(issue) : null;
+}
+
 export class CreateWallCommand implements Command {
   readonly id: string;
   readonly type = "wall.create";
@@ -22,11 +33,18 @@ export class CreateWallCommand implements Command {
     this.id = `cmd.create.${wall.id}`;
   }
 
-  execute(doc: AxonDocument): boolean {
-    if (doc.walls.some((w) => w.id === this.wall.id)) return false;
+  execute(doc: AxonDocument): CommandResult {
+    if (doc.walls.some((w) => w.id === this.wall.id)) {
+      return rejected({
+        code: "wall.duplicateId",
+        message: `wall ${this.wall.id}: id already exists`,
+      });
+    }
+    const invalid = checkWall(doc, this.wall);
+    if (invalid) return invalid;
     doc.walls.push({ ...this.wall, p1: { ...this.wall.p1 }, p2: { ...this.wall.p2 } });
     doc.meta.updatedAt = new Date().toISOString();
-    return true;
+    return CHANGED;
   }
 
   undo(doc: AxonDocument): void {
@@ -46,9 +64,9 @@ export class DeleteWallCommand implements Command {
     this.id = `cmd.delete.${wallId}`;
   }
 
-  execute(doc: AxonDocument): boolean {
+  execute(doc: AxonDocument): CommandResult {
     const found = doc.walls.find((w) => w.id === this.wallId);
-    if (!found) return false;
+    if (!found) return notFound(this.wallId);
     this.snapshot = {
       ...found,
       p1: { ...found.p1 },
@@ -62,7 +80,7 @@ export class DeleteWallCommand implements Command {
     doc.doors = doc.doors.filter((d) => d.wallId !== this.wallId);
     doc.windows = doc.windows.filter((w) => w.wallId !== this.wallId);
     doc.meta.updatedAt = new Date().toISOString();
-    return true;
+    return CHANGED;
   }
 
   undo(doc: AxonDocument): void {
@@ -90,14 +108,16 @@ export class SetWallHeightCommand implements Command {
     this.id = `cmd.height.${wallId}.${height}`;
   }
 
-  execute(doc: AxonDocument): boolean {
+  execute(doc: AxonDocument): CommandResult {
     const w = doc.walls.find((x) => x.id === this.wallId);
-    if (!w) return false;
-    if (w.height === this.height) return false;
+    if (!w) return notFound(this.wallId);
+    if (w.height === this.height) return NOOP;
+    const invalid = checkWall(doc, { ...w, height: this.height });
+    if (invalid) return invalid;
     this.prev = w.height;
     w.height = this.height;
     doc.meta.updatedAt = new Date().toISOString();
-    return true;
+    return CHANGED;
   }
 
   undo(doc: AxonDocument): void {
@@ -120,14 +140,16 @@ export class SetWallThicknessCommand implements Command {
     this.id = `cmd.thickness.${wallId}.${thickness}`;
   }
 
-  execute(doc: AxonDocument): boolean {
+  execute(doc: AxonDocument): CommandResult {
     const w = doc.walls.find((x) => x.id === this.wallId);
-    if (!w) return false;
-    if (w.thickness === this.thickness) return false;
+    if (!w) return notFound(this.wallId);
+    if (w.thickness === this.thickness) return NOOP;
+    const invalid = checkWall(doc, { ...w, thickness: this.thickness });
+    if (invalid) return invalid;
     this.prev = w.thickness;
     w.thickness = this.thickness;
     doc.meta.updatedAt = new Date().toISOString();
-    return true;
+    return CHANGED;
   }
 
   undo(doc: AxonDocument): void {
@@ -152,16 +174,22 @@ export class SetWallFamilyCommand implements Command {
     this.id = `cmd.family.${wallId}.${familyId}`;
   }
 
-  execute(doc: AxonDocument): boolean {
+  execute(doc: AxonDocument): CommandResult {
     const w = doc.walls.find((x) => x.id === this.wallId);
-    if (!w) return false;
-    if (w.familyId === this.familyId && w.thickness === this.thickness) return false;
+    if (!w) return notFound(this.wallId);
+    if (w.familyId === this.familyId && w.thickness === this.thickness) return NOOP;
+    const invalid = checkWall(doc, {
+      ...w,
+      familyId: this.familyId,
+      thickness: this.thickness,
+    });
+    if (invalid) return invalid;
     this.prevFamily = w.familyId;
     this.prevThickness = w.thickness;
     w.familyId = this.familyId;
     w.thickness = this.thickness;
     doc.meta.updatedAt = new Date().toISOString();
-    return true;
+    return CHANGED;
   }
 
   undo(doc: AxonDocument): void {
