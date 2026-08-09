@@ -1,8 +1,3 @@
-import {
-  BUILTIN_DOOR_FAMILIES,
-  BUILTIN_WALL_FAMILIES,
-  BUILTIN_WINDOW_FAMILIES,
-} from "@axonbim/families";
 import { FloatingPanel } from "./FloatingPanel";
 import { useSessionStore } from "../sessionStore";
 
@@ -70,7 +65,8 @@ function ViewportCropBlock() {
         </dl>
       )}
       <p className="props-hint">
-        Planta: crop propio (oculta fuera). Cámara: selecciona el marco azul para grips/mover la cámara.
+        Planta: grips del crop (alcance real). Vista cámara: grips del marco de pantalla
+        (no cambian el crop); solo con zoom bloqueado; doble clic = zoom/órbita.
       </p>
     </div>
   );
@@ -210,7 +206,7 @@ export function PropertiesPanel({ flexGrow = 1 }: { flexGrow?: number }) {
               value={selectedWindow.familyId}
               onChange={(e) => setSelectedWindowFamily(e.target.value)}
             >
-              {BUILTIN_WINDOW_FAMILIES.map((f) => (
+              {doc.windowFamilies.map((f) => (
                 <option key={f.id} value={f.id}>
                   {f.label} ({(f.width * 1000).toFixed(0)}×{(f.height * 1000).toFixed(0)} mm)
                 </option>
@@ -292,7 +288,7 @@ export function PropertiesPanel({ flexGrow = 1 }: { flexGrow?: number }) {
               value={selectedDoor.familyId}
               onChange={(e) => setSelectedDoorFamily(e.target.value)}
             >
-              {BUILTIN_DOOR_FAMILIES.map((f) => (
+              {doc.doorFamilies.map((f) => (
                 <option key={f.id} value={f.id}>
                   {f.label} ({(f.width * 1000).toFixed(0)}×{(f.height * 1000).toFixed(0)} mm)
                 </option>
@@ -370,7 +366,7 @@ export function PropertiesPanel({ flexGrow = 1 }: { flexGrow?: number }) {
               value={selected.familyId}
               onChange={(e) => setSelectedWallFamily(e.target.value)}
             >
-              {BUILTIN_WALL_FAMILIES.map((f) => (
+              {doc.families.map((f) => (
                 <option key={f.id} value={f.id}>
                   {f.label} ({f.thickness * 1000} mm)
                 </option>
@@ -435,7 +431,7 @@ export function PropertiesPanel({ flexGrow = 1 }: { flexGrow?: number }) {
                 value={activeWindowFamilyId}
                 onChange={(e) => setActiveWindowFamilyId(e.target.value)}
               >
-                {BUILTIN_WINDOW_FAMILIES.map((f) => (
+                {doc.windowFamilies.map((f) => (
                   <option key={f.id} value={f.id}>
                     {f.label} ({(f.width * 1000).toFixed(0)}×{(f.height * 1000).toFixed(0)} mm)
                   </option>
@@ -449,7 +445,7 @@ export function PropertiesPanel({ flexGrow = 1 }: { flexGrow?: number }) {
                 value={activeDoorFamilyId}
                 onChange={(e) => setActiveDoorFamilyId(e.target.value)}
               >
-                {BUILTIN_DOOR_FAMILIES.map((f) => (
+                {doc.doorFamilies.map((f) => (
                   <option key={f.id} value={f.id}>
                     {f.label} ({(f.width * 1000).toFixed(0)}×{(f.height * 1000).toFixed(0)} mm)
                   </option>
@@ -464,7 +460,7 @@ export function PropertiesPanel({ flexGrow = 1 }: { flexGrow?: number }) {
                 disabled={activeTool !== "wall"}
                 onChange={(e) => setActiveFamilyId(e.target.value)}
               >
-                {BUILTIN_WALL_FAMILIES.map((f) => (
+                {doc.families.map((f) => (
                   <option key={f.id} value={f.id}>
                     {f.label} ({f.thickness * 1000} mm)
                   </option>

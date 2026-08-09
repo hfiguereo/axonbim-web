@@ -19,8 +19,21 @@ import {
   SetWindowLeafStateCommand,
   SetWindowSwingCommand,
 } from "@axonbim/commands";
-import { doorFamilyById, familyById, windowFamilyById } from "@axonbim/families";
-import type { Door, DoorLeafState, DoorSwing, ViewCrop, Window } from "@axonbim/model";
+import {
+  OPENING_VERTICAL_MARGIN,
+  asOpeningSpec,
+  findDoorFamily,
+  findWallFamily,
+  findWindowFamily,
+  openingsOnWall,
+  validateHostedOpening,
+  type Door,
+  type DoorLeafState,
+  type DoorSwing,
+  type ViewCrop,
+  type Window,
+} from "@axonbim/model";
+import { rejectionStatus } from "./documentMutation.js";
 import { applyCommand } from "./sliceContracts.js";
 import type { SessionSliceCreator } from "./sliceTypes.js";
 
@@ -152,24 +165,13 @@ export const createSelectionSlice: SessionSliceCreator<{
     const id = get().selectedCameraId;
     if (!id) return;
     applyCommand(get, set, new DeleteCameraCommand(id), `Cámara eliminada ${id}`);
-    const views = get().views.filter((v) => v.cameraId !== id);
-    const activeGone = !views.some((v) => v.id === get().activeViewId);
-    set({
-      selectedCameraId: null,
-      views,
-      activeViewId: activeGone ? (views[0]?.id ?? "view.plan.level1") : get().activeViewId,
-    });
+    set({ selectedCameraId: null, selectedCropFrameCameraId: null });
   },
 
   setSelectedCameraName: (name) => {
     const id = get().selectedCameraId;
     if (!id || !name.trim()) return;
     applyCommand(get, set, new SetCameraNameCommand(id, name.trim()), `Nombre → ${name.trim()}`);
-    set({
-      views: get().views.map((v) =>
-        v.cameraId === id ? { ...v, name: name.trim() } : v,
-      ),
-    });
   },
 
   setSelectedCameraFov: (fov) => {
@@ -258,26 +260,20 @@ export const createSelectionSlice: SessionSliceCreator<{
     const id = get().selectedDoorId;
     if (!id) return;
     const door = get().document.doors.find((d) => d.id === id);
-    const fam = doorFamilyById(familyId);
+    const fam = findDoorFamily(get().document.doorFamilies, familyId);
     if (!door || !fam) return;
     const wall = get().document.walls.find((w) => w.id === door.wallId);
-    const height = wall
-      ? Math.min(fam.height, Math.max(0.5, wall.height - 0.05))
-      : fam.height;
-    const len = wall
-      ? Math.hypot(wall.p2.x - wall.p1.x, wall.p2.y - wall.p1.y)
-      : Infinity;
-    const half = fam.width / 2;
-    if (wall && (door.centerOffset < half + 0.05 || door.centerOffset > len - half - 0.05)) {
-      set({ status: "La familia no cabe en esta posición del muro" });
-      return;
-    }
-    const overlap = get().document.doors.some((d) => {
-      if (d.id === id || d.wallId !== door.wallId) return false;
-      return Math.abs(d.centerOffset - door.centerOffset) < (d.width + fam.width) / 2 + 0.02;
-    });
-    if (overlap) {
-      set({ status: "La familia solapa con otra puerta" });
+    if (!wall) return;
+    // Tool may trim height; command re-validates fit + overlap (doors and windows).
+    const height = Math.min(fam.height, Math.max(0.5, wall.height - OPENING_VERTICAL_MARGIN));
+    const candidate: Door = { ...door, familyId, width: fam.width, height };
+    const fit = validateHostedOpening(
+      asOpeningSpec(candidate),
+      wall,
+      openingsOnWall(door.wallId, get().document.doors, get().document.windows, id),
+    );
+    if (fit) {
+      set({ status: rejectionStatus(fit.code, fit.message) });
       return;
     }
     applyCommand(
@@ -350,31 +346,24 @@ export const createSelectionSlice: SessionSliceCreator<{
     const id = get().selectedWindowId;
     if (!id) return;
     const win = get().document.windows.find((w) => w.id === id);
-    const fam = windowFamilyById(familyId);
+    const fam = findWindowFamily(get().document.windowFamilies, familyId);
     if (!win || !fam) return;
     const wall = get().document.walls.find((w) => w.id === win.wallId);
-    if (wall && fam.sill + fam.height > wall.height - 0.05) {
-      set({ status: "La familia no cabe en la altura del muro" });
-      return;
-    }
-    const len = wall
-      ? Math.hypot(wall.p2.x - wall.p1.x, wall.p2.y - wall.p1.y)
-      : Infinity;
-    const half = fam.width / 2;
-    if (wall && (win.centerOffset < half + 0.05 || win.centerOffset > len - half - 0.05)) {
-      set({ status: "La familia no cabe en esta posición del muro" });
-      return;
-    }
-    const overlapsDoor = get().document.doors.some((d) => {
-      if (d.wallId !== win.wallId) return false;
-      return Math.abs(d.centerOffset - win.centerOffset) < (d.width + fam.width) / 2 + 0.02;
-    });
-    const overlapsWindow = get().document.windows.some((w) => {
-      if (w.id === id || w.wallId !== win.wallId) return false;
-      return Math.abs(w.centerOffset - win.centerOffset) < (w.width + fam.width) / 2 + 0.02;
-    });
-    if (overlapsDoor || overlapsWindow) {
-      set({ status: "La familia solapa con otro hueco" });
+    if (!wall) return;
+    const candidate: Window = {
+      ...win,
+      familyId,
+      width: fam.width,
+      height: fam.height,
+      sill: fam.sill,
+    };
+    const fit = validateHostedOpening(
+      asOpeningSpec(candidate),
+      wall,
+      openingsOnWall(win.wallId, get().document.doors, get().document.windows, id),
+    );
+    if (fit) {
+      set({ status: rejectionStatus(fit.code, fit.message) });
       return;
     }
     applyCommand(
@@ -399,7 +388,7 @@ export const createSelectionSlice: SessionSliceCreator<{
 
   setSelectedWallFamily: (familyId) => {
     const id = get().selectedWallId;
-    const fam = familyById(familyId);
+    const fam = findWallFamily(get().document.families, familyId);
     if (!id || !fam) return;
     applyCommand(
       get,

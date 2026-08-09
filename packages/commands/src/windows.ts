@@ -1,5 +1,6 @@
 import type { AxonDocument, DoorLeafState, DoorSwing, Window } from "@axonbim/model";
 import { documentRefs, validateWindow } from "@axonbim/model";
+import { checkHostedOpening } from "./hostedOpening";
 import { CHANGED, NOOP, rejected, type Command, type CommandResult } from "./types";
 
 let windowSeq = 0;
@@ -17,10 +18,11 @@ function notFound(windowId: string): CommandResult {
   return rejected({ code: "window.notFound", message: `window ${windowId}: not found` });
 }
 
-/** Validates the window as it would look after the change. */
+/** Entity rules, then hosted fit/overlap against the wall (F9-E2). */
 function checkWindow(doc: AxonDocument, candidate: Window): CommandResult | null {
   const issue = validateWindow(candidate, documentRefs(doc));
-  return issue ? rejected(issue) : null;
+  if (issue) return rejected(issue);
+  return checkHostedOpening(doc, candidate);
 }
 
 export class CreateWindowCommand implements Command {

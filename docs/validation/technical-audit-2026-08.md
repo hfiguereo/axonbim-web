@@ -10,7 +10,7 @@ aprobado. Se corrige y se anota abajo como hallazgo de proceso (C1).
 
 Arquitectura alineada (documento SoT, comandos, geometría, React, Three).
 **F5-S aprobado** (2026-08-07). **F8 Playwright o1 + o2 + CI aprobados** (2026-08-08).
-De la serie A, **A1–A3 cerrados**; **A4 reabierto** (ver abajo). Deuda estructural B5
+De la serie A, **A1–A4 cerrados** (A4 vía F9-E5, 2026-08-09). Deuda estructural B5
 (`sessionStore` / `createViewport`): **cerrada** 2026-08-08 tras desacople real (Fases 1–2).
 Protección remota A1/D5: **cerrada** 2026-08-08 (repo público + branch protection).
 
@@ -31,7 +31,7 @@ consolidados al final de la serie D.
 | A1 | Colisión de IDs tras importar | P0 | **cerrado con matiz** | `syncIdSequencesFromDocument` se llama en `newProject`, `openDemo` y `openFromText` (`apps/web/src/session/projectSlice.ts:25,47,71`). Matiz: depende de que la UI lo recuerde, y `maxNumericSuffix` ignora IDs no numéricos como `wall.demo.N`. Contrato de IDs ambiguo → ADR 0017 |
 | A2 | Undo de muro sin hospedados | P0 | **cerrado** | `DeleteWallCommand` guarda `doorSnapshots` + `windowSnapshots` y los restaura (`packages/commands/src/walls.ts`) |
 | A3 | No-ops en historial | P1 | **cerrado** | `HistoryStack.push` sale con `false` **antes** de apilar y antes de limpiar rehacer (`packages/commands/src/history.ts`) |
-| A4 | Validación `.axon` incompleta | P1 | **REABIERTO** 2026-08-08 | Se cerró por un subconjunto: refs y longitud mínima. Sigue faltando validación de forma en runtime (`JSON.parse … as Partial<AxonFileV1>` es un cast, `persistence/src/index.ts:161`), enums, unicidad global de ID, cabida y solape de huecos, `sill + height`, y límites de importación. Ver AX-P1-03 de la auditoría externa → fase **F9-E5** |
+| A4 | Validación `.axon` incompleta | P1 | **cerrado** 2026-08-09 (F9-E5) | Híbrido A3: `parseDocument` estricto + `parseDocumentRecover`; checklist humana OK |
 
 **Lección de A4:** cerrar un hallazgo porque se corrigió *parte* de él es peor que dejarlo
 abierto, porque desactiva la vigilancia. Un hallazgo se cierra cuando el contrato completo
@@ -134,14 +134,14 @@ Resumen 2026-08-08:
 |---|-----------|------|--------|
 | P1–P5 | Guardias + lint + build + e2e typecheck | A — Control | **hecho** |
 | **F9-E** | **Estabilización de integridad (AX-P0/P1)** | B — Dominio | **propuesta · espera dueño · bloquea Fase 4** |
-| A4 | Frontera `.axon` completa | B — Dominio | **reabierto** → F9-E5 |
+| A4 | Frontera `.axon` completa | B — Dominio | **cerrado** (F9-E5, 2026-08-09) |
 | R1 | Objetivo del refactor | B — Refactor | **resuelto** — desacople real, Fases 1–3 cerradas |
 | B5 / P6 | Monolitos `sessionStore` / `createViewport` | B — Refactor | **cerrado** 2026-08-08 |
 | P7 / C1 | Umbrales de clic unificados | C — Producto | **cerrado (MVP)** |
 | P8 / A1 / D5 | Protección de rama GitHub | A — Proceso | **cerrado** 2026-08-08 |
 | P9 / C2 | Bundle ~834 kB | C — Producto | **cerrado (MVP)** |
 | 7d+ | Cortes triviales viewer | B — Refactor | **sustituido** por el desacople real |
-| Parked | OCCT, IFC, workplanes, PWA… | C — Producto | gate no abierto |
+| Parked | OCCT, IFC, Sketch/Edit (WP-v1 ya cerrado), PWA… | C — Producto | gate no abierto |
 
 ### Lo que estos controles **no** atrapan
 

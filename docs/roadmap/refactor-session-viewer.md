@@ -8,7 +8,8 @@ Pruebas manuales adicionales del dueño (tras corte 4): sin problemas reportados
 ## Principio
 
 Microcortes con comportamiento idéntico. Tras cada autorización: `pnpm test` + `pnpm test:e2e` **una vez** al cerrar el corte.  
-No reescribir `sessionStore` ni `createViewport` de un golpe. No IFC/OCCT/workplanes.
+No reescribir `sessionStore` ni `createViewport` de un golpe. No IFC/OCCT/Sketch-Edit
+(constraint de aquella fase; WP-v1 llegó después por la cola LR).
 
 ### Ritmo de peels (2026-08-08, dueño)
 

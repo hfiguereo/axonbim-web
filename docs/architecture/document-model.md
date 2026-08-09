@@ -42,7 +42,7 @@ Contrato F1. Fuente de verdad del proyecto en sesión y en disco.
 }
 ```
 
-### WallFamily (catálogo embebido o referenciado)
+### WallFamily (catálogo del documento)
 
 ```ts
 {
@@ -52,7 +52,12 @@ Contrato F1. Fuente de verdad del proyecto en sesión y en disco.
 }
 ```
 
-Familias built-in:
+**Política F9-E3 (ADR 0017, opción A):** el catálogo vivo es
+`document.families` / `doorFamilies` / `windowFamilies`. La UI y los comandos
+consumen ese catálogo. Los built-ins de `@axonbim/families` solo **siembran**
+documentos nuevos/demo; no son una segunda fuente de verdad en sesión.
+
+Familias built-in (semilla):
 
 | id | label | thickness |
 |----|-------|-----------|
@@ -109,9 +114,34 @@ Cámara geométrica: `eye`, `target`, `fov`, `crop` (`ViewCrop`). Colocable en p
 
 **Nota selección:** la selección puede residir en estado UI (Zustand) siempre que no se serialice como verdad del edificio. Si se incluye en `.axon`, es conveniencia de sesión, no geometría.
 
+**Nota referencia espacial (WP-v1 / LR3):** `activeStoreyId` y el **Workplane** activo viven en
+sesión (derivados de `storeys[]`). No hay entidad `Workplane` en `AxonDocument` ni en `.axon`.
+API: `resolveSpatialReference` / `getActiveWorkplane` en `@axonbim/model`. Ver
+[coordinate-system.md](coordinate-system.md) y [editing-paradigms.md](editing-paradigms.md).
+
 ## Formato de archivo `.axon` v1
 
 Archivo JSON UTF-8, extensión `.axon` (también acepta `.json` con el mismo esquema en importación).
+
+### Política de apertura (F9-E5, híbrido A3)
+
+| Vía UI | API | Comportamiento |
+|--------|-----|----------------|
+| **Abrir…** | `parseDocument` | Rechazo duro. Sin defaults silenciosos ni `normalizeViewCrop`. |
+| **Recuperar copia…** (`.axon.bak` u otros) | `parseDocumentRecover` | Salva lo válido; omite/repara el resto; **informe** en status. |
+| **Exportar…** | `serializeDocument` | Solo escribe `.axon` **limpio** (documento en sesión ya válido). |
+
+La copia `.bak` es un rol de rescate, no un segundo formato de trabajo. Tras recuperar, Exportar deja un `.axon` estricto.
+
+### Presentación — crops de vista (ADR 0016)
+
+| Origen | Persistencia |
+|--------|----------------|
+| `Camera.crop` | Siempre en `cameras[]` |
+| Planta / perspectiva libre con crop **activado** | `presentation.viewCrops[viewId]` |
+| Crop desactivado | No se escribe |
+
+El crop es control de encuadre de presentación, no decoración.
 
 ```json
 {
@@ -146,12 +176,13 @@ Archivo JSON UTF-8, extensión `.axon` (también acepta `.json` con el mismo esq
 - Migraciones `n → n+1` viven en el paquete de persistencia (futuro) y se documentan en ADR.
 - v1 no tiene migraciones previas.
 
-### Validación al cargar
+### Validación al cargar (strict)
 
-- `format === "axon"` y `formatVersion === 1`
-- Al menos un storey
-- Cada muro referencia `storeyId` y `familyId` existentes; eje `>= MIN_WALL_LENGTH`
-- Puertas/ventanas: `wallId` y `familyId` existentes; sin IDs duplicados
+- JSON → `unknown` + validación de forma (arrays, campos, tipos finitos)
+- `format === "axon"` y `formatVersion === 1`; claves de catálogo/entidades presentes
+- IDs únicos en todo el documento; caps de tamaño (`packages/persistence/src/limits.ts`)
+- Predicados de dominio E1/E2 (`validate*` + `validateHostedOpening`)
+- Crop de cámara válido tal cual (sin normalización silenciosa)
 - Geometría cumple mínimos de [coordinate-system.md](coordinate-system.md)
 
 ### IDs tras importar

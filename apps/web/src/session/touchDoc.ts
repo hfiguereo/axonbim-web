@@ -10,10 +10,14 @@ export function touchDoc(doc: AxonDocument): AxonDocument {
     walls: [...doc.walls],
     doors: [...doc.doors],
     windows: [...doc.windows],
+    cameras: [...doc.cameras],
     storeys: [...doc.storeys],
     families: [...doc.families],
     doorFamilies: [...doc.doorFamilies],
     windowFamilies: [...doc.windowFamilies],
     meta: { ...doc.meta },
+    presentation: doc.presentation
+      ? { viewCrops: { ...doc.presentation.viewCrops } }
+      : doc.presentation,
   };
 }

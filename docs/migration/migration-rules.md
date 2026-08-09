@@ -1,5 +1,10 @@
 # Reglas de migración desde AxonBIM desktop
 
+Cola de recuperación selectiva (bloques LR, gates, priorización):
+[`../roadmap/legacy-reuse-roadmap.md`](../roadmap/legacy-reuse-roadmap.md) —
+resumen [`plan-integracion-selectiva-resumen.md`](plan-integracion-selectiva-resumen.md)
+→ PDF completo.
+
 ## Qué significa portar
 
 ```

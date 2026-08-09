@@ -13,6 +13,7 @@
     "test": "pnpm -r --if-present test",
     "check:shortcuts": "node scripts/check-no-test-shortcuts.mjs",
     "check:docs": "node scripts/check-docs-indexed.mjs",
+    "check:links": "node scripts/check-markdown-links.mjs",
     "check:layers": "node scripts/check-layer-purity.mjs",
     "check:history": "node scripts/check-main-fast-forward.mjs",
     "test:e2e": "playwright test",

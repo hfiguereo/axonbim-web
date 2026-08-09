@@ -81,6 +81,13 @@ Humo A + capturas B (canvas mask). Local. Ver `docs/validation/playwright-f8.md`
 - CI: `.github/workflows/e2e.yml` en push/PR a `main` (actions runtime Node 24)
 - Oleada 2: puerta / ventana / cámara vía `__AXON_E2E__` (sin gestos canvas)
 
-## Parked
+## Hilo post F9-E / C3 — línea LR (2026-08-09)
 
-Paradigmas / workplanes · OCCT (ADR 0013) · IFC.
+Avance operativo en [`pending-work.md`](pending-work.md) y
+[`legacy-reuse-roadmap.md`](legacy-reuse-roadmap.md):
+
+`LR0–LR3 + WP-v1 (hecho) → Sketch/Edit`
+
+## Parked (fuera del hilo hasta auth + prerreq.)
+
+LR1-C · LR4–LR7 · OCCT (ADR 0013) · IFC (LR6 antes).

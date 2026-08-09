@@ -115,6 +115,9 @@ export function Ribbon() {
   const setWallChain = useSessionStore((s) => s.setWallChain);
   const splitWallChain = useSessionStore((s) => s.splitWallChain);
   const releaseWallChain = useSessionStore((s) => s.releaseWallChain);
+  const restartChainAt = useSessionStore((s) => s.restartChainAt);
+  const wallHover = useSessionStore((s) => s.wallHover);
+  const wallPending = useSessionStore((s) => s.wallPending);
   const addView = useSessionStore((s) => s.addView);
   const requestFitView = useSessionStore((s) => s.requestFitView);
   const newProject = useSessionStore((s) => s.newProject);
@@ -445,6 +448,17 @@ export function Ribbon() {
                       label="Dividir"
                       tip="Dividir cadena — nuevo tramo"
                       onClick={splitWallChain}
+                    />
+                    <Tool
+                      tips={tips}
+                      icon="restart"
+                      label="Reiniciar"
+                      tip="Reiniciar cadena en cursor/P1 (sin historial)"
+                      onClick={() => {
+                        const p = wallHover ?? wallPending;
+                        if (p) restartChainAt(p);
+                        else splitWallChain();
+                      }}
                     />
                   </Group>
                 )}

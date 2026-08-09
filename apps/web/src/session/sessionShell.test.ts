@@ -23,7 +23,7 @@ describe("session shell peels (corte 7a)", () => {
     expect(nextDetailLevel("fine")).toBe("coarse");
   });
 
-  it("touchDoc replaces array identities without deep-cloning walls", () => {
+  it("touchDoc replaces collection identities without deep-cloning entities", () => {
     const doc = createEmptyDocument();
     doc.walls.push({
       id: "w1",
@@ -34,11 +34,29 @@ describe("session shell peels (corte 7a)", () => {
       familyId: "f",
       storeyId: "s",
     });
+    doc.cameras.push({
+      id: "camera.1",
+      name: "Cámara 1",
+      eye: { x: 0, y: 0, z: 1.7 },
+      target: { x: 1, y: 0, z: 1.7 },
+      fov: 45,
+      crop: { enabled: false, minX: -1, minY: -1, maxX: 1, maxY: 1 },
+    });
     const wall = doc.walls[0]!;
+    const camera = doc.cameras[0]!;
     const next = touchDoc(doc);
     expect(next).not.toBe(doc);
     expect(next.walls).not.toBe(doc.walls);
+    expect(next.doors).not.toBe(doc.doors);
+    expect(next.windows).not.toBe(doc.windows);
+    expect(next.cameras).not.toBe(doc.cameras);
+    expect(next.storeys).not.toBe(doc.storeys);
+    expect(next.families).not.toBe(doc.families);
+    expect(next.doorFamilies).not.toBe(doc.doorFamilies);
+    expect(next.windowFamilies).not.toBe(doc.windowFamilies);
     expect(next.walls[0]).toBe(wall);
+    expect(next.cameras[0]).toBe(camera);
     expect(next.meta).not.toBe(doc.meta);
   });
 });
+

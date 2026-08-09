@@ -1,24 +1,26 @@
+import {
+  computeModelEnvelope,
+  getActiveWorkplane,
+  type AxonDocument,
+  type CropCorner,
+} from "@axonbim/model";
 import { createViewport, type ViewportHandle } from "@axonbim/viewer";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { isInsideCameraViewFrame } from "../session/cameraViewNav";
+import {
+  buildCameraCropScreenFrame,
+  screenFrameFromCornerDrag,
+  type ScreenCropFrame,
+} from "../session/cropScreenFrame";
 import type { OrbitPivotMode } from "../session/sessionTypes";
 import { useSessionStore } from "../sessionStore";
 import { ViewOrientationGizmo } from "./ViewOrientationGizmo";
 
-function modelPivot(walls: { p1: { x: number; y: number }; p2: { x: number; y: number }; height: number }[]) {
-  if (walls.length === 0) return { x: 0, y: 0, z: 1 };
-  let minX = Infinity;
-  let maxX = -Infinity;
-  let minY = Infinity;
-  let maxY = -Infinity;
-  let maxH = 0;
-  for (const w of walls) {
-    minX = Math.min(minX, w.p1.x, w.p2.x);
-    maxX = Math.max(maxX, w.p1.x, w.p2.x);
-    minY = Math.min(minY, w.p1.y, w.p2.y);
-    maxY = Math.max(maxY, w.p1.y, w.p2.y);
-    maxH = Math.max(maxH, w.height);
-  }
-  return { x: (minX + maxX) / 2, y: (minY + maxY) / 2, z: maxH * 0.35 };
+/** Orbit fallback from LR3-C envelope (derived, not SoT). */
+function modelPivot(doc: AxonDocument) {
+  const env = computeModelEnvelope(doc);
+  if (env.empty) return { x: 0, y: 0, z: 1 };
+  return { x: env.center.x, y: env.center.y, z: env.center.z };
 }
 
 function resolveOrbitPivot(
@@ -26,7 +28,7 @@ function resolveOrbitPivot(
   state: ReturnType<typeof useSessionStore.getState>,
 ): { x: number; y: number; z: number } {
   const { document: doc, selectedWallId, selectedDoorId, selectedWindowId } = state;
-  const fallback = modelPivot(doc.walls);
+  const fallback = modelPivot(doc);
 
   if (mode !== "selection") return fallback;
 
@@ -98,11 +100,14 @@ export function Viewport() {
   const cropDragLive = useSessionStore((s) => s.cropDragLive);
   const cropDragMeta = useSessionStore((s) => s.cropDragMeta);
   const cameraPoseDragLive = useSessionStore((s) => s.cameraPoseDragLive);
+  const cameraViewNavEdit = useSessionStore((s) => s.cameraViewNavEdit);
   const activeTool = useSessionStore((s) => s.activeTool);
   const wallPending = useSessionStore((s) => s.wallPending);
   const wallHover = useSessionStore((s) => s.wallHover);
   const lastSnapKind = useSessionStore((s) => s.lastSnapKind);
-  const elevation = useSessionStore((s) => s.document.storeys[0]?.elevation ?? 0);
+  const elevation = useSessionStore(
+    (s) => getActiveWorkplane(s.document, s.activeStoreyId).origin.z,
+  );
   const activeCameraEntity = useSessionStore((s) => {
     const v = s.views.find((x) => x.id === s.activeViewId);
     if (v?.kind !== "camera" || !v.cameraId) return null;
@@ -173,8 +178,24 @@ export function Viewport() {
 
   useEffect(() => {
     if (activeViewKind !== "camera" || !activeCameraEntity) return;
+    // While nav-edit is on, keep free look; don't snap back to document pose.
+    if (cameraViewNavEdit) return;
     handleRef.current?.applyModelCamera(activeCameraEntity);
-  }, [activeViewKind, activeCameraEntity, documentRev]);
+  }, [activeViewKind, activeCameraEntity, documentRev, cameraViewNavEdit]);
+
+  // Camera view: lock zoom/orbit until double-click unlocks edit mode.
+  useEffect(() => {
+    const vp = handleRef.current;
+    if (!vp) return;
+    if (activeViewKind === "camera") {
+      vp.setNavigationEnabled(cameraViewNavEdit);
+      if (!cameraViewNavEdit && activeCameraEntity) {
+        vp.applyModelCamera(activeCameraEntity);
+      }
+      return;
+    }
+    vp.setNavigationEnabled(true);
+  }, [activeViewKind, cameraViewNavEdit, activeCameraEntity]);
 
   useEffect(() => {
     const camerasForSync = cameras.map((c) => {
@@ -242,7 +263,7 @@ export function Viewport() {
     cropDragLive,
   ]);
 
-  // Screen frame = view-limit overlay (camera / free 3D), never on plan
+  // Camera / free 3D: projected crop matte + corner grips (plan still uses world grips).
   const showCropFrame = useSessionStore((s) => {
     void s.documentRev;
     void s.views;
@@ -252,6 +273,44 @@ export function Viewport() {
     if (s.views.find((v) => v.id === s.activeViewId)?.kind === "plan") return false;
     return s.getClippingCrop()?.enabled ?? false;
   });
+
+  const [screenCrop, setScreenCrop] = useState<ScreenCropFrame | null>(null);
+  const screenCropViewKeyRef = useRef<string | null>(null);
+  const screenCropDraggingRef = useRef(false);
+
+  // Screen matte chrome only (inset 8% init). Does NOT mutate Camera.crop / GPU clip — that stays from plan.
+  useEffect(() => {
+    if (!showCropFrame) {
+      setScreenCrop(null);
+      screenCropViewKeyRef.current = null;
+      return;
+    }
+    if (screenCropDraggingRef.current) return;
+
+    const host = hostRef.current;
+    const vp = handleRef.current;
+    const s = useSessionStore.getState();
+    const crop = s.getClippingCrop();
+    if (!host || !vp || !crop?.enabled) {
+      setScreenCrop(null);
+      return;
+    }
+    const viewKey = `${s.activeViewId}:${crop.enabled}`;
+    if (screenCropViewKeyRef.current === viewKey) return;
+    screenCropViewKeyRef.current = viewKey;
+
+    const view = s.views.find((v) => v.id === s.activeViewId);
+    const cam =
+      view?.kind === "camera" && view.cameraId
+        ? s.document.cameras.find((c) => c.id === view.cameraId)
+        : undefined;
+      const activeElev = getActiveWorkplane(s.document, s.activeStoreyId).origin.z;
+      const z = cam ? (cam.eye.z + cam.target.z) / 2 : activeElev + 0.04;
+    const hr = host.getBoundingClientRect();
+    setScreenCrop(
+      buildCameraCropScreenFrame(crop, z, (x, y, wz) => vp.clientFromWorld(x, y, wz), hr),
+    );
+  }, [showCropFrame, activeViewId, documentRev]);
 
   useEffect(() => {
     handleRef.current?.setPreviewSegment(wallPending, wallHover);
@@ -272,8 +331,12 @@ export function Viewport() {
     const onPointerMove = (e: PointerEvent) => {
       const s = useSessionStore.getState();
       if (cropDragging || s.cropDragMeta) {
-        const p = handleRef.current?.pickGround(e.clientX, e.clientY, elevation);
-        if (p) s.updateCropDrag(p.x, p.y);
+        // Plan world grips only — camera/3D CSS grips resize in their own handlers.
+        const view = s.views.find((v) => v.id === s.activeViewId);
+        if (view?.kind === "plan") {
+          const p = handleRef.current?.pickGround(e.clientX, e.clientY, elevation);
+          if (p) s.updateCropDrag(p.x, p.y);
+        }
         return;
       }
       if (s.activeTool !== "wall" && s.activeTool !== "camera") return;
@@ -410,6 +473,10 @@ export function Viewport() {
           s.cancelCropDrag();
           return;
         }
+        if (s.cameraViewNavEdit) {
+          s.setCameraViewNavEdit(false);
+          return;
+        }
         s.cancelWallDraw();
         return;
       }
@@ -465,12 +532,128 @@ export function Viewport() {
                 ? "clic en muro"
                 : "";
 
+  const onViewportDoubleClick = (e: {
+    clientX: number;
+    clientY: number;
+    preventDefault: () => void;
+  }) => {
+    if (activeViewKind !== "camera") return;
+    const host = hostRef.current;
+    if (!host) return;
+    const hr = host.getBoundingClientRect();
+    const lx = e.clientX - hr.left;
+    const ly = e.clientY - hr.top;
+    const inside = screenCrop
+      ? lx >= screenCrop.left &&
+        lx <= screenCrop.left + screenCrop.width &&
+        ly >= screenCrop.top &&
+        ly <= screenCrop.top + screenCrop.height
+      : isInsideCameraViewFrame(lx, ly, hr.width, hr.height, showCropFrame);
+    if (!inside) return;
+    e.preventDefault();
+    useSessionStore.getState().setCameraViewNavEdit(!cameraViewNavEdit);
+  };
+
+  // Grips only while camera nav is locked (not in temporary zoom/orbit edit).
+  const cropGripsEnabled =
+    showCropFrame && !(activeViewKind === "camera" && cameraViewNavEdit);
+
+  const startScreenCornerDrag = (
+    e: { clientX: number; clientY: number; preventDefault: () => void; stopPropagation: () => void },
+    frame: ScreenCropFrame,
+    gripLocal: { left: number; top: number },
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!cropGripsEnabled) return;
+    const host = hostRef.current;
+    if (!host) return;
+    const s = useSessionStore.getState();
+    if (s.cameraViewNavEdit && s.views.find((v) => v.id === s.activeViewId)?.kind === "camera") {
+      return;
+    }
+
+    const oppLocal = {
+      left: gripLocal.left <= 1 ? frame.width : 0,
+      top: gripLocal.top <= 1 ? frame.height : 0,
+    };
+    const hr = host.getBoundingClientRect();
+    const oppClient = {
+      x: hr.left + frame.left + oppLocal.left,
+      y: hr.top + frame.top + oppLocal.top,
+    };
+
+    // CSS matte only — never beginCropDrag / Camera.crop (alcance de planta intacto).
+    screenCropDraggingRef.current = true;
+    const onMove = (ev: PointerEvent) => {
+      const curClient = { x: ev.clientX, y: ev.clientY };
+      setScreenCrop((prev) =>
+        screenFrameFromCornerDrag(prev ?? frame, hr, oppClient, curClient),
+      );
+    };
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      screenCropDraggingRef.current = false;
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  };
+
   return (
-    <div className={drawing ? "viewport viewport--draw" : "viewport"} ref={hostRef}>
+    <div
+      className={drawing ? "viewport viewport--draw" : "viewport"}
+      ref={hostRef}
+      onDoubleClick={onViewportDoubleClick}
+    >
       <canvas ref={canvasRef} className="viewport__canvas" />
-      {showCropFrame && (
+      {showCropFrame && screenCrop && (
         <div
-          className="viewport__crop-frame"
+          className={
+            cameraViewNavEdit
+              ? "viewport__crop-frame viewport__crop-frame--screen viewport__crop-frame--nav-edit"
+              : "viewport__crop-frame viewport__crop-frame--screen"
+          }
+          style={{
+            left: screenCrop.left,
+            top: screenCrop.top,
+            width: screenCrop.width,
+            height: screenCrop.height,
+          }}
+          title={
+            cameraViewNavEdit
+              ? "Edición de vista — Esc o doble clic para salir"
+              : "Marco de vista · arrastre esquinas (no cambia crop de planta) · doble clic = zoom/órbita"
+          }
+        >
+          {cropGripsEnabled &&
+            screenCrop.corners.map((c) => {
+              const cursorClass =
+                (c.left <= 1 && c.top <= 1) ||
+                (c.left >= screenCrop.width - 1 && c.top >= screenCrop.height - 1)
+                  ? "viewport__crop-grip--nwse"
+                  : "viewport__crop-grip--nesw";
+              return (
+                <button
+                  key={`${c.corner}-${c.left}-${c.top}`}
+                  type="button"
+                  className={`viewport__crop-grip ${cursorClass}`}
+                  style={{ left: c.left, top: c.top }}
+                  aria-label={`Redimensionar marco de vista esquina ${c.corner as CropCorner}`}
+                  onPointerDown={(e) => startScreenCornerDrag(e, screenCrop, c)}
+                  onDoubleClick={(e) => e.stopPropagation()}
+                />
+              );
+            })}
+        </div>
+      )}
+      {showCropFrame && !screenCrop && (
+        <div
+          className={
+            cameraViewNavEdit
+              ? "viewport__crop-frame viewport__crop-frame--nav-edit"
+              : "viewport__crop-frame"
+          }
           aria-hidden
           title="Límite de recorte de vista"
         />
@@ -483,8 +666,10 @@ export function Viewport() {
         {activeViewKind === "plan"
           ? "planta · rueda zoom · clic medio pan · grips · cámaras"
           : activeViewKind === "camera"
-            ? "vista cámara · rueda zoom · medio/der orbitar · marco = recorte"
-            : "3D · rueda zoom · medio/der orbitar · gizmo ejes = vistas · hold = órbita · hub = iso"}
+            ? cameraViewNavEdit
+              ? "vista cámara · edición zoom/órbita · Esc o doble clic = salir (sin grips)"
+              : "vista cámara · marco CSS (crop = planta) · doble clic = zoom/órbita"
+            : "3D · grips de crop · rueda zoom · medio/der orbitar · gizmo · hold = órbita"}
         {" · "}
         {visualStyle}
         {drawing ? ` · muro · ${snapLabel}` : snapLabel ? ` · ${snapLabel}` : ""}

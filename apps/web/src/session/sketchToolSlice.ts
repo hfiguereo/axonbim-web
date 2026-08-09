@@ -8,9 +8,17 @@ import {
   createWallId,
   createWindowId,
 } from "@axonbim/commands";
-import { doorFamilyById, familyById, windowFamilyById } from "@axonbim/families";
 import {
+  OPENING_VERTICAL_MARGIN,
+  asOpeningSpec,
   defaultCameraCrop,
+  findDoorFamily,
+  findWallFamily,
+  findWindowFamily,
+  pointOnWorkplaneXY,
+  resolveSpatialReference,
+  openingsOnWall,
+  validateHostedOpening,
   type Camera,
   type Door,
   type Wall,
@@ -18,9 +26,20 @@ import {
 } from "@axonbim/model";
 import { MIN_WALL_LENGTH } from "@axonbim/shared";
 import type { DrawMode, ToolId } from "@axonbim/tools";
-import { collectEndpoints, isCameraTool, isSketchTool, snapWallPoint } from "@axonbim/tools";
+import {
+  clearSnapSession,
+  collectEndpoints,
+  emptySnapSession,
+  isCameraTool,
+  isSketchTool,
+  restartChainAt,
+  snapWallPoint,
+  type SnapSession,
+} from "@axonbim/tools";
 import { projectPointOnWall } from "@axonbim/geometry";
-import { DEFAULT_CAMERA_EYE_Z, DEFAULT_CAMERA_FOV, type ProjectView } from "./sessionTypes.js";
+import { cameraViewId } from "./cameraViews.js";
+import { rejectionStatus } from "./documentMutation.js";
+import { DEFAULT_CAMERA_EYE_Z, DEFAULT_CAMERA_FOV } from "./sessionTypes.js";
 import { applyCommand } from "./sliceContracts.js";
 import type { SessionSliceCreator } from "./sliceTypes.js";
 
@@ -36,6 +55,8 @@ export const createSketchToolSlice: SessionSliceCreator<{
   wallChainOrigin: { x: number; y: number; z: number } | null;
   wallHover: { x: number; y: number; z: number } | null;
   lastSnapKind: import("@axonbim/tools").SnapKind;
+  /** LR1 — ortho axis lock for current segment; never in AxonDocument. */
+  snapSession: SnapSession;
   snapEnabled: boolean;
   setTool: (tool: ToolId) => void;
   setDrawMode: (mode: DrawMode) => void;
@@ -43,6 +64,8 @@ export const createSketchToolSlice: SessionSliceCreator<{
   setSnapEnabled: (enabled: boolean) => void;
   splitWallChain: () => void;
   releaseWallChain: () => void;
+  /** LR1-B — new chain at point; no document/history mutation. */
+  restartChainAt: (point: { x: number; y: number; z: number }) => void;
   setActiveFamilyId: (id: string) => void;
   setWallHeight: (height: number) => void;
   setActiveDoorFamilyId: (id: string) => void;
@@ -65,6 +88,7 @@ export const createSketchToolSlice: SessionSliceCreator<{
   wallChainOrigin: null,
   wallHover: null,
   lastSnapKind: "none",
+  snapSession: emptySnapSession(),
   snapEnabled: true,
 
   setTool: (activeTool) => {
@@ -77,6 +101,7 @@ export const createSketchToolSlice: SessionSliceCreator<{
         wallChainOrigin: null,
         wallHover: null,
         lastSnapKind: "none",
+        snapSession: clearSnapSession(),
         status: "Herramienta: ninguna",
       });
       return;
@@ -91,6 +116,7 @@ export const createSketchToolSlice: SessionSliceCreator<{
         wallPending: null,
         wallChainOrigin: null,
         wallHover: null,
+        snapSession: clearSnapSession(),
         status: "Colocar puerta — clic en un muro",
       });
       return;
@@ -106,6 +132,7 @@ export const createSketchToolSlice: SessionSliceCreator<{
         wallPending: null,
         wallChainOrigin: null,
         wallHover: null,
+        snapSession: clearSnapSession(),
         status: "Colocar ventana — clic en un muro",
       });
       return;
@@ -122,6 +149,7 @@ export const createSketchToolSlice: SessionSliceCreator<{
         wallChainOrigin: null,
         wallHover: null,
         lastSnapKind: "none",
+        snapSession: clearSnapSession(),
         status: "Cámara — clic 1: ojo · clic 2: mira (en planta)",
       });
       return;
@@ -140,6 +168,7 @@ export const createSketchToolSlice: SessionSliceCreator<{
         wallChainOrigin: null,
         wallHover: null,
         lastSnapKind: "none",
+        snapSession: clearSnapSession(),
         status:
           activeTool === "wall"
             ? "Colocar muro — snap extremos/orto/cierre (Shift = orto)"
@@ -154,6 +183,7 @@ export const createSketchToolSlice: SessionSliceCreator<{
       wallChainOrigin: null,
       wallHover: null,
       lastSnapKind: "none",
+      snapSession: clearSnapSession(),
       status: `Herramienta: ${activeTool}`,
     });
   },
@@ -180,6 +210,7 @@ export const createSketchToolSlice: SessionSliceCreator<{
     set({
       snapEnabled,
       lastSnapKind: "none",
+      snapSession: clearSnapSession(),
       status: snapEnabled
         ? "Snap activo — extremos / orto / cierre"
         : "Snap desactivado",
@@ -192,6 +223,7 @@ export const createSketchToolSlice: SessionSliceCreator<{
       wallChainOrigin: null,
       wallHover: null,
       lastSnapKind: "none",
+      snapSession: clearSnapSession(),
       status: "Cadena dividida — siguiente clic inicia un nuevo tramo",
     });
   },
@@ -203,34 +235,48 @@ export const createSketchToolSlice: SessionSliceCreator<{
       wallChainOrigin: null,
       wallHover: null,
       lastSnapKind: "none",
+      snapSession: clearSnapSession(),
       status: "Cadena soltada — coloca segmentos sueltos",
     });
   },
 
-  setActiveFamilyId: (activeFamilyId) => {
-    const fam = familyById(activeFamilyId);
+  restartChainAt: (point) => {
+    const s = get();
+    if (s.activeTool !== "wall") return;
+    const next = restartChainAt(point);
     set({
-      activeFamilyId,
-      status: fam ? `Familia: ${fam.label}` : `Familia: ${activeFamilyId}`,
+      ...next,
+      status: "Cadena reiniciada — P1 fijado · clic P2 (sin historial)",
     });
+  },
+
+  setActiveFamilyId: (activeFamilyId) => {
+    const fam = findWallFamily(get().document.families, activeFamilyId);
+    if (!fam) {
+      set({ status: "Esa familia de muro no existe en el documento" });
+      return;
+    }
+    set({ activeFamilyId, status: `Familia: ${fam.label}` });
   },
 
   setWallHeight: (wallHeight) => set({ wallHeight }),
 
   setActiveDoorFamilyId: (activeDoorFamilyId) => {
-    const fam = doorFamilyById(activeDoorFamilyId);
-    set({
-      activeDoorFamilyId,
-      status: fam ? `Familia puerta: ${fam.label}` : `Familia: ${activeDoorFamilyId}`,
-    });
+    const fam = findDoorFamily(get().document.doorFamilies, activeDoorFamilyId);
+    if (!fam) {
+      set({ status: "Esa familia de puerta no existe en el documento" });
+      return;
+    }
+    set({ activeDoorFamilyId, status: `Familia puerta: ${fam.label}` });
   },
 
   setActiveWindowFamilyId: (activeWindowFamilyId) => {
-    const fam = windowFamilyById(activeWindowFamilyId);
-    set({
-      activeWindowFamilyId,
-      status: fam ? `Familia ventana: ${fam.label}` : `Familia: ${activeWindowFamilyId}`,
-    });
+    const fam = findWindowFamily(get().document.windowFamilies, activeWindowFamilyId);
+    if (!fam) {
+      set({ status: "Esa familia de ventana no existe en el documento" });
+      return;
+    }
+    set({ activeWindowFamilyId, status: `Familia ventana: ${fam.label}` });
   },
 
   placeDoorOnWall: (wallId, world) => {
@@ -240,41 +286,35 @@ export const createSketchToolSlice: SessionSliceCreator<{
       set({ status: "Muro no encontrado" });
       return;
     }
-    const fam = doorFamilyById(s.activeDoorFamilyId);
-    const width = fam?.width ?? 0.9;
-    const height = fam?.height ?? 2.1;
-    const len = Math.hypot(wall.p2.x - wall.p1.x, wall.p2.y - wall.p1.y);
+    const fam = findDoorFamily(s.document.doorFamilies, s.activeDoorFamilyId);
+    if (!fam) {
+      set({ status: "Esa familia de puerta no existe en el documento" });
+      return;
+    }
     const { offset } = projectPointOnWall(wall, world);
-    const half = width / 2;
-    if (offset < half + 0.05 || offset > len - half - 0.05) {
-      set({ status: "Puerta demasiado cerca del extremo del muro" });
-      return;
-    }
-    const overlap = s.document.doors.some((d) => {
-      if (d.wallId !== wallId) return false;
-      return Math.abs(d.centerOffset - offset) < (d.width + width) / 2 + 0.02;
-    });
-    if (overlap) {
-      set({ status: "Hay otra puerta demasiado cerca" });
-      return;
-    }
-    if (height > wall.height - 0.05) {
-      set({ status: "La puerta es más alta que el muro" });
-      return;
-    }
+    // Tool may trim height to the wall; the command still re-validates (ADR 0017).
     const door: Door = {
       id: createDoorId(),
       wallId,
-      familyId: s.activeDoorFamilyId,
+      familyId: fam.id,
       centerOffset: offset,
-      width,
-      height: Math.min(height, wall.height - 0.05),
+      width: fam.width,
+      height: Math.min(fam.height, wall.height - OPENING_VERTICAL_MARGIN),
       sill: 0,
       hinge: "start",
       swing: "positive",
       leafState: "open",
     };
-    applyCommand(get, set, new CreateDoorCommand(door), `Puerta ${width.toFixed(2)} m`);
+    const fit = validateHostedOpening(
+      asOpeningSpec(door),
+      wall,
+      openingsOnWall(wallId, s.document.doors, s.document.windows),
+    );
+    if (fit) {
+      set({ status: rejectionStatus(fit.code, fit.message) });
+      return;
+    }
+    applyCommand(get, set, new CreateDoorCommand(door), `Puerta ${fam.width.toFixed(2)} m`);
     set({ selectedDoorId: door.id, selectedWallId: null, selectedWindowId: null });
   },
 
@@ -285,46 +325,34 @@ export const createSketchToolSlice: SessionSliceCreator<{
       set({ status: "Muro no encontrado" });
       return;
     }
-    const fam = windowFamilyById(s.activeWindowFamilyId);
-    const width = fam?.width ?? 0.9;
-    const height = fam?.height ?? 1.2;
-    const sill = fam?.sill ?? 0.9;
-    const len = Math.hypot(wall.p2.x - wall.p1.x, wall.p2.y - wall.p1.y);
+    const fam = findWindowFamily(s.document.windowFamilies, s.activeWindowFamilyId);
+    if (!fam) {
+      set({ status: "Esa familia de ventana no existe en el documento" });
+      return;
+    }
     const { offset } = projectPointOnWall(wall, world);
-    const half = width / 2;
-    if (offset < half + 0.05 || offset > len - half - 0.05) {
-      set({ status: "Ventana demasiado cerca del extremo del muro" });
-      return;
-    }
-    const overlapsDoor = s.document.doors.some((d) => {
-      if (d.wallId !== wallId) return false;
-      return Math.abs(d.centerOffset - offset) < (d.width + width) / 2 + 0.02;
-    });
-    const overlapsWindow = s.document.windows.some((w) => {
-      if (w.wallId !== wallId) return false;
-      return Math.abs(w.centerOffset - offset) < (w.width + width) / 2 + 0.02;
-    });
-    if (overlapsDoor || overlapsWindow) {
-      set({ status: "Hay otro hueco demasiado cerca" });
-      return;
-    }
-    if (sill + height > wall.height - 0.05) {
-      set({ status: "La ventana no cabe en la altura del muro" });
-      return;
-    }
     const win: Window = {
       id: createWindowId(),
       wallId,
-      familyId: s.activeWindowFamilyId,
+      familyId: fam.id,
       centerOffset: offset,
-      width,
-      height,
-      sill,
+      width: fam.width,
+      height: fam.height,
+      sill: fam.sill,
       hinge: "start",
       swing: "positive",
       leafState: "closed",
     };
-    applyCommand(get, set, new CreateWindowCommand(win), `Ventana ${width.toFixed(2)} m`);
+    const fit = validateHostedOpening(
+      asOpeningSpec(win),
+      wall,
+      openingsOnWall(wallId, s.document.doors, s.document.windows),
+    );
+    if (fit) {
+      set({ status: rejectionStatus(fit.code, fit.message) });
+      return;
+    }
+    applyCommand(get, set, new CreateWindowCommand(win), `Ventana ${fam.width.toFixed(2)} m`);
     set({ selectedWindowId: win.id, selectedWallId: null, selectedDoorId: null });
   },
 
@@ -335,7 +363,7 @@ export const createSketchToolSlice: SessionSliceCreator<{
     }
     const s = get();
     if (!s.snapEnabled) {
-      set({ wallHover: raw, lastSnapKind: "none" });
+      set({ wallHover: raw, lastSnapKind: "none", snapSession: clearSnapSession() });
       return;
     }
     const snap = snapWallPoint({
@@ -344,8 +372,9 @@ export const createSketchToolSlice: SessionSliceCreator<{
       chainOrigin: s.wallChainOrigin,
       endpoints: collectEndpoints(s.document.walls),
       forceOrtho,
+      session: s.snapSession,
     });
-    set({ wallHover: snap.point, lastSnapKind: snap.kind });
+    set({ wallHover: snap.point, lastSnapKind: snap.kind, snapSession: snap.session });
   },
 
   wallClick: (raw, forceOrtho = false) => {
@@ -363,8 +392,14 @@ export const createSketchToolSlice: SessionSliceCreator<{
           chainOrigin: s.wallChainOrigin,
           endpoints: collectEndpoints(s.document.walls),
           forceOrtho,
+          session: s.snapSession,
         })
-      : { point: raw, kind: "none" as const, closed: false };
+      : {
+          point: raw,
+          kind: "none" as const,
+          closed: false,
+          session: clearSnapSession(),
+        };
     const p = snap.point;
 
     if (!s.wallPending) {
@@ -373,6 +408,7 @@ export const createSketchToolSlice: SessionSliceCreator<{
         wallChainOrigin: s.wallChainOrigin ?? p,
         wallHover: p,
         lastSnapKind: snap.kind,
+        snapSession: clearSnapSession(),
         status:
           snap.kind === "endpoint"
             ? "P1 en extremo — clic P2 (Esc cancela)"
@@ -388,18 +424,21 @@ export const createSketchToolSlice: SessionSliceCreator<{
       return;
     }
 
-    const fam = familyById(s.activeFamilyId);
-    const thickness = fam?.thickness ?? 0.15;
-    const storey = s.document.storeys[0];
-    const elev = storey?.elevation ?? 0;
+    const fam = findWallFamily(s.document.families, s.activeFamilyId);
+    if (!fam) {
+      set({ status: "Esa familia de muro no existe en el documento", lastSnapKind: snap.kind });
+      return;
+    }
+    const spatial = resolveSpatialReference(s.document, s.activeStoreyId);
+    const wp = spatial.workplane;
     const wall: Wall = {
       id: createWallId(),
-      storeyId: storey?.id ?? "storey.default",
-      familyId: s.activeFamilyId,
-      p1: { x: p1.x, y: p1.y, z: elev },
-      p2: { x: p.x, y: p.y, z: elev },
+      storeyId: spatial.storeyId,
+      familyId: fam.id,
+      p1: pointOnWorkplaneXY(wp, p1.x, p1.y),
+      p2: pointOnWorkplaneXY(wp, p.x, p.y),
       height: s.wallHeight,
-      thickness,
+      thickness: fam.thickness,
     };
 
     const snapLabel =
@@ -417,21 +456,24 @@ export const createSketchToolSlice: SessionSliceCreator<{
       `Muro ${len.toFixed(2)} m (${snapLabel})`,
     );
 
+    const onPlane = pointOnWorkplaneXY(wp, p.x, p.y);
     if (snap.closed || !s.wallChain) {
       set({
         wallPending: null,
         wallChainOrigin: null,
         wallHover: null,
         lastSnapKind: "none",
+        snapSession: clearSnapSession(),
         status: snap.closed
           ? "Espacio cerrado — clic para nuevo trazo"
           : "Segmento colocado",
       });
     } else {
       set({
-        wallPending: { x: p.x, y: p.y, z: elev },
-        wallHover: { x: p.x, y: p.y, z: elev },
+        wallPending: onPlane,
+        wallHover: onPlane,
         lastSnapKind: snap.kind,
+        snapSession: clearSnapSession(),
         status: "Cadena — siguiente segmento (cierre cerca del origen)",
       });
     }
@@ -471,18 +513,9 @@ export const createSketchToolSlice: SessionSliceCreator<{
       crop: defaultCameraCrop(eyePos, targetPos, DEFAULT_CAMERA_FOV),
     };
     applyCommand(get, set, new CreateCameraCommand(camera), `Cámara creada: ${camera.name}`);
-
-    const viewId = `view.camera.${id}`;
-    const view: ProjectView = {
-      id: viewId,
-      name: camera.name,
-      kind: "camera",
-      open: true,
-      cameraId: id,
-    };
+    // Tab is derived from document.cameras inside applyCommand (F9-E4).
     set({
-      views: [...get().views.filter((v) => v.id !== viewId), view],
-      activeViewId: viewId,
+      activeViewId: cameraViewId(id),
       selectedCameraId: id,
       selectedWallId: null,
       selectedDoorId: null,
@@ -502,6 +535,7 @@ export const createSketchToolSlice: SessionSliceCreator<{
       wallChainOrigin: null,
       wallHover: null,
       lastSnapKind: "none",
+      snapSession: clearSnapSession(),
       status:
         tool === "camera"
           ? "Cámara cancelada — clic 1 para ojo"

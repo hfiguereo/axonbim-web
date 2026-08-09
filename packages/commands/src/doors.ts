@@ -1,5 +1,6 @@
 import type { AxonDocument, Door, DoorLeafState, DoorSwing } from "@axonbim/model";
 import { documentRefs, validateDoor } from "@axonbim/model";
+import { checkHostedOpening } from "./hostedOpening";
 import { CHANGED, NOOP, rejected, type Command, type CommandResult } from "./types";
 
 let doorSeq = 0;
@@ -17,10 +18,11 @@ function notFound(doorId: string): CommandResult {
   return rejected({ code: "door.notFound", message: `door ${doorId}: not found` });
 }
 
-/** Validates the door as it would look after the change. */
+/** Entity rules, then hosted fit/overlap against the wall (F9-E2). */
 function checkDoor(doc: AxonDocument, candidate: Door): CommandResult | null {
   const issue = validateDoor(candidate, documentRefs(doc));
-  return issue ? rejected(issue) : null;
+  if (issue) return rejected(issue);
+  return checkHostedOpening(doc, candidate);
 }
 
 export class CreateDoorCommand implements Command {

@@ -3,95 +3,102 @@
 **Fuente de verdad** para lo que queda por hacer. Si otro documento contradice este,
 **prevalece este** hasta que se actualice explícitamente.
 
-Última revisión: **2026-08-08 (tarde)** — auditoría externa recibida; **F9-E propuesta y
-Fase 4 en espera**.
+Última revisión: **2026-08-09** — hilo LR; **LR0–LR3 + WP-v1 cerradas**.
 
-## Cola activa
+Detalle de bloques LR: [`legacy-reuse-roadmap.md`](legacy-reuse-roadmap.md) ·
+resumen [`../migration/plan-integracion-selectiva-resumen.md`](../migration/plan-integracion-selectiva-resumen.md).
+
+---
+
+## Hilo activo (solo adelante)
+
+Secuencia obligatoria. **No saltar** bloques ni abrir IFC/OCCT/Sketch-Edit antes de su
+prerrequisito. Cada bloque = frase explícita en chat + gate.
+
+```
+LR0–LR3 + WP-v1 (hecho) → Sketch / Edit (auth)
+                      ↘ LR3-D → LR4… (parked)
+```
+
+| Orden | Bloque | Estado | Gate de cierre |
+|-------|--------|--------|----------------|
+| — | **LR0** Formalización legado | **cerrada** 2026-08-09 | Docs indexados; inventario clasificado |
+| — | **LR1** SnapSession + histéresis | **cerrada** 2026-08-09 | Enter 12° / hold 22°; session fuera de documento |
+| — | **LR1-B** Restart Chain | **cerrada** 2026-08-09 | `restartChainAt`; cinta Reiniciar; sin historial |
+| — | **LR2** Command Transactions | **cerrada** 2026-08-09 | `CompositeCommand` atómico + tests |
+| — | **LR3-A…D** Spatial Reference Context | **cerrada** 2026-08-09 | Active Storey · Datum · Envelope · Projection Basis |
+| — | **WP-v1** Workplane compartido | **cerrada** 2026-08-09 | [`workplanes-roadmap.md`](workplanes-roadmap.md) |
+| **1** | **Sketch / Edit Mode** | **siguiente** (auth) | Paradigmas; no Family Editor / Push&Pull sin auth |
+
+### Parked (no son el hilo actual)
+
+Solo con auth **y** prerrequisitos. No reordenan la cola de arriba.
+
+| Tema | Prerreq. | Doc |
+|------|----------|-----|
+| **LR1-C** Snaps geométricos (midpoint, perpendicular, …) | tras LR1; auth | `legacy-reuse-roadmap.md` §LR1-C |
+| LR4 Technical Views | LR3-D + auth doc 2D | `legacy-reuse-roadmap.md` |
+| LR5 Render invalidation | evidencia de coste | idem |
+| LR6 IFC Recognition Policy | auth IFC | ADR 0003 |
+| LR7 Grid adaptativo | LR3 | UX only |
+| OpenCascade | auth | ADR 0013 |
+| IFC operativo | LR6 + auth | ADR 0003 |
+| PWA / OPFS / IndexedDB | — | technical-audit §No introducir |
+| Colaboración / más Playwright / nuevos tipos | gate + ADR | — |
+
+### Informe mínimo por bloque LR (antes de programar)
+
+Problema · comportamiento Desktop recuperado · datos · invariantes · componentes Web ·
+qué **no** se reutiliza · tests. Tras: archivos · tests · Undo/Redo si aplica · docs.
+
+### Próximo paso
+
+Autorizar **Sketch Mode** o un corte concreto de edición (p. ej. «autorizo Sketch Mode»).
+Sin frase, no implementar. Family Editor / Push&Pull / LR1-C / LR4+ siguen parked.
+
+---
+
+## Cola histórica (cerrada — no reabrir salvo regresión)
 
 | Fase | Estado | Gate |
 |------|--------|------|
-| **0** Base operativa | **cerrada** | Repo público + branch protection + `check:history` |
-| **1** Session slices | **cerrada** | Checklist humana A/B OK |
-| **2** Viewer módulos | **cerrada** | Checklist humana D/E OK (D4 con observaciones) |
-| **3** Deuda residual | **cerrada** | Base limpia declarada; checklist C OK con observaciones |
-| **F9-E** Integridad del documento | **propuesta · espera dueño** | ADR 0017 + [`domain-invariants-plan.md`](domain-invariants-plan.md) |
-| **4** Desarrollo parked | **autorizada, en espera** | Recomendado: después de F9-E1/E2 |
+| **0–3** Desacople session/viewer + deuda | **cerrada** | Checklist A–E 2026-08-08 |
+| **F9-E1…E6** Integridad | **cerrada** | ADR 0017; checklists humanas OK |
+| **F9-E** (programa) | **cerrada** | 2026-08-09 |
+| **4 · C3** Crop marco cámara | **cerrada** | Checklist OK 2026-08-09 |
+| **LR0** Formalización legado | **cerrada** | Indexado 2026-08-09 |
+| **LR1** SnapSession | **cerrada** | Histéresis orto; tests tools + session |
+| **LR1-B** Restart Chain | **cerrada** | `restartChainAt` + cinta Reiniciar |
+| **LR2** CompositeCommand | **cerrada** | Transacción atómica en history |
+| **LR3-A…D** Spatial Reference | **cerrada** | `getActiveStorey` · datums · envelope · projection basis |
+| **WP-v1** Workplane | **cerrada** | `resolveSpatialReference`; tools sin acoplar a cámara |
 
-### Por qué Fase 4 queda en espera (2026-08-08)
+### Checklists humanas cerradas (referencia)
 
-La Fase 4 sigue **autorizada** por el dueño; lo que cambia es la recomendación técnica. Una
-[auditoría externa](../validation/external-audit-2026-08-08.md) encontró seis hallazgos
-**P0/P1 de integridad de datos** y recomienda no abrir expansión funcional antes de
-cerrarlos. Verificados uno a uno en el código.
+| Bloque | Resultado |
+|--------|-----------|
+| Fases 1–3 (A–E) | OK 2026-08-08 (D4 obs. aceptada; BUG-C corregido) |
+| F9-E2…E6 | OK 2026-08-09 |
+| C3 crop/marco | OK 2026-08-09 — marco CSS + nav lock; crop real en planta |
+| LR0 docs | OK 2026-08-09 — PDF + resumen + roadmap + inventario |
+| LR1 SnapSession | OK 2026-08-09 — enter/hold; Esc limpia; no en historial |
+| LR1-B Restart Chain | OK 2026-08-09 — reinicio sin mutar doc/historial |
+| LR2 CompositeCommand | OK 2026-08-09 — undo/redo atómico; fallo = rollback |
+| LR3 Spatial Reference | OK 2026-08-09 — A–D en `@axonbim/model` + session; tests verdes |
+| WP-v1 Workplane | OK 2026-08-09 — plano storey derivado; muro/Viewport; sin persistir |
 
-El más urgente **no es hipotético**: colocar una puerta solo comprueba solape contra otras
-puertas (`sketchToolSlice.ts:253`), así que **poner una ventana y luego una puerta encima
-solapa hoy**, y una puerta puede invadir una ventana al cambiar de familia. La geometría
-procesa huecos con un cursor secuencial sin unión de intervalos, así que el resultado es
-indefinido.
+### Bugs de checklist (cerrados / aceptados)
 
-El segundo destruye archivos del usuario: abrir un `.axon` con catálogo de familias propio,
-dibujar y exportar produce un archivo que **el propio parser rechaza al reabrirlo**.
-
-La decisión es del dueño. La recomendación es F9-E1 + F9-E2 antes de cualquier feature.
-
-### Checklist humana (2026-08-08)
-
-| Bloque | Resultado | Notas |
-|--------|-----------|-------|
-| A Historial/SoT | **ready** | — |
-| B Selección | **ready** | — |
-| C Crop ADR 0016 | **ready** | Ver bug **BUG-C** abajo |
-| D Picking | **aprobado** | Ver bug **BUG-D4** abajo |
-| E Cámara/navegación | **ready** | — |
-
-Dueño: «Checklist Fases 1–3 OK — autorizo Fase 4».
-
-### Bugs de checklist (antes o junto a Fase 4)
-
-| ID | Severidad | Descripción | Hipótesis técnica |
-|----|-----------|-------------|-------------------|
-| **BUG-C** | producto ADR 0016 | Solo **vista cámara**: el crop encuadra (marco) pero **no oculta** fuera del recuadro. **Planta OK.** | **corregido 2026-08-08** — máscara CSS del marco era alpha 0.45; ahora opaca `#1c2228` |
-| **BUG-D4** | UX picking | Puntos azul/verde crecen con zoom | **aceptado por ahora** (2026-08-08) — hay tope `MAX_FLIP_CONTROL_RADIUS`; dueño deja así; reabrir si molesta |
+| ID | Estado |
+|----|--------|
+| **BUG-C** máscara crop cámara | **corregido** 2026-08-08 |
+| **BUG-D4** flip controls vs zoom | **aceptado por ahora** 2026-08-08 |
 
 ---
 
-## Prioridad global (mayor → menor)
+## Hilos de soporte (no desplazan la cola LR)
 
-### 0. F9-E — estabilización de integridad (recomendada antes de features)
-
-Plan completo con gates: [`domain-invariants-plan.md`](domain-invariants-plan.md).
-Contrato: [ADR 0017](../decisions/0017-domain-invariants-in-commands.md).
-
-| Fase | Qué cierra | Hallazgo | Decisión de producto pendiente |
-|------|-----------|----------|-------------------------------|
-| **F9-E1** | Contrato de validez: predicados en `model` + resultado estructurado de `Command` | AX-P0-01, AX-P2-08/09 | — |
-| **F9-E2** | Huecos hospedados: una sola función de intervalos | AX-P1-04 (**bug presente**) | — |
-| **F9-E3** | Catálogo de familias | AX-P0-02 | **sí**: catálogo del documento (A) vs built-ins fijos v1 (B) |
-| **F9-E4** | Cámaras y sesión: una sola verdad + reset de proyecto | AX-P1-05/06, AX-P2-07 | **sí**: derivar vistas (A) vs reconciliar (B) |
-| **F9-E5** | Frontera `.axon` | AX-P1-03, A4 reabierto | **sí**: rechazo duro vs apertura con informe |
-| **F9-E6** | Docs y guardias (`check:links`, matriz post-MVP) | DOC-01…10 | — |
-
-Ninguna fase autorizada. Las tres decisiones de producto deben resolverse **antes** de su
-fase, no durante.
-
-### 1. Fase 4 — features parked (elige uno)
-
-Cada ítem = autorización explícita + ADR/gate si aplica. **No empezar** sin frase en chat.
-
-| Prioridad | Tema | Doc |
-|-----------|------|-----|
-| 1 | Crop editable en más vistas (**C3**) | ADR 0016 |
-| 2 | Workplanes / paradigmas de edición | [`workplanes-roadmap.md`](workplanes-roadmap.md) |
-| 3 | OpenCascade / kernel CAD | ADR 0013 |
-| 4 | IFC operativo | ADR 0003 |
-| 5 | IndexedDB / OPFS / PWA | technical-audit §No introducir |
-| 6 | Colaboración multiusuario | — |
-| 7 | Nuevos tipos de elemento, familias, más Playwright, desktop no portado | gate + ADR cada uno |
-
----
-
-### 2. Proceso (Hilo A)
+### Proceso (Hilo A)
 
 | ID | Pendiente | Estado |
 |----|-----------|--------|
@@ -99,43 +106,20 @@ Cada ítem = autorización explícita + ADR/gate si aplica. **No empezar** sin f
 | **A2** | Mantener docs al cerrar gates | Práctica continua |
 | **A3** | Límite conocido de CI | Contract tests + e2e |
 
----
+### Deuda técnica (Hilo B) — cerrada
 
-### 3. Deuda técnica (Hilo B)
+| ID | Estado |
+|----|--------|
+| **B5** session / viewer monolitos | **cerrado** |
+| **B6** invariantes en dominio | **cerrado** — ADR 0017 · F9-E |
 
-| ID | Deuda | Estado |
-|----|-------|--------|
-| **B5 session** | monolito sessionStore | **cerrado** |
-| **B5 viewer** | monolito createViewport | **cerrado** |
-| **B6** | invariantes del documento dependen de la UI | **abierto** — ADR 0017 · F9-E |
+### Decisiones de producto (Hilo C) — cerradas
 
-#### B6 — arquitectura declarada vs ejecutada (hallazgo 2026-08-08)
-
-El núcleo está separado: **ninguna** mutación de `AxonDocument` ocurre fuera de
-`HistoryStack`, y la auditoría externa lo confirma de forma independiente. Pero las reglas
-geométricas viven en `sketchToolSlice` / `selectionSlice`, no en los comandos que escriben.
-`CreateDoorCommand` solo valida ID duplicado y `wallId` existente
-(`packages/commands/src/doors.ts:22`).
-
-Dicho de la forma más corta: **el dominio declara reglas más estrictas de las que hace
-cumplir**. El detalle, con los cinco agujeros y su evidencia, está en
-[ADR 0017](../decisions/0017-domain-invariants-in-commands.md); las fases en
-[`domain-invariants-plan.md`](domain-invariants-plan.md).
-
-Corrección de la primera versión de este hallazgo: se propuso mantener `execute: boolean`.
-Era insuficiente. `documentMutation.ts:35-38` convierte todo `false` en «Sin cambios», así
-que con un booleano es imposible cumplir `commands-and-history.md:16`, que ya exigía error
-explícito a la UI. Va resultado estructurado (F9-E1).
-
----
-
-### 4. Decisiones de producto (Hilo C)
-
-| ID | Tema | Estado |
-|----|------|--------|
-| **C1** | Umbrales clic | **cerrado (MVP)** |
-| **C2** | Bundle ~834 kB | **cerrado (MVP)** |
-| **C3** | Crop en más vistas | **Fase 4 · prioridad 1** |
+| ID | Estado |
+|----|--------|
+| **C1** Umbrales clic | **cerrado (MVP)** |
+| **C2** Bundle ~834 kB | **cerrado (MVP)** |
+| **C3** Crop en más vistas | **cerrado** 2026-08-09 |
 
 ---
 
@@ -145,20 +129,13 @@ explícito a la UI. Va resultado estructurado (F9-E1).
 |------|--------|-------|
 | F5-S, F8, ADR 0014–0016 | 2026-08-07/08 | gates |
 | Auditoría P1–P5 | 2026-08-08 | technical-audit |
-| Desacople Fases 0–3 + checklist humana | 2026-08-08 | este doc, gates |
+| Desacople Fases 0–3 | 2026-08-08 | este doc, gates |
 | A1 protección remota | 2026-08-08 | github.md |
+| F9-E E1–E6 | 2026-08-09 | ADR 0017, domain-invariants-plan |
+| Fase 4 · C3 | 2026-08-09 | ADR 0016 |
+| LR0 plan integración selectiva | 2026-08-09 | legacy-reuse-roadmap + migration |
+| LR1 SnapSession + histéresis | 2026-08-09 | `@axonbim/tools` snap + session `snapSession` |
+| LR1-B Restart Chain | 2026-08-09 | `restartChainAt` + Ribbon Reiniciar |
+| LR2 CompositeCommand | 2026-08-09 | `packages/commands` composite + tests |
 
----
-
-## Próximo paso recomendado
-
-**F9-E1 + F9-E2 antes de cualquier feature.** E2 cierra un bug de producto presente (solape
-ventana→puerta) y E1 es su requisito, porque sin resultado estructurado de `Command` el
-rechazo no se puede explicar al usuario.
-
-Después, elegir entre F9-E3 (catálogos, protege archivos del usuario) y F9-E4 (cámaras,
-protege undo/redo). Las dos empiezan con una decisión de producto que el dueño debe tomar.
-
-Si se prefiere producto visible primero, la alternativa sigue siendo C3 (crop en más
-vistas), aceptando que cada feature nueva reimplementa reglas en la UI y que el solape
-ventana→puerta sigue abierto.
+F9-E detalle: [`domain-invariants-plan.md`](domain-invariants-plan.md).

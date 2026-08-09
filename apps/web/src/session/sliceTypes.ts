@@ -47,14 +47,21 @@ export type SessionState = {
     eye: { x: number; y: number; z: number };
     target: { x: number; y: number; z: number };
   } | null;
+  cameraViewNavEdit: boolean;
+  setCameraViewNavEdit: (edit: boolean) => void;
   activeDoorFamilyId: string;
   activeWindowFamilyId: string;
   wallPending: { x: number; y: number; z: number } | null;
   wallChainOrigin: { x: number; y: number; z: number } | null;
   wallHover: { x: number; y: number; z: number } | null;
   lastSnapKind: import("@axonbim/tools").SnapKind;
+  /** LR1 ortho axis lock — session only, never in document/history. */
+  snapSession: import("@axonbim/tools").SnapSession;
   snapEnabled: boolean;
   documentRev: number;
+  /** LR3-A — active storey for creation / elevation context. */
+  activeStoreyId: string;
+  setActiveStoreyId: (id: string) => void;
   status: string;
   visualStyle: VisualStyle;
   detailLevel: DetailLevel;
@@ -82,6 +89,8 @@ export type SessionState = {
   newProject: () => void;
   openDemo: () => void;
   openFromText: (text: string, fileName?: string) => void;
+  /** F9-E5 policy B — salvage `.axon.bak` / damaged copies with warnings. */
+  recoverFromText: (text: string, fileName?: string) => void;
   exportText: () => string;
   setStatus: (status: string) => void;
   setRibbonTab: (tab: RibbonTab) => void;
@@ -91,6 +100,7 @@ export type SessionState = {
   setSnapEnabled: (enabled: boolean) => void;
   splitWallChain: () => void;
   releaseWallChain: () => void;
+  restartChainAt: (point: { x: number; y: number; z: number }) => void;
   setActiveFamilyId: (id: string) => void;
   setWallHeight: (height: number) => void;
   setSelectedWallId: (id: string | null) => void;

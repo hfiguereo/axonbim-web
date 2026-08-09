@@ -26,6 +26,11 @@ if (import.meta.env.MODE !== "production") {
     /** Two-click camera: eye then look-at (world XY, z ignored). */
     placeCamera: (eye: { x: number; y: number }, target: { x: number; y: number }) => void;
     undo: () => void;
+    /** F9-E5: strict open (throws path → status). */
+    openFromText: (text: string, fileName?: string) => void;
+    /** F9-E5: recovery open with salvage warnings. */
+    recoverFromText: (text: string, fileName?: string) => void;
+    exportText: () => string;
   };
 
   const wallMid = (wallId: string) => {
@@ -67,6 +72,10 @@ if (import.meta.env.MODE !== "production") {
       s.cameraClick({ x: target.x, y: target.y, z: 0 });
     },
     undo: () => useSessionStore.getState().runUndo(),
+    openFromText: (text, fileName) => useSessionStore.getState().openFromText(text, fileName),
+    recoverFromText: (text, fileName) =>
+      useSessionStore.getState().recoverFromText(text, fileName),
+    exportText: () => useSessionStore.getState().exportText(),
   };
 }
 

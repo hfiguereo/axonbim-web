@@ -18,7 +18,7 @@
 |-------|----------|
 | Alcance | Puerta + ventana + cámara vía hooks `__AXON_E2E__` (sin gestos frágiles en canvas) |
 | Tipo | A (funcional) — sin capturas nuevas en o2 |
-| Fuera | Gizmo WebGL · crop grips · CI-only flakes de píxeles · IFC/OCCT/workplanes |
+| Fuera | Gizmo WebGL · crop grips · CI-only flakes de píxeles · IFC/OCCT/Sketch-Edit |
 
 **A o2:** demo → colocar puerta / ventana / cámara → contadores en status → Deshacer.
 

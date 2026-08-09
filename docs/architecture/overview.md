@@ -12,13 +12,17 @@ El documento no conoce React, Three.js, IndexedDB, IFC, OpenCascade ni APIs del 
 
 | Capa | Responsabilidad | No puede |
 |------|-----------------|----------|
-| **model** (`AxonDocument`) | Entidades, IDs, validación, serialización | Importar UI, viewer, browser APIs |
-| **commands** | Mutaciones reversibles (`execute` / `undo`) | Renderizar ni leer DOM |
-| **geometry** | Reglas analíticas → malla / proyección | Poseer estado de proyecto |
-| **tools** | Gestos, preview, snapping de interacción | Confirmar mutaciones sin comando |
+| **model** (`AxonDocument`) | Entidades, IDs, **predicados de dominio** (`validate*`, `openingFit`, catálogos) | Importar UI, viewer, browser APIs |
+| **commands** | Mutaciones reversibles (`execute` → `CommandResult` / `undo`) | Renderizar ni leer DOM; inventar reglas fuera de `model` |
+| **geometry** | Reglas analíticas → malla / proyección (muros, huecos, joins) | Poseer estado de proyecto |
+| **tools** | Gestos, preview, snapping; consumen Workplane de sesión (no inventan plano) | Confirmar mutaciones sin comando |
 | **viewer** | Three.js + planta como adaptadores | Ser fuente de verdad |
-| **persistence** | `.axon` JSON v1 | Definir semántica de negocio aparte del modelo |
-| **React UI** | Layout, paneles, orquestación | Mutar el documento directamente |
+| **persistence** | Frontera `.axon` (forma, caps, Abrir estricto / Recuperar); reutiliza predicados de `model` | Definir semántica de negocio distinta del modelo |
+| **React UI** | Layout, paneles, orquestación, crops de sesión | Mutar `walls[]` / `cameras[]` directamente |
+
+Validación de negocio vive en **`@axonbim/model`** (ADR 0017). Commands y persistence la
+consumen; la UI puede pre-chequear para mensajes, pero el comando **siempre** revalida.
+Serialización JSON del archivo es **persistence**; el shape del documento en memoria es **model**.
 
 ## Decisiones heredadas que se conservan como concepto
 
@@ -35,7 +39,10 @@ JSON-RPC, proceso Python, Godot, worker headless, SQLite como historial canónic
 ## Documentos relacionados
 
 - [document-model.md](document-model.md)
-- [coordinate-system.md](coordinate-system.md)
+- [coordinate-system.md](coordinate-system.md) — ejes, storey, Projection Basis, Workplane
 - [geometry-policy.md](geometry-policy.md)
+- [editing-paradigms.md](editing-paradigms.md) — Parametric / Sketch / Edit; WP-v1 compartido
 - [commands-and-history.md](commands-and-history.md)
 - ADRs en [../decisions/](../decisions/)
+- Integridad F9-E: [../roadmap/domain-invariants-plan.md](../roadmap/domain-invariants-plan.md)
+- Workplanes: [../roadmap/workplanes-roadmap.md](../roadmap/workplanes-roadmap.md)

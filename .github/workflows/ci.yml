@@ -51,6 +51,9 @@ jobs:
       - name: Documentation reachable from the AGENTS.md index
         run: pnpm check:docs
 
+      - name: Markdown relative links resolve
+        run: pnpm check:links
+
       - name: Domain and viewer layer purity
         run: pnpm check:layers
 

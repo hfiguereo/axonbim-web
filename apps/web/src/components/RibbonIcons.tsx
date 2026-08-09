@@ -648,6 +648,19 @@ export function Icon({ name }: IconProps) {
           <path d="M7 12l3.5 3.5L17 9" fill="none" stroke={fill} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </Svg>
       );
+    case "restart":
+      return (
+        <Svg>
+          <path
+            d="M6 12a6 6 0 1 1 1.8 4.2"
+            fill="none"
+            stroke={fill}
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+          <path d="M5 8v5h5" fill="none" stroke={fill} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </Svg>
+      );
     default:
       return (
         <Svg>

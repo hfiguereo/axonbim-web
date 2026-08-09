@@ -2,6 +2,86 @@
 
 ## Unreleased
 
+### WP-v1 — Workplane compartido (2026-08-09)
+
+- `Workplane` / `SpatialReferenceContext` en `@axonbim/model` (derivado del storey activo)
+- Muros y pick de Viewport usan el plano; no se persiste en `.axon`
+- Fuera de alcance: Sketch/Edit Mode, Family Editor, Push&Pull, planos custom
+- Docs de lógica alineadas: overview, document-model, geometry-policy, non-negotiables,
+  editing-paradigms, coordinate-system, inventario, auditorías (nota supersede)
+
+### LR3 — Spatial Reference Context (2026-08-09)
+
+- **A** `activeStoreyId` + `getActiveStorey` / reconcile; muros usan nivel activo (no `storeys[0]`)
+- **B** `deriveStoreyDatums` — datums visuales derivados
+- **C** `computeModelEnvelope` — AABB regenerable; pivot de órbita lo consume
+- **D** `getProjectionBasis` TOP/N/S/E/W (+Y = Project North); contrato para Viewer / LR4
+- Docs: coordinate-system, pending-work, legacy-reuse-roadmap, inventario
+
+### LR1-C — Snaps geométricos (parked, documentado 2026-08-09)
+
+- Midpoint / perpendicular / proyecciones: roadmap §LR1-C; no implementar sin auth
+
+### LR2 — CompositeCommand (2026-08-09)
+
+- `CompositeCommand` en `@axonbim/commands`: N pasos → 1 historial; fallo = rollback
+- Tests: undo/redo, rechazo mid-flight, noop
+
+### LR1-B — Restart Chain (2026-08-09)
+
+- `restartChainAt(point)` en tools + session; cinta **Reiniciar**
+- No muta documento ni historial; mantiene tool Muro
+
+### LR1 — SnapSession + histéresis orto (2026-08-09)
+
+- `SnapSession.axisLock` en `@axonbim/tools` / session (no en `AxonDocument`)
+- Entrada orto ~12°; mantenimiento ~22°; Esc / cambio de tool / nuevo segmento limpian
+- Prioridad intacta: cierre → extremo → orto; tests unitarios + session
+
+### Docs — plan LR indexado y hilo de trabajo reestructurado (2026-08-09)
+
+- PDF + resumen en `docs/migration/plan-integracion-selectiva-*`
+- Cola LR0–LR7: `docs/roadmap/legacy-reuse-roadmap.md`
+- `pending-work.md`: hilo activo = LR1→…→Workplanes; F9-E/C3/LR0 en historial cerrado
+- Inventario, AGENTS, workplanes, gates, work-phases alineados
+- Sin cambio de comportamiento de producto (solo documentación)
+
+### Vista cámara — navegación bloqueada (2026-08-09)
+
+- Zoom/órbita bloqueados en vista cámara (pose del documento)
+- Doble clic dentro del marco → edición temporal; Esc / doble clic / cambiar vista → salir y restaurar pose
+
+### Fase 4 · C3 — grips de marco en cámara/3D — **cerrada 2026-08-09**
+
+- Marco CSS (inicio `inset: 8%`) + grips: al arrastrar solo el marco de pantalla
+- No muta `Camera.crop` / clip (alcance de planta intacto)
+- Vista cámara: grips solo con zoom bloqueado; en nav-edit se ocultan
+- Planta: grips mundo = edición real del crop
+- Checklist humana OK; ciclo cerrado
+
+### F9-E6 — docs y guardias — **cerrada 2026-08-09** (cierra F9-E)
+
+- Sync: `commands-and-history`, `overview`, README, `geometry-policy`
+- `pnpm check:links` en CI; matriz [`acceptance-matrix-post-mvp.md`](docs/validation/acceptance-matrix-post-mvp.md)
+- Checklist humana OK; programa F9-E (E1–E6) cerrado
+
+### Crop de presentación persistente (ADR 0016, 2026-08-09)
+
+- Planta / perspectiva libre: si el crop está **activado**, se guarda en `presentation.viewCrops` al Exportar y se restaura al Abrir
+- Cámaras: sin cambio (`Camera.crop` ya persistía)
+
+### F9-E5 — frontera `.axon` (híbrido A3) — **cerrada 2026-08-09**
+
+- Abrir…: `parseDocument` estricto (forma + semántica E1/E2; sin defaults ni crop silencioso)
+- Recuperar copia…: `parseDocumentRecover` + avisos en status; Exportar solo `.axon` limpio
+- Caps de tamaño/entidades; checklist humana OK
+
+### F9-E4 — cámaras derivadas del documento (política A) — **cerrada 2026-08-09**
+
+- Pestañas `kind=camera` se reconstruyen desde `document.cameras` tras comando/undo/redo/import
+- `resetSessionForDocument` unifica Nuevo / Demo / Abrir; `touchDoc` clona `cameras`
+- Cierra la doble verdad tab↔entidad (AX-P1-05/06); checklist humana OK
+
 ### Gobernanza — merge a `main` y primacía del producto (2026-08-08)
 
 - Rama `cursor/windows-and-gizmo-cameras` fusionada en `main`; política **solo `main`** en adelante

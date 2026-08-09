@@ -7,8 +7,8 @@ Fuente: Plan Maestro §58. Aplican a producto y a agentes.
 3. React no modifica directamente el documento.
 4. Toda mutación confirmada pasa por comandos.
 5. Las previsualizaciones no entran al historial.
-6. El trazado trabaja sobre un plano matemático.
-7. Cambiar de vista no modifica el modelo.
+6. El trazado trabaja sobre un plano matemático (Workplane derivado del storey activo; no SoT en `.axon`).
+7. Cambiar de vista no modifica el modelo ni el Workplane.
 8. IFC es un adaptador (futuro), no el runtime del gesto.
 9. OpenCascade no entra en el MVP.
 10. Cada fase produce una mejora visible.

@@ -13,20 +13,32 @@ Contrato F1. Aplicable al dominio y a las vistas.
 | Eje | Significado |
 |-----|-------------|
 | **+X** | Este / derecha en planta |
-| **+Y** | Norte / arriba en planta |
+| **+Y** | **Project North** / arriba en planta |
 | **+Z** | Arriba (altura del edificio) |
 
 Sistema **diestro**. La planta se proyecta sobre **XY** (Z constante del nivel activo).
+Rotación de Project North: **fuera de este corte** (LR3-D v1).
 
 ## Origen y niveles
 
 - Origen del documento: `(0, 0, 0)` salvo que el proyecto defina otro (MVP: origen fijo en 0).
-- MVP: **un solo nivel** editable (`Storey` por defecto, elevación 0).
-- La base de un muro usa `z` de sus extremos (normalmente la elevación del storey).
+- Niveles: `Storey[]` en el documento; contexto de sesión `activeStoreyId` (LR3-A).
+- Las tools **no** leen `storeys[0]` directo — usan `getActiveStorey` / reconciliación.
+- Datums de nivel (LR3-B): derivados para UI; no son segunda SoT.
+- La base de un muro usa `z` ≈ elevación del storey activo.
 
-## Plano de trazado
+## Projection Basis (LR3-D)
 
-Las herramientas de muro trabajan sobre un **plano matemático** horizontal en la elevación del storey activo. Cambiar de vista (planta ↔ perspectiva) **no** cambia el modelo.
+Contrato formal en `@axonbim/model` (`getProjectionBasis`): TOP / NORTH / SOUTH / EAST / WEST
+con `eyeOffset`, `up`, `axisU`, `axisV` y enlace al preset del gizmo (`cameraPreset`).
+Misma basis para Viewer hoy y Technical Views / DXF / PDF después (LR4).
+
+## Plano de trazado (Workplane WP-v1)
+
+Las herramientas de muro trabajan sobre el **Workplane** activo: plano horizontal
+derivado del storey (`resolveSpatialReference` / `getActiveWorkplane`).
+Cambiar de vista (planta ↔ perspectiva) **no** cambia el modelo ni el workplane.
+El workplane **no** se persiste en `.axon` (estado derivado de sesión + storeys).
 
 ## Tolerancias
 

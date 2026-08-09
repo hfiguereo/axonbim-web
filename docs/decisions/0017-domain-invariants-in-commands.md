@@ -2,12 +2,12 @@
 
 ## Estado
 
-**Propuesto** (2026-08-08). Auditoría interna + [auditoría externa](../validation/external-audit-2026-08-08.md)
-coincidentes. Implementación **no autorizada**; plan por fases en
-`docs/roadmap/domain-invariants-plan.md`.
+**Aceptado** — F9-E **cerrada** (E1–E6, 2026-08-09). E3/E4 = política A; E5 = híbrido A3;
+E6 = docs + `check:links` + matriz post-MVP.
+Plan: `docs/roadmap/domain-invariants-plan.md`.
+Auditoría: [external-audit-2026-08-08.md](../validation/external-audit-2026-08-08.md).
 
-Revisión 2 (2026-08-08): incorpora la auditoría externa y **corrige** la decisión sobre el
-resultado de `Command` (ver «Corrección de la revisión 1»).
+Revisión 2 (2026-08-08): resultado estructurado de `Command` (no `boolean`).
 
 ## Contexto
 
@@ -122,9 +122,9 @@ pedía lo que `boolean` no puede expresar.
 Dos bifurcaciones son de producto y necesitan decisión del dueño **antes** de implementar
 las fases correspondientes. Se documentan aquí para que no se decidan por omisión:
 
-- **Catálogo de familias:** (A) catálogos del documento son reales y la UI los consume, o
-  (B) v1 declara un catálogo fijo de built-ins y la persistencia deja de aceptar catálogos
-  arbitrarios. El híbrido actual es lo único inaceptable.
+- **Catálogo de familias:** **decidido A** (2026-08-09) — catálogos del documento son
+  reales; UI/tools/comandos consumen `document.*Families`; al cargar se reconcilian los
+  IDs activos. Built-ins solo siembran new/demo. (B descartada.)
 - **Cámaras y vistas:** (A) derivar las entradas de cámara del documento, o (B) mantener
   `ProjectView` como estado de sesión con una función única de reconciliación llamada tras
   create/delete/rename/undo/redo/import. (A) reduce invariantes cruzadas.
@@ -153,6 +153,7 @@ declarada formalmente en v1. Migrar a UUID solo por estética no es el objetivo.
 ## Fuera de esta decisión
 
 Familias como catálogo versionado · reglas de códigos de edificación · resolución
-automática de conflictos (mover el hueco en vez de rechazarlo) · invariantes de workplanes
-(parked) · intersección muro-muro más allá del inglete de ADR 0008 · rendimiento del scene
-sync (AX-P2-11: deuda de escalabilidad, no bug) · hardening de importación (SEC-01).
+automática de conflictos (mover el hueco en vez de rechazarlo) · invariantes de Sketch/Edit
+Mode y planos custom (WP-v1 ya cerró el Workplane storey derivado; ver workplanes-roadmap) ·
+intersección muro-muro más allá del inglete de ADR 0008 · rendimiento del scene sync
+(AX-P2-11: deuda de escalabilidad, no bug) · hardening de importación (SEC-01).

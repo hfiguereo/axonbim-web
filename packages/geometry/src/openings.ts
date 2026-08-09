@@ -73,6 +73,11 @@ function wallSlab(
 /**
  * Wall solid with rectangular through-openings (union of slabs — no CSG kernel).
  * Miters apply only when there are no openings (delegates to wallBoxMesh).
+ *
+ * **Precondition (F9-E2):** openings must already be valid and non-overlapping
+ * (`validateHostedOpening` in `@axonbim/model`). Overlapping intervals make the
+ * sequential cursor partition undefined. The clamps below are a last-resort
+ * renderer defense, not a substitute for domain validation.
  */
 export function wallMeshWithOpenings(
   wall: Wall,
@@ -84,6 +89,7 @@ export function wallMeshWithOpenings(
   const length = Math.hypot(dx, dy);
   if (length < MIN_WALL_LENGTH) return emptyMesh();
 
+  // Defensive clamps only — callers must pass openings that already fit.
   const cleaned = openings
     .map((o) => ({
       ...o,

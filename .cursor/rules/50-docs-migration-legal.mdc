@@ -7,9 +7,11 @@ alwaysApply: false
 
 1. Contratos/comportamiento cambian → actualiza el doc en `docs/` en el mismo cambio.
 2. Legado: ficha en `legacy-inventory.md`; reglas en `migration-rules.md`. **No copiar código.**
-3. Licencia del proyecto: **propietaria / All Rights Reserved** (`LICENSE`, ADR 0007). No asumir GPL ni OSS. Estándares abiertos (p. ej. IFC) ≠ licencia del producto.
-4. Sin secretos en repo ni logs. Normativa MIVED solo cuando el alcance lo abra (no MVP).
+3. Recuperación selectiva (bloques LR): cola y gates en `docs/roadmap/legacy-reuse-roadmap.md`;
+   resumen/PDF en `docs/migration/plan-integracion-selectiva-*`. Auth explícita por bloque.
+4. Licencia del proyecto: **propietaria / All Rights Reserved** (`LICENSE`, ADR 0007). No asumir GPL ni OSS. Estándares abiertos (p. ej. IFC) ≠ licencia del producto.
+5. Sin secretos en repo ni logs. Normativa MIVED solo cuando el alcance lo abra (no MVP).
 
-Lee: `docs/migration/`, `AGENTS.md`.
+Lee: `docs/migration/`, `docs/roadmap/legacy-reuse-roadmap.md`, `AGENTS.md`.
 
-Prohibido: portar por “estaba en un markdown del desktop”; inventar valores normativos.
+Prohibido: portar por “estaba en un markdown del desktop”; inventar valores normativos; abrir LR1+ sin auth.

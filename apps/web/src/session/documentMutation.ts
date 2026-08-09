@@ -20,6 +20,9 @@ const REJECTION_TEXT: Record<string, string> = {
   "camera.fov.range": "El campo de visión debe estar entre 10° y 120°",
   "camera.eyeTarget.tooClose": "La cámara y su punto de mira están demasiado juntos",
   "camera.name.required": "La cámara necesita un nombre",
+  "opening.endMargin": "Hueco demasiado cerca del extremo del muro",
+  "opening.verticalFit": "El hueco no cabe en la altura del muro",
+  "opening.overlap": "Hay otro hueco demasiado cerca",
 };
 
 export function rejectionStatus(code: string, message: string): string {

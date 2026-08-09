@@ -147,6 +147,9 @@ importers:
 
   packages/persistence:
     dependencies:
+      '@axonbim/families':
+        specifier: workspace:*
+        version: link:../families
       '@axonbim/model':
         specifier: workspace:*
         version: link:../model

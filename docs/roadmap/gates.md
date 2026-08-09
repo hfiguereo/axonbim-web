@@ -23,11 +23,12 @@ El agente y el desarrollo humano **se detienen** en cada gate. “Continúa con 
 - **Navegación 3D (ADR 0014):** **aprobado** 2026-08-08 — gizmo tríada ±ejes + ortho + pivot / hold-orbit
 - **Cámaras (ADR 0015):** **aprobado** 2026-08-08 — Vista → Cámara + vista 3D ligada
 - **Crop Region (ADR 0016):** **aprobado** 2026-08-08 — clip por vista; planta vs cámara independientes
-- **Parked:** paradigmas/workplanes, OCCT (ADR 0013)
+- **Parked:** OCCT (ADR 0013), LR1-C / LR4–LR7 / IFC sin auth
 - **Refactor session/viewer:** desacople real Fases 0–3 **cerradas** (2026-08-08); checklist humana OK; ver `refactor-session-viewer.md`
-- **Fase 4:** **autorizada, en espera** — recomendado después de F9-E1/E2 (ver `pending-work.md`)
-- **F9-E integridad del documento (ADR 0017):** **propuesto** — auditoría externa 2026-08-08 con 2 P0 + 4 P1 verificados; fases E1–E6 en `domain-invariants-plan.md`; **sin autorizar**
-- **Auditoría externa:** `docs/validation/external-audit-2026-08-08.md` — base arquitectónica aprobada; integridad de modelo y frontera `.axon` no aprobadas para ampliar alcance
+- **Hilo activo:** **línea LR** — LR0–LR3 + **WP-v1** cerradas; siguiente **Sketch/Edit** con auth (`pending-work.md`)
+- **F9-E integridad (ADR 0017):** **cerrada** 2026-08-09 (E1–E6) — `domain-invariants-plan.md`
+- **C3 crop cámara:** **cerrada** 2026-08-09
+- **Auditoría externa:** `docs/validation/external-audit-2026-08-08.md` — base arquitectónica aprobada
 - **Pendientes (prioridad):** **`pending-work.md`**
 - **GitHub:** https://github.com/hfiguereo/axonbim-web (público + branch protection)
 
@@ -75,7 +76,18 @@ El agente y el desarrollo humano **se detienen** en cada gate. “Continúa con 
 | **Fase 3 residual** | **2026-08-08** | **hecho** | C1/C2 cerrados MVP; contract tests picking/crop |
 | **Fase 0 protección remota** | **2026-08-08** | **hecho** | Repo público + branch protection; `check:history` en CI |
 | **Checklist Fases 1–3** | **2026-08-08** | **aprobado** | A/B/E ready; C ready c/obs; D aprobado c/obs D4 |
-| **Fase 4 (cola)** | **2026-08-08** | **autorizada** | Elegir primer ítem; no implementar sin gate/ADR |
-| **B6 invariantes al dominio** | **2026-08-08** | **propuesto** | ADR 0017 rev.1; superado por F9-E |
-| **Auditoría externa** | **2026-08-08** | **recibida** | 2 P0 + 4 P1 de integridad; todos verificados en código; A4 **reabierto** |
-| **F9-E estabilización** | **2026-08-08** | **propuesta** | Fases E1–E6; **ninguna autorizada**; 3 decisiones de producto pendientes (familias, cámaras, política de rechazo `.axon`) |
+| **Fase 4 (cola)** | **2026-08-08** | **autorizada** | Elegir ítem parked; no implementar sin gate/ADR |
+| **Fase 4 · C3** | **2026-08-09** | **cerrada** | Marco CSS + nav lock; crop real en planta; checklist OK |
+| **LR0 formalización** | **2026-08-09** | **cerrada** | Plan LR indexado; hilo de avance = cola LR en `pending-work.md` |
+| **LR1 SnapSession** | **2026-08-09** | **cerrada** | Histéresis orto; session-only; tests `@axonbim/tools` + web |
+| **LR1-B Restart Chain** | **2026-08-09** | **cerrada** | `restartChainAt`; sin historial |
+| **LR2 CompositeCommand** | **2026-08-09** | **cerrada** | Transacción atómica; tests composite |
+| **B6 invariantes al dominio** | **2026-08-09** | **cerrado** | ADR 0017 + F9-E E1–E6 |
+| **Auditoría externa** | **2026-08-08** | **recibida** | 2 P0 + 4 P1 de integridad; A4 cerrado vía F9-E5 |
+| **F9-E estabilización** | **2026-08-09** | **cerrada** | E1–E6; checklist E6 OK |
+| **F9-E1 contrato validez** | **2026-08-09** | **cerrada** | Predicados `model` + `CommandResult`; dueño: verificación manual hecha |
+| **F9-E2 huecos hospedados** | **2026-08-09** | **cerrada** | `openingFit` + checklist humana OK («E2 checklist OK») |
+| **F9-E3 catálogo familias** | **2026-08-09** | **cerrada** | Política A; checklist humana OK («E3 checklist OK») |
+| **F9-E4 cámaras/sesión** | **2026-08-09** | **cerrada** | Política A; checklist humana OK («E4 checklist OK») |
+| **F9-E5 frontera `.axon`** | **2026-08-09** | **cerrada** | Híbrido A3; checklist humana OK («E5 checklist OK») |
+| **F9-E6 docs/guardias** | **2026-08-09** | **cerrada** | checklist humana OK («E6 checklist OK») |

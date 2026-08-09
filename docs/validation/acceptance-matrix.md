@@ -18,7 +18,7 @@ Checklist humana. Una fila no está hecha si no se puede ejercer **desde la inte
 | 12 | Undo | hecho | QAT / Ctrl+Z |
 | 13 | Redo | hecho | QAT / Ctrl+Y |
 | 14 | Cancelar preview con Escape | hecho | sin historial |
-| 15 | Snap ortogonal | hecho | ángulo ~12° / eje; Shift fuerza; switch status |
+| 15 | Snap ortogonal | hecho | enter ~12° / hold ~22° (LR1); Shift; switch status |
 | 16 | Snap a extremos | hecho | hit ~0.2 m en planta; feedback visual |
 | 17 | Vista planta coherente | hecho | misma `wallBoxMesh` + joins |
 | 18 | Vista perspectiva coherente | hecho | misma geom |

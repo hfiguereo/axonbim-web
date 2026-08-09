@@ -11,6 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@axonbim/families": "workspace:*",
     "@axonbim/model": "workspace:*",
     "@axonbim/shared": "workspace:*"
   },

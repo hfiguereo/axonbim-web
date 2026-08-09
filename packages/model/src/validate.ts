@@ -7,8 +7,7 @@
  * `code` is the stable machine identity of a rule; `message` is technical
  * English for logs and `.axon` errors. User-facing copy maps from `code`.
  *
- * NOT here: hosted-opening fit and overlap (does the door fit in its wall, do
- * two openings collide). Those need the host wall and land in F9-E2.
+ * Hosted-opening fit/overlap: see `openingFit.ts` (F9-E2).
  */
 import { MIN_HEIGHT, MIN_THICKNESS, MIN_WALL_LENGTH } from "@axonbim/shared";
 import type { AxonDocument, Camera, Door, ViewCrop, Wall, Window } from "./types.js";

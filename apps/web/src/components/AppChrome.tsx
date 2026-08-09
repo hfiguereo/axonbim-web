@@ -4,6 +4,7 @@ import { useSessionStore } from "../sessionStore";
 
 export function AppChrome() {
   const fileRef = useRef<HTMLInputElement>(null);
+  const recoverRef = useRef<HTMLInputElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -12,6 +13,7 @@ export function AppChrome() {
   const newProject = useSessionStore((s) => s.newProject);
   const openDemo = useSessionStore((s) => s.openDemo);
   const openFromText = useSessionStore((s) => s.openFromText);
+  const recoverFromText = useSessionStore((s) => s.recoverFromText);
   const exportText = useSessionStore((s) => s.exportText);
   const setStatus = useSessionStore((s) => s.setStatus);
   const projectName = useSessionStore((s) => s.document.meta.name);
@@ -53,6 +55,12 @@ export function AppChrome() {
   const onFile = async (file: File | undefined) => {
     if (!file) return;
     openFromText(await file.text(), file.name);
+    close();
+  };
+
+  const onRecoverFile = async (file: File | undefined) => {
+    if (!file) return;
+    recoverFromText(await file.text(), file.name);
     close();
   };
 
@@ -106,6 +114,14 @@ export function AppChrome() {
           onClick={() => fileRef.current?.click()}
         >
           Abrir…
+        </button>
+        <button
+          type="button"
+          role="menuitem"
+          className="chrome__menu-item"
+          onClick={() => recoverRef.current?.click()}
+        >
+          Recuperar copia…
         </button>
         <button type="button" role="menuitem" className="chrome__menu-item" onClick={onSave}>
           Guardar
@@ -237,6 +253,17 @@ export function AppChrome() {
         data-testid="file-open-input"
         onChange={(e) => {
           void onFile(e.target.files?.[0]);
+          e.target.value = "";
+        }}
+      />
+      <input
+        ref={recoverRef}
+        type="file"
+        accept=".axon.bak,.bak,.axon,.json,application/json"
+        hidden
+        data-testid="file-recover-input"
+        onChange={(e) => {
+          void onRecoverFile(e.target.files?.[0]);
           e.target.value = "";
         }}
       />

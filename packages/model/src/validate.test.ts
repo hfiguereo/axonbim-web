@@ -168,7 +168,8 @@ describe("validateDoor / validateWindow", () => {
     expect(validateWindow(badLeaf, refs)?.code).toBe("window.leafState.invalid");
   });
 
-  it("does not check fit or overlap — that is F9-E2", () => {
+  it("entity validation does not check fit — that is openingFit / F9-E2", () => {
+    // centerOffset past the wall is allowed here; validateHostedOpening rejects it.
     const hangingOff = validDoor({ centerOffset: 99 });
     expect(validateDoor(hangingOff, refs)).toBeNull();
   });

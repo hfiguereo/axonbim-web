@@ -101,6 +101,15 @@ export type Camera = {
   crop: ViewCrop;
 };
 
+/**
+ * Presentation state that round-trips in `.axon` (not building geometry).
+ * Session plan/perspective crops when enabled; camera crops live on `Camera`.
+ */
+export type DocumentPresentation = {
+  /** Keyed by stable session view id (`view.plan.level1`, `view.3d.perspective`, …). */
+  viewCrops: Record<string, ViewCrop>;
+};
+
 export type AxonDocument = {
   meta: ProjectMeta;
   storeys: Storey[];
@@ -111,4 +120,6 @@ export type AxonDocument = {
   doors: Door[];
   windows: Window[];
   cameras: Camera[];
+  /** Optional; omitted/empty means no persisted session crops. */
+  presentation?: DocumentPresentation;
 };

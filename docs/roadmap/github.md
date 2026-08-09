@@ -68,7 +68,7 @@ se distingan de un vistazo:
 
 | Workflow | Corre | Desde |
 |----------|-------|-------|
-| `.github/workflows/ci.yml` | `check:shortcuts` → `check:docs` → `check:layers` → `typecheck` → `lint` → `test` → `build` | 2026-08-08 |
+| `.github/workflows/ci.yml` | `check:shortcuts` → `check:docs` → `check:links` → `check:layers` → `typecheck` → `lint` → `test` → `build` | 2026-08-08 (+ links 2026-08-09) |
 | `.github/workflows/e2e.yml` | `pnpm test:e2e` (Playwright F8 o1 + o2) | 2026-08-08 (F8-CI) |
 
 Los tres `check:*` son guardias de reglas: convierten mandatos de `.cursor/rules/` en algo
@@ -78,6 +78,7 @@ que **falla** si se incumple. Todos se validaron incumpliéndolos a propósito.
 |---------|--------------------|-----------|
 | `check:shortcuts` | `30-testing-validation` §3 | hay `.skip` / `.only` / `.todo` / `xit`, `@ts-ignore` / `@ts-nocheck` / `@ts-expect-error`, o `--passWithNoTests` |
 | `check:docs` | `10-agent-behavior` §10 | un `.md` o `.pdf` rastreado no es alcanzable desde el índice de `AGENTS.md` (se permite **un salto** vía doc índice) |
+| `check:links` | F9-E6 / DOC-06 | un enlace Markdown relativo no resuelve a un archivo existente |
 | `check:layers` | `00-architecture` §5, `20-typescript-domain` §2 | el dominio importa React / Three / viewer / `@axonbim/web` o usa `localStorage`, `indexedDB`, `navigator`…; o el viewer importa React / Zustand |
 
 `check:layers` **no** vigila los identificadores `window` ni `document`: en este dominio son
