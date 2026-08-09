@@ -33,6 +33,9 @@ export const createViewCropSlice: SessionSliceCreator<{
     eye: { x: number; y: number; z: number };
     target: { x: number; y: number; z: number };
   } | null;
+  /** Camera view: false = pose locked to document; true = free zoom/orbit. */
+  cameraViewNavEdit: boolean;
+  setCameraViewNavEdit: (edit: boolean) => void;
   getActiveViewCrop: () => ViewCrop | null;
   getClippingCrop: () => ViewCrop | null;
   setActiveViewCropEnabled: (enabled: boolean) => void;
@@ -53,6 +56,21 @@ export const createViewCropSlice: SessionSliceCreator<{
   cropDragLive: null,
   cropDragMeta: null,
   cameraPoseDragLive: null,
+  cameraViewNavEdit: false,
+
+  setCameraViewNavEdit: (edit) => {
+    const view = get().views.find((v) => v.id === get().activeViewId);
+    if (view?.kind !== "camera") {
+      set({ cameraViewNavEdit: false });
+      return;
+    }
+    set({
+      cameraViewNavEdit: edit,
+      status: edit
+        ? "Edición de vista cámara — zoom/órbita · Esc o doble clic para salir"
+        : `Vista cámara: ${view.name}`,
+    });
+  },
 
   getActiveViewCrop: () => {
     const s = get();
@@ -254,11 +272,12 @@ export const createViewCropSlice: SessionSliceCreator<{
       activeViewId: id,
       views: get().views.map((v) => (v.id === id ? { ...v, open: true } : v)),
       selectedCameraId: view.cameraId ?? get().selectedCameraId,
+      cameraViewNavEdit: false,
       status:
         view.kind === "plan"
           ? `Vista ortogonal: ${view.name}`
           : view.kind === "camera"
-            ? `Vista cámara: ${view.name}`
+            ? `Vista cámara: ${view.name} · doble clic en marco = editar zoom/órbita`
             : `Vista 3D: ${view.name}`,
     });
   },

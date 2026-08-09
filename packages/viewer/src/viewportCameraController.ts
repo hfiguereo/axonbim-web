@@ -31,6 +31,8 @@ export type ViewportCameraController = {
     target: { x: number; y: number; z: number };
     fov: number;
   }) => void;
+  /** When false, wheel zoom and orbit drag are ignored (camera view lock). */
+  setNavigationEnabled: (enabled: boolean) => void;
   bindNavigation: () => () => void;
 };
 
@@ -180,7 +182,7 @@ export function createViewportCameraController(
   };
 
   const orbitByDelta = (dx: number, dy: number) => {
-    if (ctx.mode === "plan") return;
+    if (ctx.mode === "plan" || !navigationEnabled) return;
     orbit3dCamera(dx, dy);
   };
 
@@ -199,8 +201,17 @@ export function createViewportCameraController(
     persp.updateProjectionMatrix();
   };
 
+  let navigationEnabled = true;
+  const setNavigationEnabled = (enabled: boolean) => {
+    navigationEnabled = enabled;
+  };
+
   const bindNavigation = () => {
     const onWheel = (e: WheelEvent) => {
+      if (!navigationEnabled) {
+        e.preventDefault();
+        return;
+      }
       e.preventDefault();
       const direction = Math.sign(e.deltaY);
       const factor = direction > 0 ? 1.12 : 1 / 1.12;
@@ -225,6 +236,7 @@ export function createViewportCameraController(
     let lastY = 0;
 
     const onPointerDown = (e: PointerEvent) => {
+      if (!navigationEnabled) return;
       if (e.button !== 1 && e.button !== 2) return;
       e.preventDefault();
       navActive = true;
@@ -235,7 +247,7 @@ export function createViewportCameraController(
     };
 
     const onPointerMove = (e: PointerEvent) => {
-      if (!navActive) return;
+      if (!navActive || !navigationEnabled) return;
       const dx = e.clientX - lastX;
       const dy = e.clientY - lastY;
       lastX = e.clientX;
@@ -295,6 +307,7 @@ export function createViewportCameraController(
     setCameraPreset,
     orbitByDelta,
     applyModelCamera,
+    setNavigationEnabled,
     bindNavigation,
   };
 }

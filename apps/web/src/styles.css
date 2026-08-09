@@ -913,6 +913,39 @@ select {
   box-shadow: 0 0 0 9999px #1c2228;
 }
 
+/* Explicit pixel box (= inset 8%); grips sit on its corners */
+.viewport__crop-frame--screen {
+  inset: auto;
+}
+
+/* Camera view: nav edit unlocked (zoom/orbit) */
+.viewport__crop-frame--nav-edit {
+  border-color: rgba(255, 196, 92, 0.95);
+  border-style: dashed;
+}
+
+.viewport__crop-grip {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  padding: 0;
+  border: 2px solid #6ec6ff;
+  border-radius: 1px;
+  background: #1c2228;
+  pointer-events: auto;
+  cursor: nwse-resize;
+  z-index: 3;
+}
+
+.viewport__crop-grip--nwse {
+  cursor: nwse-resize;
+}
+
+.viewport__crop-grip--nesw {
+  cursor: nesw-resize;
+}
+
 .viewport__hint {
   position: absolute;
   left: 0.75rem;

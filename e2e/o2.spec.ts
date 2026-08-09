@@ -62,7 +62,10 @@ test.describe("F8-A2 oleada 2 — puerta / ventana / cámara", () => {
 
     await expect(page.getByTestId("status-meta")).toContainText("cameras:1");
     await expect(page.getByTestId("status-msg")).toContainText(/Cámara/i);
+    await expect(page.getByRole("button", { name: "Cámara 1" })).toBeVisible();
     await page.getByRole("button", { name: "Deshacer" }).click();
     await expect(page.getByTestId("status-meta")).toContainText("cameras:0");
+    await expect(page.getByRole("button", { name: "Cámara 1" })).toHaveCount(0);
+    await expect(page.getByText("Sin cámaras")).toBeVisible();
   });
 });

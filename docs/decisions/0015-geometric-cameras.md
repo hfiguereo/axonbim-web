@@ -17,10 +17,11 @@ La cinta Vista tenía **Cámara** como maqueta. Se necesita una cámara de model
 4. Vista cámara: proyección perspectiva desde `eye`→`target`+`fov`. La **Perspectiva 3D** base no lleva `cameraId` (órbita libre).
 5. Símbolo en planta (triángulo/cono de visión). Props editables: nombre, eye Z (altura), FOV, target XY.
 6. Persistencia en `.axon` v1 (`cameras[]`). Sin materiales ni render.
+7. **Navegación en vista cámara (2026-08-09):** zoom y órbita **bloqueados** por defecto (pose = documento). **Doble clic** dentro del marco de recorte en pantalla activa edición temporal (zoom/órbita); **Esc** o doble clic de nuevo (o cambiar de vista) sale y restaura la pose del documento. No escribe eye/target al salir (preview local).
 
 ## Fuera de este corte
 
-Path de cámara · animación · render · grips de FOV ricos · sincronizar gizmo con cámaras · secciones.
+Path de cámara · animación · render · grips de FOV ricos · sincronizar gizmo con cámaras · secciones · persistir órbita/zoom de la edición temporal en el documento.
 
 ## Relacionado
 

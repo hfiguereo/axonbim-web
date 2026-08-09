@@ -73,6 +73,21 @@ describe("viewCropResolve (ADR 0016)", () => {
     expect(crop).toEqual(cameraCrop);
   });
 
+  it("resolveActiveViewCrop: perspective + selected camera → session crop (C3)", () => {
+    const crop = resolveActiveViewCrop(
+      base({
+        selectedCameraId: "camera.1",
+        activeViewId: "view.3d.perspective",
+        views: [
+          { id: "view.plan.level1", kind: "plan", crop: sessionCrop },
+          { id: "view.3d.perspective", kind: "perspective", crop: sessionCrop },
+          { id: "view.camera.1", kind: "camera", cameraId: "camera.1" },
+        ],
+      }),
+    );
+    expect(crop).toEqual(sessionCrop);
+  });
+
   it("resolveClippingCrop: plan never uses camera crop", () => {
     const crop = resolveClippingCrop(
       base({ selectedCameraId: "camera.1", activeViewId: "view.plan.level1" }),

@@ -21,7 +21,7 @@ export type CropResolveInput = {
   cropDragMeta: { cameraId: string | null } | null;
 };
 
-/** Default session crop when the user first enables viewport crop. */
+/** Default session crop when the user first enables viewport crop (plan: wall bbox). */
 export function defaultSessionViewCrop(walls: Wall[]): ViewCrop {
   if (walls.length === 0) {
     return normalizeViewCrop({
@@ -62,8 +62,9 @@ export function resolveActiveViewCrop(s: CropResolveInput): ViewCrop | null {
   if (view.kind === "camera" && view.cameraId) {
     return s.documentCameras.find((c) => c.id === view.cameraId)?.crop ?? null;
   }
-  // On plan: selecting a camera edits that camera's crop (props / grips), not session clip
-  if (s.selectedCameraId) {
+  // On plan only: selecting a camera edits that camera's crop (props / grips).
+  // Free perspective always edits its own session crop (C3 / ADR 0016).
+  if (s.selectedCameraId && view.kind === "plan") {
     return s.documentCameras.find((c) => c.id === s.selectedCameraId)?.crop ?? null;
   }
   return view.crop ?? null;

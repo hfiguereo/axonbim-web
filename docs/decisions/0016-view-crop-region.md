@@ -4,7 +4,9 @@
 
 Aceptado (autorizado 2026-08-08) — corte mínimo.  
 **Aprobado en producto 2026-08-08** (validación humana).  
-Ajuste 2026-08-08: **clip por vista**; planta y cámara independientes; marco seleccionable en planta.
+Ajuste 2026-08-08: **clip por vista**; planta y cámara independientes; marco seleccionable en planta.  
+**Rev. persistencia 2026-08-09:** crop de presentación **activado** se guarda en `.axon`
+(`presentation.viewCrops`); no es decorativo.
 
 ## Contexto
 
@@ -14,7 +16,10 @@ Las cámaras geométricas (ADR 0015) y las vistas de sesión necesitan limitar l
 
 1. Tipo compartido `ViewCrop`: AABB en world XY (+ Z opcional).
 2. **Cámara (documento):** `Camera.crop` — persiste en `.axon`; default on al crear.
-3. **Vistas de sesión** (planta / perspectiva base): `ProjectView.crop` — sesión; default off. Independiente del crop de cada cámara.
+3. **Vistas planta / perspectiva libre:** `ProjectView.crop` en sesión (default off),
+   independiente del crop de cada cámara. Si `enabled === true`, **persiste** en
+   `document.presentation.viewCrops[viewId]` al Exportar/Guardar y se restaura al Abrir.
+   Crop desactivado no se escribe.
 4. **Clipping (oculta geometría) — solo la vista activa:**
    - Vista **planta** o **perspectiva** libre → `ProjectView.crop` de esa vista.
    - Vista **cámara** → `Camera.crop` de esa entidad.
@@ -40,6 +45,20 @@ generoso. Queda como invariante con prueba: la tolerancia del marco **no** puede
 estrecha que la de selección de entidades. Constantes en
 `packages/viewer/src/pickTolerance.ts`; el resto de umbrales se dejan como están.
 
+## C3 — grips en marco de cámara / perspectiva (Fase 4) — **cerrada 2026-08-09**
+
+Cerrada tras lock de navegación (ADR 0015 §7) y checklist humana:
+
+1. Marco en pantalla: arranca en **inset 8%** (chrome de vista). No usar AABB proyectado
+   del crop en planta (colapsa en perspectiva y la máscara CSS oculta la escena).
+2. Arrastrar un grip en cámara/3D **solo redimensiona el rectángulo CSS** (máscara de
+   pantalla). **No** muta `Camera.crop` / clip GPU / Ancho·Fondo — el alcance definido en
+   **planta** permanece.
+3. **Vista cámara:** grips solo con navegación **bloqueada**. Nav-edit (doble clic): sin
+   grips; Esc / doble clic restaura grips + pose.
+4. Planta: grips mundo + `pickGround` siguen siendo la edición del crop real.
+5. Clip real: planos GPU del `ViewCrop` (SoT en documento / cámara).
+
 ## Fuera de este corte
 
-Crop rotado · annotation crop · caja de sección 3D · sync animado · path de cámara · grips NDC en la vista cámara.
+Crop rotado · annotation crop · caja de sección 3D · sync animado · path de cámara.

@@ -42,6 +42,8 @@ export type ViewportHandle = {
     target: { x: number; y: number; z: number };
     fov: number;
   }) => void;
+  /** Disable wheel/orbit (locked camera view). Plan pan/zoom still uses this flag. */
+  setNavigationEnabled: (enabled: boolean) => void;
   /** World-space orbit / look-at pivot for the 3D cameras. */
   setOrbitPivot: (point: { x: number; y: number; z: number }) => void;
   getOrbitPivot: () => { x: number; y: number; z: number };
@@ -87,6 +89,12 @@ export type ViewportHandle = {
   pickCropGrip: (clientX: number, clientY: number) => CropGripPick | null;
   /** Pick camera crop frame body (not session crop). */
   pickCropFrame: (clientX: number, clientY: number) => { cameraId: string } | null;
+  /** Project world point to client (CSS) coordinates — C3 screen crop frame. */
+  clientFromWorld: (
+    wx: number,
+    wy: number,
+    wz: number,
+  ) => { x: number; y: number; behind: boolean };
 };
 
 export type CreateViewportOptions = {
@@ -198,6 +206,7 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
     setCameraPreset: camera.setCameraPreset,
     orbitByDelta: camera.orbitByDelta,
     applyModelCamera: camera.applyModelCamera,
+    setNavigationEnabled: camera.setNavigationEnabled,
     syncWalls: sceneSync.syncWalls,
     setClippingCrop: cropLayer.setClippingCrop,
     setPreviewSegment: sceneSync.setPreviewSegment,
@@ -210,6 +219,7 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
     pickFlipControl: picking.pickFlipControl,
     pickCropGrip: picking.pickCropGrip,
     pickCropFrame: picking.pickCropFrame,
+    clientFromWorld: ctx.clientFromWorld,
     dispose() {
       cancelAnimationFrame(raf);
       unbindNavigation();
