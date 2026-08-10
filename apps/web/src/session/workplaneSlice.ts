@@ -53,6 +53,13 @@ export const createWorkplaneSlice: SessionSliceCreator<{
     workplaneLinePending: null,
 
     resetWorkplaneToLevel: () => {
+      if (get().sketchTarget) {
+        set({
+          status:
+            "Sketch activo — cancela o termina antes de cambiar el Workplane",
+        });
+        return;
+      }
       const wp = levelPlane();
       set({
         activeWorkplane: wp,
@@ -63,6 +70,13 @@ export const createWorkplaneSlice: SessionSliceCreator<{
     },
 
     setWorkplaneFromSurface: (wallId, face, hint) => {
+      if (get().sketchTarget) {
+        set({
+          status:
+            "Sketch activo — cancela o termina antes de cambiar el Workplane",
+        });
+        return;
+      }
       const s = get();
       const wall = s.document.walls.find((w) => w.id === wallId);
       if (!wall) {
@@ -88,6 +102,13 @@ export const createWorkplaneSlice: SessionSliceCreator<{
     },
 
     setWorkplaneFromLine: (p1, p2) => {
+      if (get().sketchTarget) {
+        set({
+          status:
+            "Sketch activo — cancela o termina antes de cambiar el Workplane",
+        });
+        return;
+      }
       const s = get();
       const storey = getActiveStorey(s.document, s.activeStoreyId);
       const wp = workplaneFromLineTrace(p1, p2, storey.id, storey.elevation);

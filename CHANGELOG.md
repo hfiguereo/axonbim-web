@@ -2,6 +2,125 @@
 
 ## Unreleased
 
+### H4 — feedback si el clic falla el Workplane (2026-08-10)
+
+- `pickOnWorkplane` null ya no es silencio en sketch / Modificar / muro / trazo WP
+- Status: «Sin intersección con el Workplane — órbita menos rasante…»
+- Helper `workplanePickFeedback` + tests
+
+### H3 — preview sólido del provisional (2026-08-10)
+
+- Mientras se edita el perfil, el viewport muestra un **sólido derivado** del
+  `sketchProfile` (clone de display); `AxonDocument` no cambia hasta **Terminar**
+- Helper `previewWallFromSketchProfile` + status «preview · Terminar confirma»
+- Host documental sigue oculto; openings del host se dibujan sobre el preview
+
+### Fix — Modificar H1/H2 + iconos (2026-08-10)
+
+- **H1:** `setTool("select")` dejaba sketch abierto con `activeTool !== "wall"` → clics
+  iban a selección; ahora Modificar fuerza `activeTool: "wall"`, Viewport prioriza
+  sketch+modify, y Seleccionar en sketch = modo vértice
+- **H2:** Desfase = equidistancia real en UV del Workplane (`offsetProfileInPlane`);
+  clic +0,15 m · Shift contrae
+- Iconos dedicados: `offset`, `fillet`, `splitPoint`, `splitLine`, `redraw`, `editProfile`
+- El documento / malla sólida sigue actualizándose solo al **Terminar**
+
+### Fix — herramientas Modificar en sketch (2026-08-10)
+
+- Viewport robaba clics a grips/vértices y no llamaba `wallClick` → `sketchModifyClick`
+- Mover / Rotar / Split / Fillet / Copiar vuelven a transformar el **provisional**
+  (el documento sigue actualizándose solo al Terminar)
+
+### SK-wall-profile-v1 — Bloque 7 persistencia `.axon` v2 (2026-08-10) — **cerrado**
+
+- Escritores: `formatVersion: 2`; muros siempre con `vertical` (sin `height` suelto)
+- Lectores: v1 (`height` → uniform) y v2 (`vertical` obligatorio); memoria promovida a v2
+- Strict: perfil inválido / v2 solo-`height` → reject; recover: muro descartado + warning
+- Properties: altura máxima solo lectura si `kind === "profile"`
+- Tests: migración, round-trip perfil, reject sin degradar (`axon.test.ts`)
+- **Feature `SK-wall-profile-v1` cerrada** (Bloques 0–7). Siguiente: losas/Edit Mode con auth
+
+### SK-wall-profile-v1 — Bloque 6 editor + toolkit (2026-08-10)
+
+- **6A:** Terminar en cara → `SetWallVerticalProfileCommand` (mismo `wallId`);
+  `worldRingToWallVertical`; Redibujar limpia provisional
+- **6B:** Mover / Rotar / Split point / Split line / Fillet / Copiar (+ Desfase stub)
+  sobre `sketchProfile` con **SnapSession + Workplane** (`sketchModifySlice`)
+- Helpers `@axonbim/tools` `sketchProfileEdit.ts` (15 tests)
+- Cinta Modificar: stubs → tools activos en sketch
+- **Parada** auth Bloque 7 (persistencia `.axon` v2)
+
+### SK-wall-profile-v1 — plan Bloque 6 ampliado (2026-08-10)
+
+- Docs: Bloque 6 = **6A** núcleo (Terminar in-place) + **6B** toolkit Modificar
+  (mover → **split point** → **split line** → rotar → fillet → copiar → desfase opcional)
+  sobre provisional
+- Invariante: tools **con SnapSession + Workplane** (no camino paralelo / Edit Mode)
+- Sin código de implementación hasta frase de auth Bloque 6
+
+### SK-wall-profile-v1 — Bloque 5 vista / picking / Workplane (2026-08-10)
+
+- `WallHit` + `pickWallHit` (cara / punto / normal); doble clic usa hit → face WP
+- Gate de vista: planta y cámara documental rechazados; perspectiva (presets gizmo OK)
+- Entrada fija `workplaneFromWallFace`; Workplane congelado mientras `sketchTarget`
+- Overlay/grips de perfil orientados en `axisU` × `axisV` con lift por `normal`
+- Tests: WP-01…04 (plan reject, face seed, freeze); `wallProfileEditContext`
+- **Parada** checklist manual frontal / lateral / isométrica → auth Bloque 6
+
+### SK-wall-profile-v1 — Bloque 4 comando in-place (2026-08-10)
+
+- `Wall.vertical` (sin `height` suelto); helpers `wallMaxHeightOf` / clone / equals
+- `SetWallVerticalProfileCommand`: in-place, noop/reject, openings vía
+  `validateOpeningInsideWallProfile` + `validateHostedOpening`
+- `SetWallHeightCommand` bloquea perfil custom (`wall.profile.heightLocked`);
+  `SetWallEndpointsCommand` bloquea cambio de longitud (`wall.profile.lengthLocked`)
+- Persistencia: lee `height` legacy → uniform; escribe `height` si uniform / `vertical` si profile
+- Tests: `wallVerticalProfile.test.ts` (6) — mismo `wallId` en Undo/Redo
+- **Parada** auth Bloque 5 (vista / picking / Workplane de cara)
+
+### SK-wall-profile-v1 — Bloque 3 geometría (2026-08-10)
+
+- `wallProfileMesh`: extrusión U/V ± espesor; uniform → `wallBoxMesh` / slabs
+- Pendiente/escalón: vértices de malla conservan alturas distintas (oráculos numéricos)
+- Openings: notch sill=0; perfil rectangular → `wallMeshWithOpenings`; joins solo uniform
+- `wallProfileMetrics` / `wallProfileSupportsMiter`; envelope Z vía `wallMaxHeightOf`
+- Tests: `wallProfileMesh.test.ts` (7) — **parada** auth Bloque 4
+- Revisión visual humana: checklist en matriz `04_…` (pendiente al cablear viewer)
+
+### SK-wall-profile-v1 — Bloque 2 dominio puro (2026-08-10)
+
+- Tipos: `WallProfilePoint`, `WallVerticalDefinition` (ADR 0018)
+- API: `wallVerticalOf` / `wallVerticalLoop` / `wallLocalToWorld` / `worldToWallProfileUV`
+- Validación: `validateWallProfile`, `validateOpeningInsideWallProfile` (+ autointersección, extremos, openings)
+- Tests: `packages/model/src/wallVertical.test.ts` (11)
+- `Wall.height` legacy intacto hasta Bloques 3–7 — **parada** auth Bloque 3
+
+### SK-wall-profile-v1 — Bloque 1 ADR y contrato (2026-08-10)
+
+- ADR 0018: `WallVerticalDefinition`, U/V, openings, in-place, planta bloqueada, `.axon` v2
+- Docs: `document-model`, `sketch-result-outline`, `editing-paradigms`, `geometry-policy`, cola
+- **Sin código de editor** — parada auth Bloque 2 (dominio puro)
+
+### SK-wall-profile-v1 — Bloque 0 diagnóstico (2026-08-10)
+
+- Paquete externo archivado: `docs/validation/sk-wall-profile-report-2026-08-10/` (+ ZIP)
+- Diagnóstico reproducible: `docs/validation/sk-wall-profile-bloque0-2026-08-10.md`
+- Evidencia: AABB en `invertVerticalFaceOutline`; commit Delete+Create sin perfil; `Wall.height` caja
+- **Parada:** auth Bloque 1 (ADR/contrato) — sin código de editor aún
+
+### SK-profile-one — un único perfil + contrato UX croquis (2026-08-10)
+
+- Contrato UX: planta → pide elevación/3D; solo contorno; niveles + plano de referencia
+- Terminar: silueta `result` de 1 host → **1** muro convertible o **rechazo** (nunca N por arista)
+- Extensión a pisos/techos/terreno: nota; auth aparte
+- Docs: `sketch-result-outline.md`, `editing-paradigms.md`, `pending-work.md`
+
+### BUG-UI-NUM — props numéricas teclado (2026-08-10)
+
+- `PropsNumberInput`: draft local; commit en blur/Enter; spinners al valor completo
+- Aplica a altura/espesor muro, altura nueva, crop, cámara (ojo/FOV)
+- Tests: `apps/web/src/components/propsNumberCommit.test.ts`
+
 ### WP-v2 — planos de trabajo tangibles (2026-08-09)
 
 - Kinds: `storey` | `surface` | `line` (sesión; no `.axon`)
@@ -10,17 +129,11 @@
 - Sketch Mode edita el perímetro sobre `activeWorkplane` (surface/line, no solo storey)
 - APIs: `workplaneFromWallFace`, `workplaneFromLineTrace`, `intersectRayWorkplane`
 
-### SK-profile-one — un único perfil (siguiente; auth)
-
-- Objetivo: Terminar materializa **un** resultado coherente (sin silueta del sólido → N muros)
-- Deuda v0 documentada: `docs/architecture/sketch-result-outline.md`
-- No implementar sin frase «autorizo SK-profile-one»
-
 ### SK-replace — provisional libre → muros nuevos (2026-08-09, v0)
 
 - Vértices/aristas del provisional **independientes** (sin corner constricted)
 - **Terminar** = validar → **delete** hosts + **create** muros nuevos (no update in-place)
-- Huella caja → 1 muro nuevo; huella libre → N muros (aristas); openings bloquean replace
+- Huella caja → 1 muro nuevo; (v0) huella libre → N muros — **retirado en SK-profile-one**
 - APIs: `isWallBoxFootprint`, `commitSketchProfile` (replace), `validateSketchProfileForHost`
 - Contrato: `docs/architecture/sketch-result-outline.md`
 

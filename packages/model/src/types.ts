@@ -3,7 +3,8 @@ import type { Vec3 } from "@axonbim/shared";
 
 export type ProjectMeta = {
   format: "axon";
-  formatVersion: 1;
+  /** 1 = legacy height wire; 2 = vertical (ADR 0018). Writers always emit 2. */
+  formatVersion: 1 | 2;
   name: string;
   createdAt: string;
   updatedAt: string;
@@ -15,14 +16,29 @@ export type Storey = {
   elevation: number;
 };
 
+/**
+ * Vertical definition of a wall (ADR 0018).
+ */
+export type WallProfilePoint = {
+  /** Meters along the wall axis from p1 toward p2. */
+  u: number;
+  /** Meters above the wall base (world +Z). */
+  v: number;
+};
+
+export type WallVerticalDefinition =
+  | { kind: "uniform"; height: number }
+  | { kind: "profile"; outerLoop: WallProfilePoint[] };
+
 export type Wall = {
   id: string;
   storeyId: string;
   familyId: string;
   p1: Vec3;
   p2: Vec3;
-  height: number;
   thickness: number;
+  /** Uniform height or custom U/V outer loop (ADR 0018). */
+  vertical: WallVerticalDefinition;
 };
 
 /** Door hosted on a wall — center along wall axis from p1. */

@@ -1,5 +1,5 @@
 /**
- * Runtime shape checks for `.axon` JSON (F9-E5).
+ * Runtime shape checks for `.axon` JSON (F9-E5 + SK-wall-profile-v1 Bloque 7).
  * Input is `unknown` — never trust a TypeScript cast from JSON.parse.
  */
 import type { DoorFamily, WallFamily, WindowFamily } from "@axonbim/families";
@@ -12,12 +12,20 @@ import type {
   Storey,
   ViewCrop,
   Wall,
+  WallProfilePoint,
+  WallVerticalDefinition,
   Window,
 } from "@axonbim/model";
+import {
+  validateWallVerticalDefinition,
+  wallLength,
+  wallVerticalFromHeight,
+} from "@axonbim/model";
 
-export type AxonFileV1 = {
+/** On-disk / parsed file envelope. v1 and v2 accepted on read; writers emit 2. */
+export type AxonFile = {
   format: "axon";
-  formatVersion: 1;
+  formatVersion: 1 | 2;
   meta: {
     name: string;
     createdAt: string;
@@ -33,6 +41,9 @@ export type AxonFileV1 = {
   cameras: Camera[];
   presentation?: DocumentPresentation;
 };
+
+/** @deprecated Use AxonFile — kept for import paths during migration. */
+export type AxonFileV1 = AxonFile;
 
 export function failAxon(msg: string): never {
   throw new Error(`Invalid .axon file: ${msg}`);
@@ -151,22 +162,92 @@ function readWindowFamily(v: unknown, i: number): WindowFamily {
   return { id: v.id, label: v.label, width: v.width, height: v.height, sill: v.sill };
 }
 
-function readWall(v: unknown, i: number): Wall {
+/**
+ * Read vertical definition.
+ * v1: `height` legacy OR `vertical`.
+ * v2: `vertical` required (bare `height` alone rejected).
+ */
+function readWallVertical(
+  v: Record<string, unknown>,
+  i: number,
+  formatVersion: 1 | 2,
+): WallVerticalDefinition {
+  const at = `walls[${i}]`;
+  if (v.vertical !== undefined) {
+    if (!isObj(v.vertical)) failAxon(`${at}.vertical must be an object`);
+    const kind = v.vertical.kind;
+    if (kind === "uniform") {
+      if (!isFiniteNum(v.vertical.height)) {
+        failAxon(`${at}.vertical.height must be finite`);
+      }
+      return wallVerticalFromHeight(v.vertical.height);
+    }
+    if (kind === "profile") {
+      if (!Array.isArray(v.vertical.outerLoop)) {
+        failAxon(`${at}.vertical.outerLoop must be an array`);
+      }
+      const outerLoop: WallProfilePoint[] = v.vertical.outerLoop.map((p, j) => {
+        if (!isObj(p) || !isFiniteNum(p.u) || !isFiniteNum(p.v)) {
+          failAxon(`${at}.vertical.outerLoop[${j}] must have finite u,v`);
+        }
+        return { u: p.u, v: p.v };
+      });
+      return { kind: "profile", outerLoop };
+    }
+    failAxon(`${at}.vertical.kind must be uniform|profile`);
+  }
+  if (formatVersion >= 2) {
+    failAxon(`${at}: formatVersion 2 requires vertical (legacy height alone rejected)`);
+  }
+  if (isFiniteNum(v.height)) {
+    return wallVerticalFromHeight(v.height);
+  }
+  failAxon(`${at}: height or vertical required`);
+}
+
+function readWall(v: unknown, i: number, formatVersion: 1 | 2): Wall {
   if (!isObj(v)) failAxon(`walls[${i}] must be an object`);
   if (!isNonEmptyString(v.id)) failAxon(`walls[${i}].id required`);
   if (!isNonEmptyString(v.storeyId)) failAxon(`walls[${i}].storeyId required`);
   if (!isNonEmptyString(v.familyId)) failAxon(`walls[${i}].familyId required`);
-  if (!isFiniteNum(v.height) || !isFiniteNum(v.thickness)) {
-    failAxon(`walls[${i}]: height/thickness must be finite`);
+  if (!isFiniteNum(v.thickness)) {
+    failAxon(`walls[${i}]: thickness must be finite`);
   }
-  return {
+  const wall: Wall = {
     id: v.id,
     storeyId: v.storeyId,
     familyId: v.familyId,
     p1: readVec3(v.p1, `walls[${i}].p1`),
     p2: readVec3(v.p2, `walls[${i}].p2`),
-    height: v.height,
     thickness: v.thickness,
+    vertical: readWallVertical(v, i, formatVersion),
+  };
+  const profileIssue = validateWallVerticalDefinition(
+    wall.vertical,
+    wallLength(wall),
+  );
+  if (profileIssue) {
+    failAxon(`walls[${i}]: ${profileIssue.message}`);
+  }
+  return wall;
+}
+
+/** Wire shape for formatVersion 2 — always `vertical`; never bare `height`. */
+export function wallToFileJson(wall: Wall): Record<string, unknown> {
+  return {
+    id: wall.id,
+    storeyId: wall.storeyId,
+    familyId: wall.familyId,
+    p1: wall.p1,
+    p2: wall.p2,
+    thickness: wall.thickness,
+    vertical:
+      wall.vertical.kind === "uniform"
+        ? { kind: "uniform", height: wall.vertical.height }
+        : {
+            kind: "profile",
+            outerLoop: wall.vertical.outerLoop.map((p) => ({ u: p.u, v: p.v })),
+          },
   };
 }
 
@@ -248,12 +329,15 @@ function readPresentation(v: unknown): DocumentPresentation | undefined {
   return { viewCrops };
 }
 
-/** Strict shape: every required field present; no silent defaults. */
-export function readAxonFileStrict(data: unknown): AxonFileV1 {
+/** Strict shape: every required field present; no silent defaults. Accepts v1|v2. */
+export function readAxonFileStrict(data: unknown): AxonFile {
   if (!isObj(data)) failAxon("root must be an object");
   if (data.format !== "axon") failAxon('format must be "axon"');
-  if (data.formatVersion !== 1) {
-    failAxon(`unsupported formatVersion: ${String(data.formatVersion)}`);
+  const formatVersion = data.formatVersion;
+  if (formatVersion !== 1 && formatVersion !== 2) {
+    failAxon(
+      `unsupported formatVersion: ${String(formatVersion)} (supported: 1, 2)`,
+    );
   }
   if (!isObj(data.meta)) failAxon("meta must be an object");
   if (!isNonEmptyString(data.meta.name)) failAxon("missing meta.name");
@@ -263,7 +347,6 @@ export function readAxonFileStrict(data: unknown): AxonFileV1 {
   const storeys = readArray(data.storeys, "storeys").map(readStorey);
   if (storeys.length === 0) failAxon("missing storeys");
 
-  // Catalogs are required keys (may be empty arrays).
   if (!("families" in data)) failAxon("missing families");
   if (!("doorFamilies" in data)) failAxon("missing doorFamilies");
   if (!("windowFamilies" in data)) failAxon("missing windowFamilies");
@@ -276,7 +359,7 @@ export function readAxonFileStrict(data: unknown): AxonFileV1 {
 
   return {
     format: "axon",
-    formatVersion: 1,
+    formatVersion,
     meta: {
       name: data.meta.name,
       createdAt: data.meta.createdAt,
@@ -286,7 +369,7 @@ export function readAxonFileStrict(data: unknown): AxonFileV1 {
     families: readArray(data.families, "families").map(readWallFamily),
     doorFamilies: readArray(data.doorFamilies, "doorFamilies").map(readDoorFamily),
     windowFamilies: readArray(data.windowFamilies, "windowFamilies").map(readWindowFamily),
-    walls: readArray(data.walls, "walls").map(readWall),
+    walls: readArray(data.walls, "walls").map((w, i) => readWall(w, i, formatVersion)),
     doors: readArray(data.doors, "doors").map(readDoor),
     windows: readArray(data.windows, "windows").map(readWindow),
     cameras: readArray(data.cameras, "cameras").map(readCamera),
@@ -295,9 +378,13 @@ export function readAxonFileStrict(data: unknown): AxonFileV1 {
 }
 
 /** Soft readers for recovery — return null + reason instead of throwing. */
-export function tryReadWall(v: unknown, i: number): { ok: true; value: Wall } | { ok: false; reason: string } {
+export function tryReadWall(
+  v: unknown,
+  i: number,
+  formatVersion: 1 | 2 = 2,
+): { ok: true; value: Wall } | { ok: false; reason: string } {
   try {
-    return { ok: true, value: readWall(v, i) };
+    return { ok: true, value: readWall(v, i, formatVersion) };
   } catch (e) {
     return { ok: false, reason: e instanceof Error ? e.message : String(e) };
   }

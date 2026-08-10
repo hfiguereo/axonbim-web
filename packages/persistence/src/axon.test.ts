@@ -12,7 +12,7 @@ describe("F5-S / F9-E5 .axon parser (strict)", () => {
         familyId: "family.block-150",
         p1: { x: 0, y: 0, z: 0 },
         p2: { x: 2, y: 0, z: 0 },
-        height: 2.7,
+        vertical: { kind: "uniform", height: 2.7 },
         thickness: 0.15,
       },
     ];
@@ -30,7 +30,7 @@ describe("F5-S / F9-E5 .axon parser (strict)", () => {
         familyId: "family.nope",
         p1: { x: 0, y: 0, z: 0 },
         p2: { x: 2, y: 0, z: 0 },
-        height: 2.7,
+        vertical: { kind: "uniform", height: 2.7 },
         thickness: 0.15,
       },
     ];
@@ -67,7 +67,7 @@ describe("F5-S / F9-E5 .axon parser (strict)", () => {
         familyId: "family.custom-220",
         p1: { x: 0, y: 0, z: 0 },
         p2: { x: 3, y: 0, z: 0 },
-        height: 2.7,
+        vertical: { kind: "uniform", height: 2.7 },
         thickness: 0.22,
       },
     ];
@@ -86,7 +86,7 @@ describe("F5-S / F9-E5 .axon parser (strict)", () => {
         familyId: "family.block-150",
         p1: { x: 0, y: 0, z: 0 },
         p2: { x: 6, y: 0, z: 0 },
-        height: 2.7,
+        vertical: { kind: "uniform", height: 2.7 },
         thickness: 0.15,
       },
     ];
@@ -129,7 +129,7 @@ describe("F5-S / F9-E5 .axon parser (strict)", () => {
       familyId: "family.block-150",
       p1: { x: 0, y: 0, z: 0 },
       p2: { x: 3, y: 0, z: 0 },
-      height: 2.7,
+      vertical: { kind: "uniform", height: 2.7 },
       thickness: 0.15,
     });
     const again = parseDocument(serializeDocument(parseDocument(serializeDocument(doc))));
@@ -152,7 +152,7 @@ describe("F5-S / F9-E5 .axon parser (strict)", () => {
         familyId: "family.block-150",
         p1: { x: 0, y: 0, z: 0 },
         p2: { x: 4, y: 0, z: 0 },
-        height: 2.7,
+        vertical: { kind: "uniform", height: 2.7 },
         thickness: 0.15,
       },
     ];
@@ -202,7 +202,7 @@ describe("F5-S / F9-E5 .axon parser (strict)", () => {
         familyId: "family.block-150",
         p1: { x: 0, y: 0, z: 0 },
         p2: { x: 2, y: 0, z: 0 },
-        height: 2.7,
+        vertical: { kind: "uniform", height: 2.7 },
         thickness: 0.15,
       },
     ];
@@ -220,7 +220,7 @@ describe("F9-E5 .axon recovery parser", () => {
         familyId: "family.block-150",
         p1: { x: 0, y: 0, z: 0 },
         p2: { x: 6, y: 0, z: 0 },
-        height: 2.7,
+        vertical: { kind: "uniform", height: 2.7 },
         thickness: 0.15,
       },
     ];
@@ -288,7 +288,7 @@ describe("F9-E5 .axon recovery parser", () => {
         familyId: "family.block-150",
         p1: { x: 0, y: 0, z: 0 },
         p2: { x: 4, y: 0, z: 0 },
-        height: 2.7,
+        vertical: { kind: "uniform", height: 2.7 },
         thickness: 0.15,
       },
     ];
@@ -379,6 +379,153 @@ describe("presentation.viewCrops persistence", () => {
       },
     };
     expect(() => parseDocument(JSON.stringify(data))).toThrow(/only enabled crops/);
+  });
+
+  it("Bloque 7: writes formatVersion 2 with vertical (no bare height)", () => {
+    const doc = createEmptyDocument();
+    doc.walls = [
+      {
+        id: "wall.1",
+        storeyId: "storey.default",
+        familyId: "family.block-150",
+        p1: { x: 0, y: 0, z: 0 },
+        p2: { x: 3, y: 0, z: 0 },
+        thickness: 0.15,
+        vertical: { kind: "uniform", height: 2.7 },
+      },
+    ];
+    const raw = JSON.parse(serializeDocument(doc));
+    expect(raw.formatVersion).toBe(2);
+    expect(raw.walls[0].vertical).toEqual({ kind: "uniform", height: 2.7 });
+    expect(raw.walls[0].height).toBeUndefined();
+  });
+
+  it("Bloque 7: round-trips custom vertical profile", () => {
+    const doc = createEmptyDocument("Perfil");
+    doc.walls = [
+      {
+        id: "wall.1",
+        storeyId: "storey.default",
+        familyId: "family.block-150",
+        p1: { x: 0, y: 0, z: 0 },
+        p2: { x: 4, y: 0, z: 0 },
+        thickness: 0.15,
+        vertical: {
+          kind: "profile",
+          outerLoop: [
+            { u: 0, v: 0 },
+            { u: 4, v: 0 },
+            { u: 4, v: 2 },
+            { u: 0, v: 3 },
+          ],
+        },
+      },
+    ];
+    const again = parseDocument(serializeDocument(doc));
+    expect(again.meta.formatVersion).toBe(2);
+    expect(again.walls[0]!.id).toBe("wall.1");
+    expect(again.walls[0]!.vertical).toEqual(doc.walls[0]!.vertical);
+  });
+
+  it("Bloque 7: migrates v1 height → vertical and promotes to v2 in memory", () => {
+    const data = {
+      format: "axon",
+      formatVersion: 1,
+      meta: {
+        name: "Legacy",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+      storeys: [{ id: "storey.default", name: "Nivel 1", elevation: 0 }],
+      families: [{ id: "family.block-150", label: "Bloque 150", thickness: 0.15 }],
+      doorFamilies: [],
+      windowFamilies: [],
+      walls: [
+        {
+          id: "wall.1",
+          storeyId: "storey.default",
+          familyId: "family.block-150",
+          p1: { x: 0, y: 0, z: 0 },
+          p2: { x: 2, y: 0, z: 0 },
+          thickness: 0.15,
+          height: 2.7,
+        },
+      ],
+      doors: [],
+      windows: [],
+      cameras: [],
+    };
+    const doc = parseDocument(JSON.stringify(data));
+    expect(doc.meta.formatVersion).toBe(2);
+    expect(doc.walls[0]!.vertical).toEqual({ kind: "uniform", height: 2.7 });
+    const out = JSON.parse(serializeDocument(doc));
+    expect(out.formatVersion).toBe(2);
+    expect(out.walls[0].vertical).toEqual({ kind: "uniform", height: 2.7 });
+    expect(out.walls[0].height).toBeUndefined();
+  });
+
+  it("Bloque 7: rejects v2 wall with only legacy height", () => {
+    const data = JSON.parse(serializeDocument(createEmptyDocument()));
+    data.formatVersion = 2;
+    data.walls = [
+      {
+        id: "wall.1",
+        storeyId: "storey.default",
+        familyId: "family.block-150",
+        p1: { x: 0, y: 0, z: 0 },
+        p2: { x: 2, y: 0, z: 0 },
+        thickness: 0.15,
+        height: 2.7,
+      },
+    ];
+    expect(() => parseDocument(JSON.stringify(data))).toThrow(/requires vertical/);
+  });
+
+  it("Bloque 7: rejects invalid profile without degrading to box", () => {
+    const data = JSON.parse(serializeDocument(createEmptyDocument()));
+    data.walls = [
+      {
+        id: "wall.1",
+        storeyId: "storey.default",
+        familyId: "family.block-150",
+        p1: { x: 0, y: 0, z: 0 },
+        p2: { x: 4, y: 0, z: 0 },
+        thickness: 0.15,
+        vertical: {
+          kind: "profile",
+          outerLoop: [
+            { u: 0, v: 0 },
+            { u: 1, v: 0 },
+            { u: 1, v: 1 },
+          ],
+        },
+      },
+    ];
+    expect(() => parseDocument(JSON.stringify(data))).toThrow(/profile|ends|u=/i);
+  });
+
+  it("Bloque 7: recover discards invalid profile wall with warning", () => {
+    const data = JSON.parse(serializeDocument(createEmptyDocument()));
+    data.walls = [
+      {
+        id: "wall.bad",
+        storeyId: "storey.default",
+        familyId: "family.block-150",
+        p1: { x: 0, y: 0, z: 0 },
+        p2: { x: 4, y: 0, z: 0 },
+        thickness: 0.15,
+        vertical: {
+          kind: "profile",
+          outerLoop: [
+            { u: 0, v: 0 },
+            { u: 1, v: 0 },
+          ],
+        },
+      },
+    ];
+    const { document, warnings } = parseDocumentRecover(JSON.stringify(data));
+    expect(document.walls).toHaveLength(0);
+    expect(warnings.some((w) => /walls\[0\] discarded/i.test(w))).toBe(true);
   });
 });
 

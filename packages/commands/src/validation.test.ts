@@ -26,8 +26,8 @@ function wall(partial: Partial<Wall> = {}): Wall {
     familyId: "family.block-150",
     p1: { x: 0, y: 0, z: 0 },
     p2: { x: 3, y: 0, z: 0 },
-    height: 2.7,
     thickness: 0.15,
+    vertical: { kind: "uniform", height: 2.7 },
     ...partial,
   };
 }
@@ -109,7 +109,7 @@ describe("setters validate the resulting entity", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.code).toBe("wall.height.min");
-    expect(doc.walls[0]!.height).toBe(2.7);
+    expect(doc.walls[0]!.vertical).toEqual({ kind: "uniform", height: 2.7 });
   });
 
   it("SetWallEndpointsCommand updates axis and undoes", () => {

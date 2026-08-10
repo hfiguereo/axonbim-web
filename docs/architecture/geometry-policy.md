@@ -15,19 +15,28 @@ Wall / Door / Window (paramétrico) → reglas geométricas → MeshBuffer / Ort
 
 Una sola derivación alimenta **planta** y **3D**. Prohibido mantener dos verdades geométricas divergentes.
 
-## Muro caja (núcleo)
+## Muro caja y muro con perfil (núcleo)
 
 Oráculo de comportamiento (legado `wall_box_mesh`, reimplementar en TS):
 
 1. Eje = segmento `(p1.x, p1.y)` → `(p2.x, p2.y)`.
 2. Dirección unitaria del eje; normal horizontal perpendicular en XY.
 3. Contorno en planta: rectángulo de ancho `thickness` centrado en el eje.
-4. Extrusión en +Z de altura `height` desde `z0 = min(p1.z, p2.z)`.
-5. Malla: prisma cerrado (vértices + índices de triángulos + normales).
+4. Definición vertical:
+   - **uniform:** extrusión +Z de altura `height` (camino `wallBoxMesh`).
+   - **profile:** bucle U/V extruido ± `thickness/2` vía `wallProfileMesh`
+     ([ADR 0018](../decisions/0018-wall-vertical-profile.md)).
+5. Malla: sólido cerrado (vértices + índices + normales). Una sola derivación planta/3D.
+
+Helpers de dominio (`wallVerticalLoop`, …) unifican uniform y profile para outline/validación.
+API geometría: `wallProfileMesh`, `wallProfileMetrics`, `wallProfileSupportsMiter`.
 
 ### Uniones en esquina
 
-Si **exactamente dos** muros comparten un extremo, la malla usa **inglete** (`miterCorners` vía `computeWallJoinDirs`) — corte diagonal limpio, sin solape de losa. Los `p1`/`p2` del documento no cambian. Ver [ADR 0008](../decisions/0008-wall-corner-join-extension.md).
+Si **exactamente dos** muros **uniformes** comparten un extremo, la malla usa **inglete**
+(`miterCorners` vía `computeWallJoinDirs`) — ADR 0008. Con `vertical.kind === "profile"`:
+**sin inglete** (`wallProfileSupportsMiter === false`; extremos cuadrados) hasta un corte
+de joins perfilados.
 
 ### Huecos hospedados (autorizados)
 

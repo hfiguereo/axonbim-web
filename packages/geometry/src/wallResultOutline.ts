@@ -5,6 +5,7 @@
 
 import {
   projectPointOntoWorkplane,
+  wallMaxHeightOf,
   workplaneFromWallFace,
   workplanePointFromUV,
   worldToWorkplaneUV,
@@ -89,7 +90,7 @@ export function wallBoxCorners3(
   const base = wallBoxPlanCorners(wall, opts);
   if (!base) return null;
   const z0 = base[0]!.z;
-  const z1 = z0 + wall.height;
+  const z1 = z0 + wallMaxHeightOf(wall);
   return [
     ...base,
     { x: base[0]!.x, y: base[0]!.y, z: z1 },
@@ -257,7 +258,8 @@ function surfaceFaceOutline(wall: Wall, wp: Workplane): ResultOutline | null {
   const dx = wall.p2.x - wall.p1.x;
   const dy = wall.p2.y - wall.p1.y;
   const length = Math.hypot(dx, dy);
-  if (length < MIN_WALL_LENGTH || wall.height <= 0) return null;
+  const height = wallMaxHeightOf(wall);
+  if (length < MIN_WALL_LENGTH || height <= 0) return null;
 
   // Prefer host face plane; if WP has no host, rebuild from wall + face toward origin.
   let faceWp = wp;
@@ -269,7 +271,7 @@ function surfaceFaceOutline(wall: Wall, wp: Workplane): ResultOutline | null {
   }
 
   const halfL = length / 2;
-  const h = wall.height;
+  const h = height;
   const pts = [
     workplanePointFromUV(faceWp, -halfL, 0),
     workplanePointFromUV(faceWp, halfL, 0),

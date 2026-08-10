@@ -79,6 +79,18 @@ En **Arquitectura → Construir**: **Muro**, **Puerta**, **Ventana** (colocació
 En **Arquitectura → Plano de trabajo**: **Seleccionar**, **Dibujar**, **Nivel**.
 Resto de iconos = stubs de maqueta.
 
+## Propiedades numéricas (panel)
+
+Campos vía `PropsNumberInput` en **Propiedades** (altura / espesor muro; altura nueva;
+viewport crop; cámara ojo / FOV).
+
+| Control | Comportamiento |
+|---------|----------------|
+| Spinners ▲▼ | Commit inmediato del valor completo |
+| Teclado | Draft local: se puede borrar y escribir (p. ej. `0.20`); commit en **blur** / **Enter** (o al completar un número válido); **Esc** descarta el draft |
+
+**BUG-UI-NUM** — **corregido** 2026-08-10 (`PropsNumberInput` + `propsNumberCommit`).
+
 ## Qué queda fuera de Etapa 0–1 (aunque esté en la maqueta)
 
 Cotas, sheets, IFC, render real, sync, la mayoría de Modify geométrico — se activan por etapa cuando el gate lo autorice. Puertas/ventanas: post-MVP (ADR 0010 / 0011).

@@ -1,5 +1,5 @@
 import type { Wall, Window } from "@axonbim/model";
-import { DOOR_LEAF_ANGLE_RAD } from "@axonbim/model";
+import { DOOR_LEAF_ANGLE_RAD, wallMaxHeightOf } from "@axonbim/model";
 import { MIN_WALL_LENGTH } from "@axonbim/shared";
 import type { PlanFlipControl } from "./planControls";
 import type { MeshBuffer } from "./types";
@@ -245,7 +245,7 @@ export function windowPlanSymbol(wall: Wall, win: Window): WindowPlanSymbol | nu
   const b = windowBasis(wall, win);
   if (!b) return null;
   const { ux, uy, nx, ny, hx, hy, swingSign, closedAlong, leafLen } = b;
-  const z = b.baseZ + Math.max(wall.height, win.sill + win.height) + 0.12;
+  const z = b.baseZ + Math.max(wallMaxHeightOf(wall), win.sill + win.height) + 0.12;
   const lines: number[] = [];
   const halfT = wall.thickness / 2;
   const openLeft = win.centerOffset - win.width / 2;

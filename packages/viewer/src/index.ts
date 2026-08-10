@@ -6,4 +6,5 @@ export type {
   FlipPick,
   ViewProjection,
   ViewportHandle,
+  WallHit,
 } from "./createViewport.js";

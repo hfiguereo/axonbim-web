@@ -7,6 +7,7 @@ import {
   findWallFamily,
   getActiveStorey,
   pointOnWorkplaneXY,
+  wallVerticalFromHeight,
   workplaneFromStorey,
   type Wall,
 } from "@axonbim/model";
@@ -45,7 +46,7 @@ export function commitWallAxes(
       familyId: fam.id,
       p1: pointOnWorkplaneXY(wp, axis.p1.x, axis.p1.y),
       p2: pointOnWorkplaneXY(wp, axis.p2.x, axis.p2.y),
-      height: s.wallHeight,
+      vertical: wallVerticalFromHeight(s.wallHeight),
       thickness: fam.thickness,
     };
     return new CreateWallCommand(wall);

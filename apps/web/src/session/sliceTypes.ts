@@ -19,6 +19,7 @@ import type {
 } from "@axonbim/tools";
 import type { CameraPreset } from "@axonbim/viewer";
 import type { CropDragMeta } from "./viewCropDrag.js";
+import type { SketchModifyMode } from "./sketchModifySlice.js";
 import type {
   DetailLevel,
   DockSide,
@@ -48,6 +49,13 @@ export type SessionState = {
   sketchProfile: SketchProfile | null;
   sketchProfileStroke: boolean;
   profileVertexIndex: number | null;
+  /** Bloque 6B — Modificar sobre provisional (null path = vertex default). */
+  sketchModifyMode: SketchModifyMode;
+  sketchModifyPending: SketchPoint | null;
+  setSketchModifyMode: (mode: SketchModifyMode) => void;
+  redrawSketchProfile: () => void;
+  sketchModifyClick: (raw: SketchPoint, forceOrtho?: boolean) => void;
+  deleteSelectedProfileVertex: () => void;
   wallChain: boolean;
   activeFamilyId: string;
   wallHeight: number;
@@ -133,7 +141,14 @@ export type SessionState = {
   setTool: (tool: ToolId) => void;
   setDrawMode: (mode: DrawMode) => void;
   enterSketchOnSelection: () => void;
-  enterSketchOnElement: (kind: SketchTarget["kind"], id: string) => void;
+  enterSketchOnElement: (
+    kind: SketchTarget["kind"],
+    id: string,
+    opts?: {
+      face?: "front" | "back";
+      hitPoint?: { x: number; y: number; z: number };
+    },
+  ) => void;
   finishSketchOnSelection: () => void;
   exitSketchOnSelection: () => void;
   profileVertexClick: (

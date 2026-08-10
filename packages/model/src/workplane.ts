@@ -253,20 +253,35 @@ export function workplaneStatusLabel(wp: Workplane): string {
   return wp.label;
 }
 
+/** Unit outward normal of the wall front face in XY (left of p1→p2). */
+export function wallFrontNormalXY(wall: Wall): { x: number; y: number } {
+  const dx = wall.p2.x - wall.p1.x;
+  const dy = wall.p2.y - wall.p1.y;
+  const len = Math.hypot(dx, dy) || 1;
+  return { x: -dy / len, y: dx / len };
+}
+
 /** Which wall face is toward a world point (plan-side test). */
 export function wallFaceTowardPoint(
   wall: Wall,
   point: Vec3,
 ): "front" | "back" {
-  const dx = wall.p2.x - wall.p1.x;
-  const dy = wall.p2.y - wall.p1.y;
-  const len = Math.hypot(dx, dy) || 1;
-  const ux = dx / len;
-  const uy = dy / len;
-  const frontNx = -uy;
-  const frontNy = ux;
+  const n = wallFrontNormalXY(wall);
   const mx = (wall.p1.x + wall.p2.x) / 2;
   const my = (wall.p1.y + wall.p2.y) / 2;
-  const dot = (point.x - mx) * frontNx + (point.y - my) * frontNy;
+  const dot = (point.x - mx) * n.x + (point.y - my) * n.y;
+  return dot >= 0 ? "front" : "back";
+}
+
+/**
+ * Map a world-space hit normal to front/back (ADR 0018 / WallHit).
+ * Uses XY components of the mesh normal vs the wall front normal.
+ */
+export function wallFaceFromWorldNormal(
+  wall: Wall,
+  worldNormal: Vec3,
+): "front" | "back" {
+  const n = wallFrontNormalXY(wall);
+  const dot = worldNormal.x * n.x + worldNormal.y * n.y;
   return dot >= 0 ? "front" : "back";
 }

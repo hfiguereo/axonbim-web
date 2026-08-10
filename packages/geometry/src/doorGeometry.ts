@@ -1,5 +1,5 @@
 import type { Door, Wall } from "@axonbim/model";
-import { DOOR_LEAF_ANGLE_RAD } from "@axonbim/model";
+import { DOOR_LEAF_ANGLE_RAD, wallMaxHeightOf } from "@axonbim/model";
 import { MIN_WALL_LENGTH } from "@axonbim/shared";
 import type { PlanFlipControl } from "./planControls";
 import type { MeshBuffer } from "./types";
@@ -363,7 +363,7 @@ export function doorPlanSymbol(wall: Wall, door: Door): DoorPlanSymbol | null {
   const b = doorBasis(wall, door);
   if (!b) return null;
   const { ux, uy, nx, ny, hx, hy, swingSign, closedAlong, leafLen } = b;
-  const z = b.baseZ + Math.max(wall.height, door.height) + 0.15;
+  const z = b.baseZ + Math.max(wallMaxHeightOf(wall), door.height) + 0.15;
   const R = Math.max(0.15, b.leafLen);
   const steps = 16;
   const lines: number[] = [];

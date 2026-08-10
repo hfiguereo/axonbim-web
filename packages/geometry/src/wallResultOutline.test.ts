@@ -27,8 +27,8 @@ function wall(
     familyId: "family.default",
     p1: { x: p1[0], y: p1[1], z: 0 },
     p2: { x: p2[0], y: p2[1], z: 0 },
-    height,
     thickness,
+    vertical: { kind: "uniform", height },
   };
 }
 

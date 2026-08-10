@@ -8,8 +8,8 @@ function wall(partial: Partial<Wall> & Pick<Wall, "id" | "p1" | "p2">): Wall {
   return {
     storeyId: "storey.default",
     familyId: "family.block-150",
-    height: 2.7,
     thickness: 0.15,
+    vertical: { kind: "uniform", height: 2.7 },
     ...partial,
   };
 }

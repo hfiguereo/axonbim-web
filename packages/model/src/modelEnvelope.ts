@@ -1,7 +1,11 @@
+import { MIN_WALL_LENGTH } from "@axonbim/shared";
 import type { AxonDocument } from "./types.js";
+import { wallLength, wallMaxHeightOf } from "./wallVertical.js";
 
 /**
  * LR3-C — axis-aligned envelope derived from the document (not persisted SoT).
+ * Z uses `wallMaxHeightOf` (ADR 0018). Plan extents remain axis endpoints
+ * (thickness not expanded) to preserve existing envelope oracles.
  */
 export type ModelEnvelope = {
   minX: number;
@@ -28,7 +32,7 @@ const EMPTY: ModelEnvelope = {
   empty: true,
 };
 
-/** Rebuild completely from walls (and their height). No document mutation. */
+/** Rebuild completely from walls. No document mutation. */
 export function computeModelEnvelope(document: AxonDocument): ModelEnvelope {
   const walls = document.walls;
   if (walls.length === 0) return { ...EMPTY, center: { ...EMPTY.center }, size: { ...EMPTY.size } };
@@ -39,16 +43,23 @@ export function computeModelEnvelope(document: AxonDocument): ModelEnvelope {
   let maxX = -Infinity;
   let maxY = -Infinity;
   let maxZ = -Infinity;
+  let any = false;
 
   for (const w of walls) {
+    if (wallLength(w) < MIN_WALL_LENGTH) continue;
+    any = true;
     minX = Math.min(minX, w.p1.x, w.p2.x);
     maxX = Math.max(maxX, w.p1.x, w.p2.x);
     minY = Math.min(minY, w.p1.y, w.p2.y);
     maxY = Math.max(maxY, w.p1.y, w.p2.y);
     const z0 = Math.min(w.p1.z, w.p2.z);
-    const z1 = Math.max(w.p1.z, w.p2.z) + w.height;
+    const z1 = z0 + wallMaxHeightOf(w);
     minZ = Math.min(minZ, z0);
     maxZ = Math.max(maxZ, z1);
+  }
+
+  if (!any) {
+    return { ...EMPTY, center: { ...EMPTY.center }, size: { ...EMPTY.size } };
   }
 
   const size = { x: maxX - minX, y: maxY - minY, z: maxZ - minZ };

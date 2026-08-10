@@ -9,6 +9,8 @@ export type {
   Storey,
   ViewCrop,
   Wall,
+  WallProfilePoint,
+  WallVerticalDefinition,
   Window,
 } from "./types.js";
 export { DOOR_LEAF_ANGLE_RAD } from "./types.js";
@@ -50,6 +52,25 @@ export {
 } from "./openingFit.js";
 export type { HostedOpeningSpec } from "./openingFit.js";
 export {
+  openingRectangleUV,
+  pointInWallProfile,
+  validateOpeningInsideWallProfile,
+  validateWallProfile,
+  validateWallVerticalDefinition,
+  wallAxisFrame,
+  wallLength,
+  wallLocalToWorld,
+  wallMaxHeight,
+  wallMaxHeightOf,
+  wallVerticalFromHeight,
+  wallVerticalLoop,
+  wallVerticalOf,
+  wallVerticalEquals,
+  cloneWallVertical,
+  worldToWallProfileUV,
+} from "./wallVertical.js";
+export type { WallAxisFrame } from "./wallVertical.js";
+export {
   findDoorFamily,
   findWallFamily,
   findWindowFamily,
@@ -78,6 +99,7 @@ export {
   pointOnWorkplaneXY,
   projectPointOntoWorkplane,
   resolveSpatialReference,
+  wallFaceFromWorldNormal,
   wallFaceTowardPoint,
   workplaneFromLineTrace,
   workplaneFromStorey,

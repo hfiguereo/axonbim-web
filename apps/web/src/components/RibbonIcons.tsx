@@ -552,6 +552,103 @@ export function Icon({ name }: IconProps) {
           <circle cx="12" cy="12" r="2.5" fill={muted} stroke={fill} strokeWidth="1.2" />
         </Svg>
       );
+    case "splitPoint":
+      return (
+        <Svg>
+          <path d="M4 18L20 6" stroke={fill} strokeWidth="1.8" strokeLinecap="round" />
+          <circle cx="12" cy="12" r="2.8" fill={muted} stroke={fill} strokeWidth="1.4" />
+          <path d="M12 8v8M8 12h8" stroke={fill} strokeWidth="1.4" strokeLinecap="round" />
+        </Svg>
+      );
+    case "splitLine":
+      return (
+        <Svg>
+          <path d="M5 5v14M19 5v14" stroke={fill} strokeWidth="1.8" strokeLinecap="round" />
+          <path
+            d="M3 12h18"
+            stroke={fill}
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeDasharray="3 2"
+          />
+          <circle cx="12" cy="12" r="2" fill={muted} stroke={fill} strokeWidth="1.2" />
+        </Svg>
+      );
+    case "offset":
+      return (
+        <Svg>
+          <rect
+            x="7"
+            y="7"
+            width="10"
+            height="10"
+            rx="1"
+            fill="none"
+            stroke={fill}
+            strokeWidth="1.5"
+            strokeDasharray="2.5 2"
+          />
+          <rect x="4" y="4" width="16" height="16" rx="1.5" fill={muted} stroke={fill} strokeWidth="1.4" />
+        </Svg>
+      );
+    case "fillet":
+      return (
+        <Svg>
+          <path
+            d="M5 19V9a4 4 0 0 1 4-4h10"
+            fill="none"
+            stroke={fill}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <circle cx="9" cy="9" r="1.6" fill={fill} />
+        </Svg>
+      );
+    case "redraw":
+      return (
+        <Svg>
+          <path
+            d="M6 12a6 6 0 1 0 1.8-4.2"
+            fill="none"
+            stroke={fill}
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+          <path
+            d="M5 5v5h5"
+            fill="none"
+            stroke={fill}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path d="M9 15h6M12 12v6" stroke={fill} strokeWidth="1.4" strokeLinecap="round" />
+        </Svg>
+      );
+    case "editProfile":
+      return (
+        <Svg>
+          <path
+            d="M4 16l6-10 4 6 2-3 4 7H4z"
+            fill={muted}
+            stroke={fill}
+            strokeWidth="1.3"
+            strokeLinejoin="round"
+          />
+          <circle cx="10" cy="6" r="1.5" fill={fill} />
+          <circle cx="14" cy="12" r="1.5" fill={fill} />
+          <circle cx="16" cy="9" r="1.5" fill={fill} />
+        </Svg>
+      );
+    case "cut":
+      return (
+        <Svg>
+          <circle cx="7" cy="7" r="2.5" fill="none" stroke={fill} strokeWidth="1.5" />
+          <circle cx="7" cy="17" r="2.5" fill="none" stroke={fill} strokeWidth="1.5" />
+          <path d="M9 9l8 8M17 7L9 15" stroke={fill} strokeWidth="1.6" strokeLinecap="round" />
+        </Svg>
+      );
     case "delete":
       return (
         <Svg>

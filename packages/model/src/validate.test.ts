@@ -25,8 +25,8 @@ function validWall(partial: Partial<Wall> = {}): Wall {
     familyId: "family.block-150",
     p1: { x: 0, y: 0, z: 0 },
     p2: { x: 3, y: 0, z: 0 },
-    height: 2.7,
     thickness: 0.15,
+    vertical: { kind: "uniform", height: 2.7 },
     ...partial,
   };
 }
@@ -97,13 +97,21 @@ describe("validateWall", () => {
   });
 
   it("rejects height below the documented minimum", () => {
-    expect(validateWall(validWall({ height: 0.049 }), refs)?.code).toBe("wall.height.min");
-    expect(validateWall(validWall({ height: 0 }), refs)?.code).toBe("wall.height.min");
-    expect(validateWall(validWall({ height: -2 }), refs)?.code).toBe("wall.height.min");
+    expect(
+      validateWall(validWall({ vertical: { kind: "uniform", height: 0.049 } }), refs)?.code,
+    ).toBe("wall.height.min");
+    expect(
+      validateWall(validWall({ vertical: { kind: "uniform", height: 0 } }), refs)?.code,
+    ).toBe("wall.height.min");
+    expect(
+      validateWall(validWall({ vertical: { kind: "uniform", height: -2 } }), refs)?.code,
+    ).toBe("wall.height.min");
   });
 
   it("rejects non-finite numbers", () => {
-    expect(validateWall(validWall({ height: Number.NaN }), refs)?.code).toBe("wall.height.min");
+    expect(
+      validateWall(validWall({ vertical: { kind: "uniform", height: Number.NaN } }), refs)?.code,
+    ).toBe("wall.height.min");
     expect(validateWall(validWall({ thickness: Number.POSITIVE_INFINITY }), refs)?.code).toBe(
       "wall.thickness.min",
     );

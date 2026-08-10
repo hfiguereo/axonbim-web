@@ -14,7 +14,7 @@ export function createEmptyDocument(name = "Sin título"): AxonDocument {
   return {
     meta: {
       format: "axon",
-      formatVersion: 1,
+      formatVersion: 2,
       name,
       createdAt: now,
       updatedAt: now,
@@ -56,8 +56,8 @@ export function createDemoDocument(): AxonDocument {
     familyId,
     p1: { x: x1, y: y1, z },
     p2: { x: x2, y: y2, z },
-    height,
     thickness,
+    vertical: { kind: "uniform", height },
   }));
 
   return doc;

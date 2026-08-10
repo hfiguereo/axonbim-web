@@ -12,6 +12,7 @@ import {
   createViewportPicking,
   type CropGripPick,
   type FlipPick,
+  type WallHit,
 } from "./viewportPicking.js";
 import {
   createViewportSceneGraph,
@@ -20,7 +21,7 @@ import {
 
 export type { CameraPreset } from "./viewportCameraController.js";
 export type { ViewProjection } from "./viewportContext.js";
-export type { CropGripPick, FlipPick } from "./viewportPicking.js";
+export type { CropGripPick, FlipPick, WallHit } from "./viewportPicking.js";
 
 export type ViewportHandle = {
   canvas: HTMLCanvasElement;
@@ -78,6 +79,11 @@ export type ViewportHandle = {
     points: { x: number; y: number; z: number }[] | null,
     vertices?: { x: number; y: number; z: number }[] | null,
     selectedVertex?: number | null,
+    frame?: {
+      normal: { x: number; y: number; z: number };
+      axisU: { x: number; y: number; z: number };
+      axisV: { x: number; y: number; z: number };
+    } | null,
   ) => void;
   setWorkplaneOverlay: (
     corners: [
@@ -115,6 +121,11 @@ export type ViewportHandle = {
     },
   ) => { x: number; y: number; z: number } | null;
   pickWallId: (clientX: number, clientY: number) => string | null;
+  pickWallHit: (
+    clientX: number,
+    clientY: number,
+    walls: readonly Wall[],
+  ) => WallHit | null;
   pickDoorId: (clientX: number, clientY: number) => string | null;
   pickWindowId: (clientX: number, clientY: number) => string | null;
   pickCameraId: (clientX: number, clientY: number) => string | null;
@@ -254,6 +265,7 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
     pickGround: picking.pickGround,
     pickWorkplane: picking.pickWorkplane,
     pickWallId: picking.pickWallId,
+    pickWallHit: picking.pickWallHit,
     pickDoorId: picking.pickDoorId,
     pickWindowId: picking.pickWindowId,
     pickCameraId: picking.pickCameraId,

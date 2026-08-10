@@ -43,7 +43,7 @@ describe("validateSketchProfileForHost", () => {
     expect(r.ok).toBe(true);
   });
 
-  it("accepts a free non-rect footprint (axes-on-replace path)", () => {
+  it("rejects a free non-rect footprint (SK-profile-one: no axes-on-replace)", () => {
     const r = validateSketchProfileForHost(
       {
         sourceWallIds: ["w1"],
@@ -58,7 +58,8 @@ describe("validateSketchProfileForHost", () => {
       },
       { workplane: wp, sourceCount: 1, hasOpenings: false, thickness: 0.15 },
     );
-    expect(r.ok).toBe(true);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.code).toBe("profile.footprint.one");
   });
 
   it("rejects replace when host has openings", () => {

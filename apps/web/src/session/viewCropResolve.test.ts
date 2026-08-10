@@ -57,7 +57,7 @@ describe("viewCropResolve (ADR 0016)", () => {
         familyId: "family.block-150",
         p1: { x: 0, y: 0, z: 0 },
         p2: { x: 8, y: 0, z: 0 },
-        height: 2.7,
+        vertical: { kind: "uniform", height: 2.7 },
         thickness: 0.15,
       },
     ]);

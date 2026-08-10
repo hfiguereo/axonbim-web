@@ -511,6 +511,11 @@ export function createDocumentSceneSync(
     points: { x: number; y: number; z: number }[] | null,
     vertices: { x: number; y: number; z: number }[] | null = null,
     selectedVertex: number | null = null,
+    frame: {
+      normal: { x: number; y: number; z: number };
+      axisU: { x: number; y: number; z: number };
+      axisV: { x: number; y: number; z: number };
+    } | null = null,
   ) => {
     if (!points || points.length < 2) {
       profileLine.visible = false;
@@ -519,14 +524,33 @@ export function createDocumentSceneSync(
       profileGripGeom.setDrawRange(0, 0);
       return;
     }
+    const lift = 0.12;
+    const nx = frame?.normal.x ?? 0;
+    const ny = frame?.normal.y ?? 0;
+    const nz = frame?.normal.z ?? 1;
+    const ux = frame?.axisU.x ?? 1;
+    const uy = frame?.axisU.y ?? 0;
+    const uz = frame?.axisU.z ?? 0;
+    const vx = frame?.axisV.x ?? 0;
+    const vy = frame?.axisV.y ?? 1;
+    const vz = frame?.axisV.z ?? 0;
     const arr = profileGeom.getAttribute("position") as BufferAttribute;
-    const zOff = 0.12;
     let seg = 0;
     for (let i = 0; i < points.length - 1 && seg < PROFILE_MAX_SEGMENTS; i++) {
       const a = points[i]!;
       const b = points[i + 1]!;
-      arr.setXYZ(seg * 2, a.x, a.y, a.z + zOff);
-      arr.setXYZ(seg * 2 + 1, b.x, b.y, b.z + zOff);
+      arr.setXYZ(
+        seg * 2,
+        a.x + nx * lift,
+        a.y + ny * lift,
+        a.z + nz * lift,
+      );
+      arr.setXYZ(
+        seg * 2 + 1,
+        b.x + nx * lift,
+        b.y + ny * lift,
+        b.z + nz * lift,
+      );
       seg++;
     }
     arr.needsUpdate = true;
@@ -541,15 +565,19 @@ export function createDocumentSceneSync(
     }
     const garr = profileGripGeom.getAttribute("position") as BufferAttribute;
     let gi = 0;
+    const gripLift = lift + 0.02;
     for (let i = 0; i < grips.length && i < PROFILE_MAX_GRIPS; i++) {
       const v = grips[i]!;
       const s = i === selectedVertex ? 0.28 : 0.16;
-      const z = v.z + zOff + 0.02;
+      const cx = v.x + nx * gripLift;
+      const cy = v.y + ny * gripLift;
+      const cz = v.z + nz * gripLift;
       const base = gi * 4;
-      garr.setXYZ(base + 0, v.x - s, v.y, z);
-      garr.setXYZ(base + 1, v.x + s, v.y, z);
-      garr.setXYZ(base + 2, v.x, v.y - s, z);
-      garr.setXYZ(base + 3, v.x, v.y + s, z);
+      // Cross in face UV (axisU × axisV), not world XY.
+      garr.setXYZ(base + 0, cx - ux * s, cy - uy * s, cz - uz * s);
+      garr.setXYZ(base + 1, cx + ux * s, cy + uy * s, cz + uz * s);
+      garr.setXYZ(base + 2, cx - vx * s, cy - vy * s, cz - vz * s);
+      garr.setXYZ(base + 3, cx + vx * s, cy + vy * s, cz + vz * s);
       gi++;
     }
     garr.needsUpdate = true;

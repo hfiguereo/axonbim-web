@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { createProjectSlice } from "./projectSlice.js";
 import { createSelectionSlice } from "./selectionSlice.js";
 import { createShellSlice, createViewportBridgeSlice } from "./shellSlice.js";
+import { createSketchModifySlice } from "./sketchModifySlice.js";
 import { createSketchToolSlice } from "./sketchToolSlice.js";
 import type { SessionState } from "./sliceTypes.js";
 import { createViewCropSlice } from "./viewCropSlice.js";
@@ -18,5 +19,6 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
   ...createSelectionSlice(set, get),
   ...createViewCropSlice(set, get),
   ...createSketchToolSlice(set, get),
+  ...createSketchModifySlice(set, get),
   ...createWorkplaneSlice(set, get),
 }));

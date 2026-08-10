@@ -13,12 +13,13 @@ import {
   findDoorFamily,
   findWallFamily,
   findWindowFamily,
-  getActiveStorey,
   projectPointOntoWorkplane,
   reconcileActiveStoreyId,
   openingsOnWall,
   validateHostedOpening,
-  workplaneFromStorey,
+  wallFaceTowardPoint,
+  wallMaxHeightOf,
+  workplaneFromWallFace,
   type Camera,
   type Door,
   type Wall,
@@ -69,6 +70,36 @@ import { rejectionStatus } from "./documentMutation.js";
 import { DEFAULT_CAMERA_EYE_Z, DEFAULT_CAMERA_FOV } from "./sessionTypes.js";
 import { applyCommand } from "./sliceContracts.js";
 import type { SessionSliceCreator } from "./sliceTypes.js";
+import { wallProfileEditContext } from "./wallProfileViewContext.js";
+
+export type EnterSketchOnElementOpts = {
+  /** Explicit face from WallHit (preferred). */
+  face?: "front" | "back";
+  /** World point used with wallFaceTowardPoint when face is omitted. */
+  hitPoint?: { x: number; y: number; z: number };
+};
+
+/** Resolve face Workplane for vertical profile — never storey / first-storey default. */
+function resolveWallProfileWorkplane(
+  wall: Wall,
+  activeWp: Workplane,
+  opts?: EnterSketchOnElementOpts,
+): Workplane | null {
+  if (opts?.face) {
+    return workplaneFromWallFace(wall, opts.face);
+  }
+  if (opts?.hitPoint) {
+    return workplaneFromWallFace(wall, wallFaceTowardPoint(wall, opts.hitPoint));
+  }
+  if (
+    activeWp.kind === "surface" &&
+    activeWp.host?.kind === "wall" &&
+    activeWp.host.id === wall.id
+  ) {
+    return activeWp;
+  }
+  return null;
+}
 
 function drawModeStatus(mode: DrawMode, onSelection: boolean): string {
   const prefix = onSelection ? "Sketch · Workplane · " : "";
@@ -383,8 +414,12 @@ export const createSketchToolSlice: SessionSliceCreator<{
   cancelWallDraw: () => void;
   /** SK-sel — enter Sketch on current selection (Modify button). */
   enterSketchOnSelection: () => void;
-  /** SK-sel — enter Sketch on a picked element (double-click). */
-  enterSketchOnElement: (kind: SketchTarget["kind"], id: string) => void;
+  /** SK-sel / ADR 0018 — enter Sketch on a wall face (elevación/3D + WallHit). */
+  enterSketchOnElement: (
+    kind: SketchTarget["kind"],
+    id: string,
+    opts?: EnterSketchOnElementOpts,
+  ) => void;
   /** SK-profile — apply profile then leave Sketch → Parametric. */
   finishSketchOnSelection: () => void;
   /** SK-sel — discard profile and leave Sketch → Parametric. */
@@ -641,7 +676,7 @@ export const createSketchToolSlice: SessionSliceCreator<{
       familyId: fam.id,
       centerOffset: offset,
       width: fam.width,
-      height: Math.min(fam.height, wall.height - OPENING_VERTICAL_MARGIN),
+      height: Math.min(fam.height, wallMaxHeightOf(wall) - OPENING_VERTICAL_MARGIN),
       sill: 0,
       hinge: "start",
       swing: "positive",
@@ -721,7 +756,33 @@ export const createSketchToolSlice: SessionSliceCreator<{
 
   wallClick: (raw, forceOrtho = false) => {
     const s = get();
-    if (s.activeTool !== "wall") return;
+    const modifyLive =
+      !!s.sketchTarget &&
+      !!s.sketchProfile &&
+      !!s.sketchModifyMode &&
+      s.sketchModifyMode !== "vertex" &&
+      s.sketchModifyMode !== "redraw";
+    // H1: Modificar must work even if ribbon left activeTool on "select".
+    if (s.activeTool !== "wall" && !modifyLive) return;
+
+    // Bloque 6B — Modificar toolkit (snap + Workplane); not vertex default.
+    if (modifyLive) {
+      const resolved = resolveSketchEditPoint(
+        {
+          sketchProfile: s.sketchProfile,
+          document: s.document,
+          activeWorkplane: s.activeWorkplane,
+          snapEnabled: s.snapEnabled,
+          snapSession: s.snapSession,
+        },
+        raw,
+        forceOrtho,
+        s.sketchModifyPending,
+      );
+      get().sketchModifyClick(resolved.point, forceOrtho);
+      set({ lastSnapKind: resolved.kind, snapSession: resolved.session });
+      return;
+    }
 
     // SK-provisional: grips if hit/selected; otherwise fall through to Dibujar.
     if (s.sketchTarget && s.sketchProfile && !isProfileRebuildMode(s.drawMode)) {
@@ -1157,7 +1218,7 @@ export const createSketchToolSlice: SessionSliceCreator<{
     });
   },
 
-  enterSketchOnElement: (kind, id) => {
+  enterSketchOnElement: (kind, id, opts) => {
     if (!canEnterSketchOnKind(kind)) {
       set({
         status: "Sketch sobre selección: este tipo aún no tiene perfil editable",
@@ -1170,13 +1231,25 @@ export const createSketchToolSlice: SessionSliceCreator<{
       set({ status: "Sketch: el elemento ya no está en el documento" });
       return;
     }
+
+    const view = s.views.find((v) => v.id === s.activeViewId);
+    const viewKind = view?.kind ?? "plan";
+    const viewCtx = wallProfileEditContext(viewKind);
+    if (!viewCtx.allowed) {
+      set({ status: viewCtx.reason ?? "Perfil vertical: vista no permitida" });
+      return;
+    }
+
+    const wp = resolveWallProfileWorkplane(wall, s.activeWorkplane, opts);
+    if (!wp) {
+      set({
+        status:
+          "Perfil vertical: haz doble clic en una cara del muro en elevación/3D (o Seleccionar cara)",
+      });
+      return;
+    }
+
     const storeyId = reconcileActiveStoreyId(s.document, wall.storeyId);
-    const storey = getActiveStorey(s.document, storeyId);
-    // Keep a user-selected surface/line plane; only sync storey → host level.
-    const wp =
-      s.activeWorkplane.kind === "storey"
-        ? workplaneFromStorey(storey)
-        : s.activeWorkplane;
     const seeded = seedResultOutlineProfile(s.document.walls, id, wp);
     if (!seeded) {
       set({ status: "Sketch: no se pudo cargar el contorno del muro" });
@@ -1191,18 +1264,22 @@ export const createSketchToolSlice: SessionSliceCreator<{
       sketchProfile: profile,
       sketchProfileStroke: false,
       profileVertexIndex: null,
+      sketchModifyMode: "vertex",
+      sketchModifyPending: null,
       selectedWallId: id,
       selectedDoorId: null,
       selectedWindowId: null,
       selectedCameraId: null,
       activeStoreyId: storeyId,
       activeWorkplane: wp,
+      workplaneLock: "manual",
+      workplaneLinePending: null,
       editingParadigm: "sketch",
       activeTool: "wall",
       drawMode: "line",
       ribbonTab: "modify",
       ...clearDrawGesture(),
-      status: `Sketch · Workplane «${wp.label}» — ${loopNote} · clic vértices · Terminar aplica`,
+      status: `Sketch · Workplane «${wp.label}» — ${loopNote} · preview derivado · Terminar confirma en el documento`,
     });
   },
 
@@ -1247,6 +1324,8 @@ export const createSketchToolSlice: SessionSliceCreator<{
       sketchProfile: null,
       sketchProfileStroke: false,
       profileVertexIndex: null,
+      sketchModifyMode: "vertex",
+      sketchModifyPending: null,
       editingParadigm: "parametric",
       activeTool: "select",
       drawMode: "line",
@@ -1255,7 +1334,7 @@ export const createSketchToolSlice: SessionSliceCreator<{
       // Force viewer resync after un-hiding host solids.
       documentRev: get().documentRev + 1,
       ...clearDrawGesture(),
-      status: "Paramétrico — provisional materializado (muros nuevos)",
+      status: "Paramétrico — perfil vertical aplicado (mismo muro)",
     });
   },
 
@@ -1271,6 +1350,8 @@ export const createSketchToolSlice: SessionSliceCreator<{
       sketchProfile: null,
       sketchProfileStroke: false,
       profileVertexIndex: null,
+      sketchModifyMode: "vertex",
+      sketchModifyPending: null,
       editingParadigm: "parametric",
       activeTool: "select",
       drawMode: "line",

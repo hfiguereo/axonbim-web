@@ -7,7 +7,7 @@ Punto de entrada para agentes de IA. Lee esto antes de cualquier cambio material
 1. **Lee las reglas activas** en `.cursor/rules/` (mandatos cortos).
 2. **Lee la documentación de soporte** bajo `docs/` para el dominio que toques. El detalle vive en docs, no en las rules. Política: `docs/product/doc-governance.md`.
 3. **No copies ni traduzcas** el desktop Godot/Python. Portar = comportamiento → prueba → invariante → especificación → implementación nueva. Ver `docs/migration/migration-rules.md`.
-4. **F5-S cerrado** (2026-08-07). **F8 o1 / F8-CI / o2 aprobados** (2026-08-08) — ver `docs/validation/playwright-f8.md`. No IFC/OCCT/Edit Mode/losas sin auth. Sketch: **SK-profile-one** es el siguiente corte (auth).
+4. **F5-S cerrado** (2026-08-07). **F8 o1 / F8-CI / o2 aprobados** (2026-08-08) — ver `docs/validation/playwright-f8.md`. No IFC/OCCT/Edit Mode/losas sin auth. Sketch: **SK-wall-profile-v1 cerrado** (Bloques 0–7; `.axon` v2).
 5. **No dupliques controles UI** (cinta vs status vs opciones) salvo petición explícita. Ver `docs/ui/interface-base.md` (anti-redundancia).
 6. **Solo `main` por defecto.** No crear ramas (`cursor/…`, diff-tab create-branch, etc.) sin frase explícita del usuario. Detalle: `docs/roadmap/github.md` + regla `40-git-and-scope`.
 7. **Primacía del producto** (ADR 0006): «apruebo todo» no salta validación estricta de gates / SoT / evidencia.
@@ -17,12 +17,12 @@ Punto de entrada para agentes de IA. Lee esto antes de cualquier cambio material
 | Si vas a… | Lee primero |
 |-----------|-------------|
 | Entender el producto | `docs/product/vision.md`, `mvp-scope.md`, `non-negotiables.md`, `doc-governance.md` |
-| Tocar arquitectura / capas | `docs/architecture/overview.md` + ADR: índice en `docs/decisions/README.md` |
+| Tocar arquitectura / capas | `docs/architecture/overview.md` + ADR: índice en `docs/decisions/README.md` (**0018** perfil muro) |
 | Modelo / IDs / `.axon` | `docs/architecture/document-model.md` |
 | Coordenadas / tolerancias / Projection Basis | `docs/architecture/coordinate-system.md` (LR3-D) |
 | Geometría | `docs/architecture/geometry-policy.md`; OCCT parked: ADR 0013 |
 | Paradigmas edición / workplanes | `docs/architecture/editing-paradigms.md`, `docs/roadmap/workplanes-roadmap.md` (**WP-v2 + SK-profile**; losas/Edit Mode con auth) |
-| Contorno sketch (resultado ≠ eje) | **`docs/architecture/sketch-result-outline.md`** — historial SK-* + **SK-replace v0**; siguiente **SK-profile-one** |
+| Contorno sketch (resultado ≠ eje) | **`docs/architecture/sketch-result-outline.md`** · perfil vertical: **ADR 0018** / `docs/validation/sk-wall-profile-*` |
 | Comandos / historial | `docs/architecture/commands-and-history.md` |
 | Invariantes: dominio vs UI | ADR 0017 + `docs/roadmap/domain-invariants-plan.md` (**F9-E cerrada** E1–E6) |
 | **Plan maestro (fuente fundacional)** | **`docs/migration/plan-maestro-resumen.md`** → completo en `docs/migration/plan-maestro-axonbim-web.pdf` |
@@ -30,6 +30,7 @@ Punto de entrada para agentes de IA. Lee esto antes de cualquier cambio material
 | Legado desktop | `docs/migration/legacy-inventory.md`, `migration-rules.md` |
 | Validar / auditoría | `docs/validation/acceptance-matrix.md`, `acceptance-matrix-post-mvp.md`, `technical-audit-2026-08.md`, `playwright-f8.md`, `navigation-3d-checklist.md` |
 | **Auditoría externa 2026-08-08** | **`docs/validation/external-audit-2026-08-08.md`** (P0/P1 de integridad) |
+| **SK wall profile (paquete 2026-08-10)** | **`docs/validation/sk-wall-profile-report-2026-08-10/`** · B0: `sk-wall-profile-bloque0-2026-08-10.md` · B5 checklist: `sk-wall-profile-bloque5-checklist-2026-08-10.md` · ADR **0018** |
 | UI / layout | `docs/ui/interface-base.md`, `reference-shell-baseline.md`, `axonbim-shell-v0.md` |
 | Fase / gates | `docs/roadmap/work-phases.md`, `gates.md`, **`f5-stabilization.md`** |
 | **Pendientes y prioridad (hilo único)** | **`docs/roadmap/pending-work.md`** (avance = línea LR) |

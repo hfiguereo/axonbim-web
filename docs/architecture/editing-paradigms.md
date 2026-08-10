@@ -1,8 +1,8 @@
 # Paradigmas de edición y referencias espaciales
 
-**Estado:** WP-v1/**v2** · SK-v1 · SK-sel · SK-draw · **SK-profile / SK-replace v0**
-cerradas 2026-08-09. **SK-profile-one** (un único perfil al Terminar) = siguiente (auth).
-Edit Mode / Family Editor / Push&Pull / losas siguen **parked** (auth).
+**Estado:** WP-v1/**v2** · SK-* · **SK-profile-one** · **SK-wall-profile-v1 cerrado** (B0–7)
+([ADR 0018](../decisions/0018-wall-vertical-profile.md)). Edit Mode / Family Editor /
+Push&Pull / losas siguen **parked** (auth).
 
 Separar claramente:
 
@@ -56,10 +56,11 @@ Reglas:
   storey / referencia del elemento — no el plano de la cámara).
 - Terminar / Cancelar (Modificar) salen del sketch del elemento y vuelven a
   Parametric Edit; el commit sigue siendo comandos sobre `AxonDocument`.
-- **SK-sel + SK-profile (2026-08-09):** doble clic / «Editar perfil» carga el
-  **contorno resultante** del sólido en el Workplane activo (huella / cara /
-  silueta — no el eje). Ver [`sketch-result-outline.md`](sketch-result-outline.md).
-  **Terminar** reemplaza hosts (muros nuevos); **Cancelar** descarta.
+- **SK-sel + SK-profile + SK-profile-one:** doble clic / «Editar perfil» carga el
+  **contorno resultante**. **SK-wall-profile-v1 (ADR 0018):** edición **vertical** solo
+  desde elevación/3D (planta rechazada); Terminar → `SetWallVerticalProfileCommand` en el
+  **mismo** `wallId`; openings conservados o rechazo. Código del editor: Bloques 2–7.
+  Contrato UX croquis: [`sketch-result-outline.md`](sketch-result-outline.md).
 
 ## Abstracción: trazo global vs commit por contexto (normativa)
 
@@ -82,10 +83,11 @@ gestos Dibujar  →  builders (@axonbim/tools)  →  perfil / polilínea de sesi
 | **Sesión de perfil** (`sketchProfile`) | Contorno abstracto en Workplane (aristas editables, no el sólido BIM) |
 | **Adaptador** | Al confirmar: comandos que **crean** o **reemplazan** (delete + create) hosts |
 
-**Editar perfil (SK-profile / SK-replace v0):** overlay provisional (vértices libres);
-host intacto hasta Terminar. Commit actual = delete + create. **Deuda:** huella libre
-puede crear **N muros por arista** de la silueta (solape) — no es el objetivo de producto
-(un único perfil). Siguiente corte: **SK-profile-one**.
+**Editar perfil (SK-profile-one):** overlay provisional (vértices libres); host
+intacto hasta Terminar. Commit = delete + create. Silueta `result` de **1** host →
+**1** muro convertible o **rechazo** (nunca N por arista). Redibujo `axes` /
+bucles N≥3 siguen permitiendo cadena. Extensión a pisos/techos/terreno: nota
+en el contrato; auth aparte.
 Detalle: [`sketch-result-outline.md`](sketch-result-outline.md).
 
 ## Opciones / herramientas de dibujo (reutilización)
@@ -146,19 +148,24 @@ Detalle workplanes: [`workplanes-roadmap.md`](../roadmap/workplanes-roadmap.md).
 | Seed | `outlineOnWorkplane` (huella / cara / silueta); sólidos host ocultos |
 | Interacción por defecto | Clic/arrastra **vértices libres** del perímetro en el plano activo |
 | Rect/arco | Reemplazan el perímetro en el Workplane (redibujar) |
-| **Terminar** | `commitSketchProfile` → delete hosts + create (v0; puede N muros por arista) |
+| Toolkit Modificar (plan B6) | Mover / split point·line / rotar / fillet / copiar — **con snap + Workplane** |
+| **Terminar** | `commitSketchProfile` → delete + create; **1** muro si `result` 1-host convertible |
 | **Cancelar** | Descarta; documento intacto |
 
 API: `outlineOnWorkplane`, `profileFromClosedRing`, `hitProfileVertex`, `moveProfileVertex`, …
 
-**Deuda v0 → SK-profile-one:** el resultado esperado de producto es **un único perfil**
-sustituyendo al host, no geometría solapada (silueta → N muros). Ver
-[`sketch-result-outline.md`](sketch-result-outline.md).
+**SK-profile-one (2026-08-10):** un perfil materializado; silueta libre no-caja se
+rechaza (sin solape). Ver [`sketch-result-outline.md`](sketch-result-outline.md).
 
-## Fuera de SK-profile (auth aparte)
+## Fuera de SK-profile-one / SK-wall-profile-v1 (auth aparte)
 
-- Losas / pisos · terreno · barridos / perfiles de extrusión (aplicaciones principales)
-- Arco como entidad curva nativa (hoy = segmentos de muro)
+- Losas / pisos · techos · terreno · barridos / perfiles de extrusión
+- Remapeo de perfil al cambiar longitud del muro · joins perfil–perfil
+- Arco como entidad curva nativa (hoy = segmentos)
 - Edit Mode · Family Editor · Push & Pull
 - Sketch que mute malla Three.js
-- Commit de perfil vertical como sólido no-muro (hoy Terminar → muros en planta)
+- Alzado documental completo (LR4); v1 solo contexto de vista para la herramienta
+
+**SK-wall-profile-v1** (perfil U/V del muro): contrato ADR 0018; no es Edit Mode.
+Bloque 6 ampliado: toolkit Modificar sobre sketch **integrado a snap (LR1) y Workplane
+(WP-v1/v2)** — ver [`../roadmap/pending-work.md`](../roadmap/pending-work.md).

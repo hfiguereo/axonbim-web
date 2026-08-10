@@ -78,6 +78,22 @@ export {
   type WallAxisLike,
 } from "./sketchProfile.js";
 
+export {
+  clearProfileEdges,
+  copyProfileTranslated,
+  deleteProfileVertex,
+  filletProfileVertex,
+  hitProfileEdge,
+  offsetProfile,
+  offsetProfileInPlane,
+  rotateProfile,
+  rotateProfileAboutAxis,
+  splitProfileAtPoint,
+  splitProfileEdgeByLine,
+  translateProfile,
+  type SketchPlaneFrame,
+} from "./sketchProfileEdit.js";
+
 /** Two-click placement on plan (eye → target). */
 export function isCameraTool(tool: ToolId): boolean {
   return tool === "camera";

@@ -9,8 +9,9 @@
  *
  * Hosted-opening fit/overlap: see `openingFit.ts` (F9-E2).
  */
-import { MIN_HEIGHT, MIN_THICKNESS, MIN_WALL_LENGTH } from "@axonbim/shared";
+import { MIN_THICKNESS, MIN_WALL_LENGTH } from "@axonbim/shared";
 import type { AxonDocument, Camera, Door, ViewCrop, Wall, Window } from "./types.js";
+import { validateWallVerticalDefinition } from "./wallVertical.js";
 
 export type ValidationIssue = { code: string; message: string };
 
@@ -84,15 +85,16 @@ export function validateWall(wall: Wall, refs: DocumentRefs): ValidationResult {
   if (p1) return p1;
   const p2 = vec3Issue(wall.p2, "wall.point.invalid", `${at}.p2`);
   if (p2) return p2;
-  if (!isFiniteNum(wall.height) || wall.height < MIN_HEIGHT) {
-    return issue("wall.height.min", `${at}: height must be at least ${MIN_HEIGHT} m`);
-  }
   if (!isFiniteNum(wall.thickness) || wall.thickness < MIN_THICKNESS) {
     return issue("wall.thickness.min", `${at}: thickness must be at least ${MIN_THICKNESS} m`);
   }
   const length = Math.hypot(wall.p2.x - wall.p1.x, wall.p2.y - wall.p1.y);
   if (length < MIN_WALL_LENGTH) {
     return issue("wall.length.min", `${at}: axis shorter than ${MIN_WALL_LENGTH} m`);
+  }
+  const verticalIssue = validateWallVerticalDefinition(wall.vertical, length);
+  if (verticalIssue) {
+    return issue(verticalIssue.code, `${at}: ${verticalIssue.message}`);
   }
   return null;
 }

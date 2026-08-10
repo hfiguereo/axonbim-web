@@ -1,4 +1,10 @@
 import type { PlanFlipControl } from "@axonbim/geometry";
+import type { Wall } from "@axonbim/model";
+import {
+  wallFaceFromWorldNormal,
+  wallFaceTowardPoint,
+  wallMaxHeightOf,
+} from "@axonbim/model";
 import {
   Group,
   LineSegments,
@@ -38,6 +44,14 @@ export type CropGripPick = {
   cameraId: string | null;
 };
 
+/** Ephemeral pick for vertical wall profile (ADR 0018). Not SoT. */
+export type WallHit = {
+  wallId: string;
+  face: "front" | "back";
+  point: { x: number; y: number; z: number };
+  normal: { x: number; y: number; z: number };
+};
+
 export type WorkplanePickSpec = {
   origin: { x: number; y: number; z: number };
   normal: { x: number; y: number; z: number };
@@ -56,6 +70,15 @@ export type ViewportPicking = {
     plane: WorkplanePickSpec,
   ) => { x: number; y: number; z: number } | null;
   pickWallId: (clientX: number, clientY: number) => string | null;
+  /**
+   * Ray ∩ wall mesh → WallHit (face/point/normal). Requires live walls for face map.
+   * Prefer this over pickWallId when entering vertical profile edit.
+   */
+  pickWallHit: (
+    clientX: number,
+    clientY: number,
+    walls: readonly Wall[],
+  ) => WallHit | null;
   pickDoorId: (clientX: number, clientY: number) => string | null;
   pickWindowId: (clientX: number, clientY: number) => string | null;
   pickCameraId: (clientX: number, clientY: number) => string | null;
@@ -172,6 +195,77 @@ export function createViewportPicking(ctx: ViewportContext): ViewportPicking {
 
   const pickWallId = (clientX: number, clientY: number) =>
     pickEntityId(clientX, clientY, wallsGroup, WALL_ID);
+
+  const pickWallHit = (
+    clientX: number,
+    clientY: number,
+    walls: readonly Wall[],
+  ): WallHit | null => {
+    ctx.applyPickThreshold();
+    ctx.toNdc(clientX, clientY);
+    ctx.raycaster.setFromCamera(ctx.ndc, ctx.activeCamera());
+    const hits = ctx.raycaster.intersectObjects(wallsGroup.children, true);
+    for (const h of hits) {
+      let o: typeof h.object | null = h.object;
+      let wallId: string | undefined;
+      while (o) {
+        const id = o.userData?.[WALL_ID];
+        if (typeof id === "string") {
+          wallId = id;
+          break;
+        }
+        o = o.parent as typeof o;
+        if (o === wallsGroup) break;
+      }
+      if (!wallId) continue;
+      const wall = walls.find((w) => w.id === wallId);
+      if (!wall) continue;
+      const point = { x: h.point.x, y: h.point.y, z: h.point.z };
+      const nWorld = h.face
+        ? h.face.normal
+            .clone()
+            .transformDirection(h.object.matrixWorld)
+            .normalize()
+        : new Vector3(0, 0, 1);
+      const normal = { x: nWorld.x, y: nWorld.y, z: nWorld.z };
+      const face =
+        Math.hypot(normal.x, normal.y) > 1e-6
+          ? wallFaceFromWorldNormal(wall, normal)
+          : wallFaceTowardPoint(wall, point);
+      return { wallId, face, point, normal };
+    }
+    // Proximity fallback: id + face toward a point near the wall mid on the ray.
+    const wallId = pickWallId(clientX, clientY);
+    if (!wallId) return null;
+    const wall = walls.find((w) => w.id === wallId);
+    if (!wall) return null;
+    const mid = {
+      x: (wall.p1.x + wall.p2.x) / 2,
+      y: (wall.p1.y + wall.p2.y) / 2,
+      z: (wall.p1.z + wall.p2.z) / 2 + wallMaxHeightOf(wall) * 0.5,
+    };
+    const face = wallFaceTowardPoint(wall, mid);
+    const half = wall.thickness * 0.5;
+    const dx = wall.p2.x - wall.p1.x;
+    const dy = wall.p2.y - wall.p1.y;
+    const len = Math.hypot(dx, dy) || 1;
+    let nx = -dy / len;
+    let ny = dx / len;
+    if (face === "back") {
+      nx = -nx;
+      ny = -ny;
+    }
+    return {
+      wallId,
+      face,
+      point: {
+        x: mid.x + nx * half,
+        y: mid.y + ny * half,
+        z: mid.z,
+      },
+      normal: { x: nx, y: ny, z: 0 },
+    };
+  };
 
   const pickDoorId = (clientX: number, clientY: number) => {
     const fromSolid = pickEntityId(clientX, clientY, doorsGroup, DOOR_ID);
@@ -306,6 +400,7 @@ export function createViewportPicking(ctx: ViewportContext): ViewportPicking {
     pickGround,
     pickWorkplane,
     pickWallId,
+    pickWallHit,
     pickDoorId,
     pickWindowId,
     pickCameraId,

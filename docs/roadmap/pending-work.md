@@ -3,7 +3,8 @@
 **Fuente de verdad** para lo que queda por hacer. Si otro documento contradice este,
 **prevalece este** hasta que se actualice explícitamente.
 
-Última revisión: **2026-08-10** — hilo LR; SK-* base cerradas; **SK-profile-one** siguiente (auth).
+Última revisión: **2026-08-10** — **SK-wall-profile-v1 cerrado** (Bloques 0–7).
+Siguiente hilo: losas / terreno / barridos u Edit Mode (auth). ADR 0018.
 
 Detalle de bloques LR: [`legacy-reuse-roadmap.md`](legacy-reuse-roadmap.md) ·
 resumen [`../migration/plan-integracion-selectiva-resumen.md`](../migration/plan-integracion-selectiva-resumen.md).
@@ -16,8 +17,9 @@ Secuencia obligatoria. **No saltar** bloques ni abrir IFC/OCCT/Edit Mode antes d
 prerrequisito. Cada bloque = frase explícita en chat + gate.
 
 ```
-LR0–LR3 + WP + SK-* base → **SK-profile-one** (auth) → losas/terreno/barridos u Edit Mode (auth)
-                                                      ↘ LR3-D → LR4… (parked)
+LR0–LR3 + WP + SK-* + SK-profile-one + SK-wall-profile-v1
+  → losas/terreno/barridos u Edit Mode (auth)
+  ↘ LR3-D → LR4… (parked)
 ```
 
 | Orden | Bloque | Estado | Gate de cierre |
@@ -32,9 +34,10 @@ LR0–LR3 + WP + SK-* base → **SK-profile-one** (auth) → losas/terreno/barri
 | — | **SK-v1** Sketch Mode (rectángulo) | **cerrada** 2026-08-09 | [`editing-paradigms.md`](../architecture/editing-paradigms.md) |
 | — | **SK-sel** Sketch sobre selección | **cerrada** 2026-08-09 | Entrada UX; carga perfil (SK-profile) |
 | — | **SK-draw** Dibujar completo | **cerrada** 2026-08-09 | Builders globales; commit muro = adaptador crear |
-| — | **SK-profile** + **SK-replace v0** | **cerrada** 2026-08-09 | Provisional libre; replace Delete+Create; **deuda: N muros por arista de silueta** |
-| **1** | **SK-profile-one** | **siguiente** (auth) | Un único perfil materializado; sin solape silueta→N muros. Contrato: [`sketch-result-outline.md`](../architecture/sketch-result-outline.md) |
-| **2** | **Sketch → losas / terreno / barridos** u **Edit Mode** | auth | Tras SK-profile-one (o en paralelo solo con auth explícita) |
+| — | **SK-profile** + **SK-replace v0** | **cerrada** 2026-08-09 | Provisional libre; replace Delete+Create |
+| — | **SK-profile-one** | **cerrada** 2026-08-10 | Anti silueta→N muros; **no** perfil vertical persistente |
+| — | **SK-wall-profile-v1** | **cerrada** 2026-08-10 | ADR 0018; `.axon` v2; Bloques 0–7 |
+| **1** | **Sketch → losas / terreno / barridos** u **Edit Mode** | auth | Frase explícita; no IFC/OCCT |
 
 ### Parked (no son el hilo actual)
 
@@ -59,12 +62,14 @@ qué **no** se reutiliza · tests. Tras: archivos · tests · Undo/Redo si aplic
 
 ### Próximo paso
 
-Autorizar **SK-profile-one** (un único perfil al Terminar; sin silueta→N muros).
-Frase p. ej. «autorizo SK-profile-one». Detalle:
-[`../architecture/sketch-result-outline.md`](../architecture/sketch-result-outline.md).
+**SK-wall-profile-v1 cerrado.** Autorizar el siguiente producto con frase explícita, p. ej.:
 
-Losas / terreno / barridos / Edit Mode: auth aparte **después** (o con frase explícita).
-Family Editor / Push&Pull / LR1-C / LR4+ parked.
+> Autorizo Sketch → losas (o Edit Mode / terreno / barridos).
+
+Bloque 7: `.axon` v2 · migración `height`→`vertical` · round-trip perfil · reject sin degradar.
+ADR: [`../decisions/0018-wall-vertical-profile.md`](../decisions/0018-wall-vertical-profile.md).
+
+Family Editor / Push&Pull / LR1-C / LR4+ / IFC / OCCT: parked.
 
 ---
 
@@ -86,8 +91,9 @@ Family Editor / Push&Pull / LR1-C / LR4+ parked.
 | **SK-v1** Sketch Mode | **cerrada** | Rectángulo → 4 muros / CompositeCommand; arcos stub |
 | **SK-sel** Sketch selección | **cerrada** | Doble clic / Editar perfil; `sketchTarget` |
 | **SK-draw** Dibujar | **cerrada** | Arcos tessellados; pickLines/pickFace; preview polilínea |
-| **SK-profile** + SK-replace v0 | **cerrada** | Provisional libre; replace; **deuda** silueta→N muros |
-| **SK-profile-one** | **siguiente** | Un perfil materializado; ver `sketch-result-outline.md` |
+| **SK-profile** + SK-replace v0 | **cerrada** | Provisional libre; replace Delete+Create |
+| **SK-profile-one** | **cerrada** 2026-08-10 | Anti silueta→N muros; no perfil vertical |
+| **SK-wall-profile-v1** | **cerrada** 2026-08-10 | Bloques 0–7; `.axon` v2 |
 
 ### Checklists humanas cerradas (referencia)
 
@@ -106,8 +112,16 @@ Family Editor / Push&Pull / LR1-C / LR4+ parked.
 | SK-v1 Sketch Mode | OK 2026-08-09 — rectángulo en Workplane; undo atómico de 4 muros |
 | SK-sel Sketch selección | OK 2026-08-09 — muro; Dibujar reutilizado |
 | SK-draw Dibujar | OK 2026-08-09 — 6 modos; tests tools + session |
-| SK-profile / SK-replace v0 | OK código 2026-08-09 — deuda producto: silueta libre → N muros (solape) |
-| SK-profile-one | **pendiente auth** — un único perfil al Terminar |
+| SK-profile / SK-replace v0 | OK código 2026-08-09 |
+| SK-profile-one | OK 2026-08-10 — anti N muros; croquis vertical = parked |
+| SK-wall-profile-v1 Bloque 0 | OK 2026-08-10 — diagnóstico |
+| SK-wall-profile-v1 Bloque 1 | OK 2026-08-10 — ADR 0018 |
+| SK-wall-profile-v1 Bloque 2 | OK 2026-08-10 — `wallVertical.ts` |
+| SK-wall-profile-v1 Bloque 3 | OK 2026-08-10 — `wallProfileMesh` + 7 tests |
+| SK-wall-profile-v1 Bloque 4 | OK 2026-08-10 — `SetWallVerticalProfileCommand` + 6 tests Undo/Redo IDs |
+| SK-wall-profile-v1 Bloque 5 | OK código 2026-08-10 — `WallHit` / gate planta / WP freeze; checklist humana frontal·lateral·iso |
+| SK-wall-profile-v1 Bloque 6 | OK 2026-08-10 — Terminar in-place + toolkit Modificar (snap+WP) |
+| SK-wall-profile-v1 Bloque 7 | OK 2026-08-10 — `.axon` v2; migración; round-trip; Properties perfil RO — **feature cerrada** |
 
 ### Bugs de checklist (cerrados / aceptados)
 
@@ -115,6 +129,12 @@ Family Editor / Push&Pull / LR1-C / LR4+ parked.
 |----|--------|
 | **BUG-C** máscara crop cámara | **corregido** 2026-08-08 |
 | **BUG-D4** flip controls vs zoom | **aceptado por ahora** 2026-08-08 |
+
+### Bugs UI
+
+| ID | Estado | Notas |
+|----|--------|-------|
+| **BUG-UI-NUM** | **corregido** 2026-08-10 | `PropsNumberInput`: draft local; commit blur/Enter (y valor completo / spinner). Tests: `propsNumberCommit.test.ts`. |
 
 ---
 

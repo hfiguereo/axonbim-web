@@ -9,8 +9,8 @@ function wall(): Wall {
     familyId: "family.block-150",
     p1: { x: 0, y: 0, z: 0 },
     p2: { x: 6, y: 0, z: 0 },
-    height: 2.7,
     thickness: 0.15,
+    vertical: { kind: "uniform", height: 2.7 },
   };
 }
 

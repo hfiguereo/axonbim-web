@@ -27,6 +27,7 @@ import {
   findWindowFamily,
   openingsOnWall,
   validateHostedOpening,
+  wallMaxHeightOf,
   type Door,
   type DoorLeafState,
   type DoorSwing,
@@ -265,7 +266,10 @@ export const createSelectionSlice: SessionSliceCreator<{
     const wall = get().document.walls.find((w) => w.id === door.wallId);
     if (!wall) return;
     // Tool may trim height; command re-validates fit + overlap (doors and windows).
-    const height = Math.min(fam.height, Math.max(0.5, wall.height - OPENING_VERTICAL_MARGIN));
+    const height = Math.min(
+      fam.height,
+      Math.max(0.5, wallMaxHeightOf(wall) - OPENING_VERTICAL_MARGIN),
+    );
     const candidate: Door = { ...door, familyId, width: fam.width, height };
     const fit = validateHostedOpening(
       asOpeningSpec(candidate),

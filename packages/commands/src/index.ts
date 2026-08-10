@@ -9,6 +9,7 @@ export {
   SetWallFamilyCommand,
   SetWallHeightCommand,
   SetWallThicknessCommand,
+  SetWallVerticalProfileCommand,
   createWallId,
   resetWallIdSeq,
 } from "./walls";

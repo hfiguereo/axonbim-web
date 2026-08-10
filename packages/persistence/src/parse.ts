@@ -63,7 +63,7 @@ import {
   tryReadDoor,
   tryReadWall,
   tryReadWindow,
-  type AxonFileV1,
+  type AxonFile,
 } from "./shape.js";
 
 export type RecoverResult = {
@@ -71,7 +71,7 @@ export type RecoverResult = {
   warnings: string[];
 };
 
-function checkCaps(file: AxonFileV1): void {
+function checkCaps(file: AxonFile): void {
   if (file.storeys.length > MAX_STOREYS) failAxon(`too many storeys (>${MAX_STOREYS})`);
   if (file.families.length > MAX_WALL_FAMILIES) {
     failAxon(`too many families (>${MAX_WALL_FAMILIES})`);
@@ -88,7 +88,7 @@ function checkCaps(file: AxonFileV1): void {
   if (file.cameras.length > MAX_CAMERAS) failAxon(`too many cameras (>${MAX_CAMERAS})`);
 }
 
-function assertUniqueIds(file: AxonFileV1): void {
+function assertUniqueIds(file: AxonFile): void {
   const seen = new Map<string, string>();
   const claim = (id: string, kind: string) => {
     const prev = seen.get(id);
@@ -109,11 +109,12 @@ function checkIssue(issue: ValidationResult): void {
   if (issue) failAxon(issue.message);
 }
 
-function toDocument(file: AxonFileV1): AxonDocument {
+function toDocument(file: AxonFile): AxonDocument {
   return {
     meta: {
       format: "axon",
-      formatVersion: 1,
+      // Always promote to v2 in memory after read (ADR 0018 Bloque 7).
+      formatVersion: 2,
       name: file.meta.name,
       createdAt: file.meta.createdAt,
       updatedAt: file.meta.updatedAt,
@@ -130,7 +131,7 @@ function toDocument(file: AxonFileV1): AxonDocument {
   };
 }
 
-function validateSemantics(file: AxonFileV1): void {
+function validateSemantics(file: AxonFile): void {
   const refs: DocumentRefs = {
     storeyIds: new Set(file.storeys.map((s) => s.id)),
     wallFamilyIds: new Set(file.families.map((f) => f.id)),
@@ -416,8 +417,16 @@ export function parseDocumentRecover(text: string): RecoverResult {
   if (root.format !== "axon") {
     warnings.push(`format was ${JSON.stringify(root.format)} — treating as axon`);
   }
-  if (root.formatVersion !== 1) {
-    warnings.push(`formatVersion was ${String(root.formatVersion)} — treating as 1`);
+  let recoverFormat: 1 | 2 = 2;
+  if (root.formatVersion === 1) {
+    recoverFormat = 1;
+    warnings.push("formatVersion 1 — migrated to vertical / v2 in memory");
+  } else if (root.formatVersion === 2) {
+    recoverFormat = 2;
+  } else if (root.formatVersion !== undefined) {
+    warnings.push(
+      `formatVersion was ${String(root.formatVersion)} — treating as 2`,
+    );
   }
 
   const metaObj = isObj(root.meta) ? root.meta : {};
@@ -433,7 +442,7 @@ export function parseDocumentRecover(text: string): RecoverResult {
   const wallRaw = Array.isArray(root.walls) ? root.walls : [];
   if (!Array.isArray(root.walls)) warnings.push("walls missing/invalid — treated as []");
   wallRaw.slice(0, MAX_WALLS).forEach((raw, i) => {
-    const r = tryReadWall(raw, i);
+    const r = tryReadWall(raw, i, recoverFormat);
     if (!r.ok) {
       warnings.push(`walls[${i}] discarded: ${stripInvalidPrefix(r.reason)}`);
       return;
@@ -603,9 +612,9 @@ export function parseDocumentRecover(text: string): RecoverResult {
     }
   }
 
-  const file: AxonFileV1 = {
+  const file: AxonFile = {
     format: "axon",
-    formatVersion: 1,
+    formatVersion: 2,
     meta: { name, createdAt, updatedAt },
     storeys: catalogs.storeys,
     families: catalogs.families,

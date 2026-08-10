@@ -85,6 +85,7 @@ describe("WP-v2 tangible workplanes", () => {
     useSessionStore.getState().wallClick({ x: 4, y: 0, z: 0 });
     const wallId = useSessionStore.getState().document.walls[0]!.id;
 
+    useSessionStore.getState().setActiveView("view.3d.perspective");
     useSessionStore.getState().setWorkplaneFromSurface(wallId, "front");
     const wpBefore = useSessionStore.getState().activeWorkplane;
     expect(wpBefore.kind).toBe("surface");
@@ -111,5 +112,28 @@ describe("WP-v2 tangible workplanes", () => {
     const moved = after.sketchProfile!.edges[0]!.p1;
     expectOnPlane(after.activeWorkplane, moved);
     expect(moved.z).toBeCloseTo(target.z, 5);
+  });
+
+  it("WP-04: sketch freezes Workplane (storey / surface change blocked)", () => {
+    useSessionStore.getState().newProject();
+    useSessionStore.getState().setTool("wall");
+    useSessionStore.getState().wallClick({ x: 0, y: 0, z: 0 });
+    useSessionStore.getState().wallClick({ x: 3, y: 0, z: 0 });
+    const wallId = useSessionStore.getState().document.walls[0]!.id;
+    useSessionStore.getState().setActiveView("view.3d.perspective");
+    useSessionStore.getState().enterSketchOnElement("wall", wallId, { face: "front" });
+    const wpId = useSessionStore.getState().activeWorkplane.id;
+
+    useSessionStore.getState().resetWorkplaneToLevel();
+    expect(useSessionStore.getState().activeWorkplane.id).toBe(wpId);
+    expect(useSessionStore.getState().status).toMatch(/Sketch activo/i);
+
+    useSessionStore.getState().setActiveStoreyId(
+      useSessionStore.getState().activeStoreyId,
+    );
+    expect(useSessionStore.getState().activeWorkplane.id).toBe(wpId);
+
+    useSessionStore.getState().setWorkplaneFromSurface(wallId, "back");
+    expect(useSessionStore.getState().activeWorkplane.host?.face).toBe("front");
   });
 });

@@ -8,6 +8,7 @@
  */
 import type { Door, Wall, Window } from "./types.js";
 import type { ValidationResult } from "./validate.js";
+import { wallMaxHeightOf } from "./wallVertical.js";
 
 /** Clearance from wall ends (m). Matches the prior UI margin. */
 export const OPENING_END_MARGIN = 0.05;
@@ -84,7 +85,8 @@ export function validateOpeningFitsWall(
       `opening ${opening.id}: too close to wall end (need ${OPENING_END_MARGIN} m clearance)`,
     );
   }
-  if (opening.sill + opening.height > wall.height - OPENING_VERTICAL_MARGIN) {
+  // Headroom vs uniform height today; profile-aware check lives in wallVertical.ts.
+  if (opening.sill + opening.height > wallMaxHeightOf(wall) - OPENING_VERTICAL_MARGIN) {
     return issue(
       "opening.verticalFit",
       `opening ${opening.id}: sill+height exceeds wall height (need ${OPENING_VERTICAL_MARGIN} m headroom)`,

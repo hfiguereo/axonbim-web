@@ -41,6 +41,16 @@ export {
 } from "./openings";
 export type { WallOpening } from "./openings";
 export {
+  ensureProfileCcw,
+  meshBufferBBox,
+  profileLoopArea,
+  triangulateProfileLoop,
+  wallProfileMesh,
+  wallProfileMetrics,
+  wallProfileSupportsMiter,
+} from "./wallProfileMesh";
+export type { WallProfileMeshOptions } from "./wallProfileMesh";
+export {
   doorBasis,
   doorLeafMesh,
   doorAssemblyMeshes,

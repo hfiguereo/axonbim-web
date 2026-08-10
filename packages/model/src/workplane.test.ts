@@ -7,6 +7,8 @@ import {
   pointOnWorkplaneXY,
   projectPointOntoWorkplane,
   resolveSpatialReference,
+  wallFaceFromWorldNormal,
+  wallFaceTowardPoint,
   workplaneFromLineTrace,
   workplaneFromStorey,
   workplaneFromWallFace,
@@ -55,8 +57,8 @@ describe("workplane (WP-v1 / WP-v2)", () => {
       familyId: "family.block-150",
       p1: { x: 0, y: 0, z: 0 },
       p2: { x: 4, y: 0, z: 0 },
-      height: 2.7,
       thickness: 0.2,
+      vertical: { kind: "uniform", height: 2.7 },
     };
     const front = workplaneFromWallFace(wall, "front");
     expect(front).not.toBeNull();
@@ -85,6 +87,23 @@ describe("workplane (WP-v1 / WP-v2)", () => {
     expect(wp!.axisV.z).toBe(1);
     expect(wp!.normal.y).toBeCloseTo(-1); // U×V with U=+X, V=+Z
     expect(workplaneFromLineTrace({ x: 0, y: 0, z: 0 }, { x: 0.01, y: 0, z: 0 }, "s", 0)).toBeNull();
+  });
+
+  it("maps hit normals to front/back faces (WallHit)", () => {
+    const wall: Wall = {
+      id: "w1",
+      storeyId: "s",
+      familyId: "f",
+      p1: { x: 0, y: 0, z: 0 },
+      p2: { x: 4, y: 0, z: 0 },
+      thickness: 0.2,
+      vertical: { kind: "uniform", height: 2.7 },
+    };
+    // Front = +Y for wall along +X
+    expect(wallFaceFromWorldNormal(wall, { x: 0, y: 1, z: 0 })).toBe("front");
+    expect(wallFaceFromWorldNormal(wall, { x: 0, y: -1, z: 0 })).toBe("back");
+    expect(wallFaceTowardPoint(wall, { x: 2, y: 1, z: 1 })).toBe("front");
+    expect(wallFaceTowardPoint(wall, { x: 2, y: -1, z: 1 })).toBe("back");
   });
 
   it("intersects a ray with a vertical workplane", () => {

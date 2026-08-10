@@ -1,4 +1,5 @@
 import type { Door, Wall, Window } from "@axonbim/model";
+import { wallMaxHeightOf } from "@axonbim/model";
 import { MIN_WALL_LENGTH } from "@axonbim/shared";
 import type { MeshBuffer } from "./types";
 import { emptyMesh, type WallMeshOptions, wallBoxMesh } from "./wallBox";
@@ -65,7 +66,7 @@ function wallSlab(
       y: wall.p1.y + uy * along1,
       z: baseZ + z0,
     },
-    height: z1 - z0,
+    vertical: { kind: "uniform", height: z1 - z0 },
   };
   return wallBoxMesh(slab);
 }
@@ -89,12 +90,13 @@ export function wallMeshWithOpenings(
   const length = Math.hypot(dx, dy);
   if (length < MIN_WALL_LENGTH) return emptyMesh();
 
+  const wallH = wallMaxHeightOf(wall);
   // Defensive clamps only — callers must pass openings that already fit.
   const cleaned = openings
     .map((o) => ({
       ...o,
       width: Math.min(o.width, length - MIN_WALL_LENGTH),
-      height: Math.min(o.height, wall.height - o.sill),
+      height: Math.min(o.height, wallH - o.sill),
     }))
     .filter((o) => o.width >= MIN_WALL_LENGTH && o.height > 0)
     .sort((a, b) => a.centerAlong - b.centerAlong);
@@ -110,19 +112,19 @@ export function wallMeshWithOpenings(
     const left = Math.max(0, o.centerAlong - o.width / 2);
     const right = Math.min(length, o.centerAlong + o.width / 2);
     if (left - cursor >= MIN_WALL_LENGTH) {
-      appendMesh(acc, wallSlab(wall, cursor, left, 0, wall.height));
+      appendMesh(acc, wallSlab(wall, cursor, left, 0, wallH));
     }
     if (o.sill > 0) {
       appendMesh(acc, wallSlab(wall, left, right, 0, o.sill));
     }
     const head = o.sill + o.height;
-    if (head < wall.height - 1e-6) {
-      appendMesh(acc, wallSlab(wall, left, right, head, wall.height));
+    if (head < wallH - 1e-6) {
+      appendMesh(acc, wallSlab(wall, left, right, head, wallH));
     }
     cursor = right;
   }
   if (length - cursor >= MIN_WALL_LENGTH) {
-    appendMesh(acc, wallSlab(wall, cursor, length, 0, wall.height));
+    appendMesh(acc, wallSlab(wall, cursor, length, 0, wallH));
   }
   return finishMesh(acc);
 }

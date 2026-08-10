@@ -6,8 +6,8 @@ function wall(partial: Partial<Wall> & Pick<Wall, "id" | "p1" | "p2">): Wall {
   return {
     storeyId: "storey.default",
     familyId: "family.block-150",
-    height: 2.7,
     thickness: 0.15,
+    vertical: { kind: "uniform", height: 2.7 },
     ...partial,
   };
 }
@@ -26,7 +26,7 @@ describe("modelEnvelope (LR3-C)", () => {
         id: "w1",
         p1: { x: -2, y: -1, z: 0 },
         p2: { x: 4, y: 3, z: 0 },
-        height: 2.7,
+        vertical: { kind: "uniform", height: 2.7 },
       }),
     );
     const env = computeModelEnvelope(doc);

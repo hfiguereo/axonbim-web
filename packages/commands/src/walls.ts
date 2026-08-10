@@ -1,15 +1,25 @@
-import type { AxonDocument, Wall } from "@axonbim/model";
+import type { AxonDocument, Wall, WallVerticalDefinition } from "@axonbim/model";
 import {
   asOpeningSpec,
+  cloneWallVertical,
   documentRefs,
   openingsOnWall,
   validateHostedOpening,
+  validateOpeningInsideWallProfile,
   validateWall,
+  validateWallVerticalDefinition,
+  wallLength,
+  wallVerticalEquals,
+  wallVerticalFromHeight,
 } from "@axonbim/model";
 import { CHANGED, NOOP, rejected, type Command, type CommandResult } from "./types";
 
 export type { Command } from "./types";
 export { HistoryStack } from "./history";
+
+function almostEqual(a: number, b: number, eps = 1e-6): boolean {
+  return Math.abs(a - b) <= eps;
+}
 
 let wallSeq = 0;
 
@@ -48,7 +58,12 @@ export class CreateWallCommand implements Command {
     }
     const invalid = checkWall(doc, this.wall);
     if (invalid) return invalid;
-    doc.walls.push({ ...this.wall, p1: { ...this.wall.p1 }, p2: { ...this.wall.p2 } });
+    doc.walls.push({
+      ...this.wall,
+      p1: { ...this.wall.p1 },
+      p2: { ...this.wall.p2 },
+      vertical: cloneWallVertical(this.wall.vertical),
+    });
     doc.meta.updatedAt = new Date().toISOString();
     return CHANGED;
   }
@@ -77,6 +92,7 @@ export class DeleteWallCommand implements Command {
       ...found,
       p1: { ...found.p1 },
       p2: { ...found.p2 },
+      vertical: cloneWallVertical(found.vertical),
     };
     this.doorSnapshots = doc.doors.filter((d) => d.wallId === this.wallId).map((d) => ({ ...d }));
     this.windowSnapshots = doc.windows
@@ -95,6 +111,7 @@ export class DeleteWallCommand implements Command {
       ...this.snapshot,
       p1: { ...this.snapshot.p1 },
       p2: { ...this.snapshot.p2 },
+      vertical: cloneWallVertical(this.snapshot.vertical),
     });
     for (const d of this.doorSnapshots) doc.doors.push({ ...d });
     for (const w of this.windowSnapshots) doc.windows.push({ ...w });
@@ -134,6 +151,16 @@ export class SetWallEndpointsCommand implements Command {
       p1: { ...this.p1 },
       p2: { ...this.p2 },
     };
+    if (w.vertical.kind === "profile") {
+      const oldLen = wallLength(w);
+      const newLen = wallLength(candidate);
+      if (!almostEqual(oldLen, newLen, 1e-6)) {
+        return rejected({
+          code: "wall.profile.lengthLocked",
+          message: `wall ${this.wallId}: cannot change length while a custom vertical profile is set`,
+        });
+      }
+    }
     const invalid = checkWall(doc, candidate);
     if (invalid) return invalid;
     const hosted = [
@@ -164,7 +191,7 @@ export class SetWallEndpointsCommand implements Command {
 export class SetWallHeightCommand implements Command {
   readonly id: string;
   readonly type = "wall.setHeight";
-  private prev = 0;
+  private prev: WallVerticalDefinition | null = null;
 
   constructor(
     private readonly wallId: string,
@@ -176,19 +203,95 @@ export class SetWallHeightCommand implements Command {
   execute(doc: AxonDocument): CommandResult {
     const w = doc.walls.find((x) => x.id === this.wallId);
     if (!w) return notFound(this.wallId);
-    if (w.height === this.height) return NOOP;
-    const invalid = checkWall(doc, { ...w, height: this.height });
+    if (w.vertical.kind === "profile") {
+      return rejected({
+        code: "wall.profile.heightLocked",
+        message: `wall ${this.wallId}: use Restablecer perfil / SetWallVerticalProfile to change a custom profile`,
+      });
+    }
+    const next = wallVerticalFromHeight(this.height);
+    if (wallVerticalEquals(w.vertical, next)) return NOOP;
+    const invalid = checkWall(doc, { ...w, vertical: next });
     if (invalid) return invalid;
-    this.prev = w.height;
-    w.height = this.height;
+    // Openings must still fit the new uniform height.
+    const hosted = [
+      ...doc.doors.filter((d) => d.wallId === w.id),
+      ...doc.windows.filter((win) => win.wallId === w.id),
+    ];
+    const candidate: Wall = { ...w, vertical: next };
+    for (const h of hosted) {
+      const others = openingsOnWall(w.id, doc.doors, doc.windows, h.id);
+      const fit = validateHostedOpening(asOpeningSpec(h), candidate, others);
+      if (fit) return rejected(fit);
+    }
+    this.prev = cloneWallVertical(w.vertical);
+    w.vertical = next;
     doc.meta.updatedAt = new Date().toISOString();
     return CHANGED;
   }
 
   undo(doc: AxonDocument): void {
     const w = doc.walls.find((x) => x.id === this.wallId);
-    if (!w) return;
-    w.height = this.prev;
+    if (!w || !this.prev) return;
+    w.vertical = cloneWallVertical(this.prev);
+    doc.meta.updatedAt = new Date().toISOString();
+  }
+}
+
+/**
+ * ADR 0018 / SK-wall-profile-v1 Bloque 4 — set vertical definition in place.
+ * Preserves wallId, openings (when they still fit), family, thickness, storey.
+ */
+export class SetWallVerticalProfileCommand implements Command {
+  readonly id: string;
+  readonly type = "wall.setVerticalProfile";
+  private prev: WallVerticalDefinition | null = null;
+
+  constructor(
+    private readonly wallId: string,
+    private readonly nextVertical: WallVerticalDefinition,
+  ) {
+    this.id = `cmd.vertical.${wallId}`;
+  }
+
+  execute(doc: AxonDocument): CommandResult {
+    const w = doc.walls.find((x) => x.id === this.wallId);
+    if (!w) return notFound(this.wallId);
+
+    const next = cloneWallVertical(this.nextVertical);
+    if (wallVerticalEquals(w.vertical, next)) return NOOP;
+
+    const len = wallLength(w);
+    const profileIssue = validateWallVerticalDefinition(next, len);
+    if (profileIssue) return rejected(profileIssue);
+
+    const candidate: Wall = { ...w, vertical: next };
+    const invalid = checkWall(doc, candidate);
+    if (invalid) return invalid;
+
+    const hosted = [
+      ...doc.doors.filter((d) => d.wallId === w.id),
+      ...doc.windows.filter((win) => win.wallId === w.id),
+    ];
+    for (const h of hosted) {
+      const spec = asOpeningSpec(h);
+      const inside = validateOpeningInsideWallProfile(spec, candidate, next);
+      if (inside) return rejected(inside);
+      const others = openingsOnWall(w.id, doc.doors, doc.windows, h.id);
+      const fit = validateHostedOpening(spec, candidate, others);
+      if (fit) return rejected(fit);
+    }
+
+    this.prev = cloneWallVertical(w.vertical);
+    w.vertical = next;
+    doc.meta.updatedAt = new Date().toISOString();
+    return CHANGED;
+  }
+
+  undo(doc: AxonDocument): void {
+    const w = doc.walls.find((x) => x.id === this.wallId);
+    if (!w || !this.prev) return;
+    w.vertical = cloneWallVertical(this.prev);
     doc.meta.updatedAt = new Date().toISOString();
   }
 }

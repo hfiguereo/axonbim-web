@@ -9,7 +9,8 @@
 | **SK-v1** Sketch Mode (rectángulo) | **cerrada** 2026-08-09 | Solo paramétrico sobre Workplane |
 | **SK-sel** Sketch sobre selección | **cerrada** 2026-08-09 | Doble clic / Editar perfil (muro) |
 | **SK-profile** Perfil abstracto | **cerrada** 2026-08-09 | Perímetro editable; SK-replace v0 |
-| **SK-profile-one** | **siguiente** (auth) | Un perfil al Terminar; ver `sketch-result-outline.md` |
+| **SK-profile-one** | **cerrada** 2026-08-10 | Anti N muros; ver `sketch-result-outline.md` |
+| **SK-wall-profile-v1** | **cerrada** 2026-08-10 | Bloques 0–7; `.axon` v2 |
 | **SK-draw** Dibujar completo | **cerrada** 2026-08-09 | Línea/rect/arcos/pick |
 | Edit Mode / Family Editor / Push&Pull | **parked** | Auth aparte |
 | Planos inclinados 3 pts / persistencia `.axon` | **parked** | Auth + ADR |

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createDemoDocument, createEmptyDocument } from "./create.js";
 import type { AxonDocument } from "./types.js";
+import { wallMaxHeightOf } from "./wallVertical.js";
 
 /**
  * The same referential rules the `.axon` parser enforces at the boundary
@@ -16,7 +17,7 @@ function expectReferentialIntegrity(doc: AxonDocument) {
   for (const w of doc.walls) {
     expect(storeyIds.has(w.storeyId)).toBe(true);
     expect(familyIds.has(w.familyId)).toBe(true);
-    expect(w.height).toBeGreaterThan(0);
+    expect(wallMaxHeightOf(w)).toBeGreaterThan(0);
     expect(w.thickness).toBeGreaterThan(0);
     expect(Math.hypot(w.p2.x - w.p1.x, w.p2.y - w.p1.y)).toBeGreaterThan(0);
   }
@@ -40,7 +41,7 @@ describe("createEmptyDocument", () => {
   it("stamps the .axon format metadata", () => {
     const doc = createEmptyDocument("Casa");
     expect(doc.meta.format).toBe("axon");
-    expect(doc.meta.formatVersion).toBe(1);
+    expect(doc.meta.formatVersion).toBe(2);
     expect(doc.meta.name).toBe("Casa");
     expect(Number.isNaN(Date.parse(doc.meta.createdAt))).toBe(false);
     expect(Number.isNaN(Date.parse(doc.meta.updatedAt))).toBe(false);

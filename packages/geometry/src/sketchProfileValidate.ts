@@ -1,15 +1,13 @@
 /**
  * Validate provisional sketch profile before Terminar replaces hosts.
- * Contrato: docs/architecture/sketch-result-outline.md (SK-replace).
+ * Contrato: docs/architecture/sketch-result-outline.md (SK-profile-one).
  */
 
 import type { Workplane } from "@axonbim/model";
 import { MIN_THICKNESS, MIN_WALL_LENGTH, type Vec3 } from "@axonbim/shared";
 import {
-  faceLineToWallAxis,
   insetRingToAxes,
   invertStoreyFootprint,
-  invertVerticalFaceOutline,
   isWallBoxFootprint,
 } from "./wallResultOutline.js";
 
@@ -87,17 +85,25 @@ export function validateSketchProfileForHost(
   }
 
   if (ctx.hasOpenings) {
-    return fail(
-      "profile.openings",
-      "No se puede reemplazar: hay puertas/ventanas en muros del perfil",
-    );
+    // In-place vertical profile (surface/line) keeps openings via command validation.
+    const faceInPlace =
+      profile.semantic !== "axes" &&
+      profile.closed &&
+      ctx.sourceCount === 1 &&
+      (ctx.workplane.kind === "surface" || ctx.workplane.kind === "line");
+    if (!faceInPlace) {
+      return fail(
+        "profile.openings",
+        "No se puede reemplazar: hay puertas/ventanas en muros del perfil",
+      );
+    }
   }
 
   const asResult = profile.semantic !== "axes";
   const ring = ringFromProfile(profile);
   const wp = ctx.workplane;
 
-  // Single storey result: prefer invertible footprint; else free edges → axes.
+  // Single storey result: only invertible box footprint → 1 wall (SK-profile-one).
   if (asResult && profile.closed && ctx.sourceCount === 1 && wp.kind === "storey") {
     if (
       profile.edges.length === 4 &&
@@ -113,14 +119,13 @@ export function validateSketchProfileForHost(
         return { ok: true };
       }
     }
-    // Free / non-rect silhouette: each usable edge becomes a wall on replace.
-    if (usableEdgeCount(profile) >= 1) return { ok: true };
     return fail(
-      "profile.footprint.invert",
-      "No se puede convertir la huella en muros (aristas demasiado cortas)",
+      "profile.footprint.one",
+      "La huella no es un muro caja convertible — ajusta a rectángulo o redibuja con Rect/ejes",
     );
   }
 
+  // Face/line: Bloque 6A in-place — dry-run only shape; command validates UV + openings.
   if (
     asResult &&
     profile.closed &&
@@ -129,17 +134,6 @@ export function validateSketchProfileForHost(
   ) {
     if (ring.length < 3) {
       return fail("profile.face.shape", "Contorno vertical incompleto");
-    }
-    const face = invertVerticalFaceOutline(ring, wp);
-    if (!face || face.height < MIN_THICKNESS) {
-      return fail(
-        "profile.face.invert",
-        "No se puede convertir el contorno vertical en muro",
-      );
-    }
-    const axis = faceLineToWallAxis(face.p1, face.p2, wp, ctx.thickness);
-    if (Math.hypot(axis.p2.x - axis.p1.x, axis.p2.y - axis.p1.y) < MIN_WALL_LENGTH) {
-      return fail("profile.face.short", "Eje resultante demasiado corto");
     }
     return { ok: true };
   }

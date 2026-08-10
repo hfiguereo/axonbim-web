@@ -1,5 +1,7 @@
 import { FloatingPanel } from "./FloatingPanel";
+import { PropsNumberInput } from "./PropsNumberInput";
 import { useSessionStore } from "../sessionStore";
+import { wallMaxHeightOf } from "@axonbim/model";
 
 function ViewportCropBlock() {
   const crop = useSessionStore((s) => {
@@ -33,32 +35,22 @@ function ViewportCropBlock() {
           <div>
             <dt>Ancho (m)</dt>
             <dd>
-              <input
-                className="props__input"
-                type="number"
+              <PropsNumberInput
                 min={0.5}
                 step={0.1}
                 value={Number(width.toFixed(2))}
-                onChange={(e) => {
-                  const v = Number(e.target.value);
-                  if (Number.isFinite(v) && v > 0) setSize(v, depth || 1);
-                }}
+                onCommit={(v) => setSize(v, depth || 1)}
               />
             </dd>
           </div>
           <div>
             <dt>Fondo (m)</dt>
             <dd>
-              <input
-                className="props__input"
-                type="number"
+              <PropsNumberInput
                 min={0.5}
                 step={0.1}
                 value={Number(depth.toFixed(2))}
-                onChange={(e) => {
-                  const v = Number(e.target.value);
-                  if (Number.isFinite(v) && v > 0) setSize(width || 1, v);
-                }}
+                onCommit={(v) => setSize(width || 1, v)}
               />
             </dd>
           </div>
@@ -149,33 +141,23 @@ export function PropertiesPanel({ flexGrow = 1 }: { flexGrow?: number }) {
             <div>
               <dt>Altura ojo (m)</dt>
               <dd>
-                <input
-                  className="props__input"
-                  type="number"
+                <PropsNumberInput
                   min={0.1}
                   step={0.05}
                   value={selectedCamera.eye.z}
-                  onChange={(e) => {
-                    const v = Number(e.target.value);
-                    if (Number.isFinite(v) && v > 0) setSelectedCameraEyeHeight(v);
-                  }}
+                  onCommit={setSelectedCameraEyeHeight}
                 />
               </dd>
             </div>
             <div>
               <dt>FOV (°)</dt>
               <dd>
-                <input
-                  className="props__input"
-                  type="number"
+                <PropsNumberInput
                   min={10}
                   max={120}
                   step={1}
                   value={selectedCamera.fov}
-                  onChange={(e) => {
-                    const v = Number(e.target.value);
-                    if (Number.isFinite(v)) setSelectedCameraFov(v);
-                  }}
+                  onCommit={setSelectedCameraFov}
                 />
               </dd>
             </div>
@@ -381,32 +363,29 @@ export function PropertiesPanel({ flexGrow = 1 }: { flexGrow?: number }) {
             <div>
               <dt>Altura</dt>
               <dd>
-                <input
-                  className="props__input"
-                  type="number"
-                  min={0.05}
-                  step={0.1}
-                  value={selected.height}
-                  onChange={(e) => {
-                    const v = Number(e.target.value);
-                    if (Number.isFinite(v) && v > 0) setSelectedWallHeight(v);
-                  }}
-                />
+                {selected.vertical.kind === "profile" ? (
+                  <span title="Perfil custom — solo lectura (Restablecer vía Sketch)">
+                    {wallMaxHeightOf(selected).toFixed(2)} m{" "}
+                    <em className="props-hint">(perfil)</em>
+                  </span>
+                ) : (
+                  <PropsNumberInput
+                    min={0.05}
+                    step={0.1}
+                    value={wallMaxHeightOf(selected)}
+                    onCommit={setSelectedWallHeight}
+                  />
+                )}
               </dd>
             </div>
             <div>
               <dt>Espesor</dt>
               <dd>
-                <input
-                  className="props__input"
-                  type="number"
+                <PropsNumberInput
                   min={0.05}
                   step={0.01}
                   value={selected.thickness}
-                  onChange={(e) => {
-                    const v = Number(e.target.value);
-                    if (Number.isFinite(v) && v > 0) setSelectedWallThickness(v);
-                  }}
+                  onCommit={setSelectedWallThickness}
                 />
               </dd>
             </div>
@@ -473,16 +452,11 @@ export function PropertiesPanel({ flexGrow = 1 }: { flexGrow?: number }) {
               <div>
                 <dt>Altura nueva</dt>
                 <dd>
-                  <input
-                    className="props__input"
-                    type="number"
+                  <PropsNumberInput
                     min={0.05}
                     step={0.1}
                     value={wallHeight}
-                    onChange={(e) => {
-                      const v = Number(e.target.value);
-                      if (Number.isFinite(v) && v > 0) setWallHeight(v);
-                    }}
+                    onCommit={setWallHeight}
                   />
                 </dd>
               </div>

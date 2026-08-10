@@ -1,7 +1,7 @@
 import type { AxonDocument } from "@axonbim/model";
-import type { AxonFileV1 } from "./shape.js";
+import { wallToFileJson } from "./shape.js";
 
-export type { AxonFileV1 } from "./shape.js";
+export type { AxonFile, AxonFileV1 } from "./shape.js";
 export type { RecoverResult } from "./parse.js";
 export { parseDocument, parseDocumentRecover } from "./parse.js";
 export {
@@ -18,9 +18,9 @@ export function serializeDocument(doc: AxonDocument): string {
   const enabledCrops = Object.fromEntries(
     Object.entries(viewCrops).filter(([, crop]) => crop.enabled),
   );
-  const file: AxonFileV1 = {
-    format: "axon",
-    formatVersion: 1,
+  const file = {
+    format: "axon" as const,
+    formatVersion: 2 as const,
     meta: {
       name: doc.meta.name,
       createdAt: doc.meta.createdAt,
@@ -30,7 +30,7 @@ export function serializeDocument(doc: AxonDocument): string {
     families: doc.families,
     doorFamilies: doc.doorFamilies,
     windowFamilies: doc.windowFamilies,
-    walls: doc.walls,
+    walls: doc.walls.map(wallToFileJson),
     doors: doc.doors,
     windows: doc.windows,
     cameras: doc.cameras ?? [],

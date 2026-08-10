@@ -1,4 +1,5 @@
 import type { Wall } from "@axonbim/model";
+import { wallMaxHeightOf } from "@axonbim/model";
 import { MIN_WALL_LENGTH, type Vec3 } from "@axonbim/shared";
 import type { MeshBuffer } from "./types";
 
@@ -147,8 +148,9 @@ export function wallMetrics(wall: Wall): WallMetrics {
   const dx = wall.p2.x - wall.p1.x;
   const dy = wall.p2.y - wall.p1.y;
   const length = Math.hypot(dx, dy);
+  const height = wallMaxHeightOf(wall);
   const z0 = Math.min(wall.p1.z, wall.p2.z);
-  const z1 = z0 + wall.height;
+  const z1 = z0 + height;
   const ux = length > 0 ? dx / length : 1;
   const uy = length > 0 ? dy / length : 0;
   const nx = -uy;
@@ -164,7 +166,7 @@ export function wallMetrics(wall: Wall): WallMetrics {
   const ys = corners.map((c) => c.y);
   return {
     length,
-    volume: length * wall.thickness * wall.height,
+    volume: length * wall.thickness * height,
     centroidXY: {
       x: (wall.p1.x + wall.p2.x) / 2,
       y: (wall.p1.y + wall.p2.y) / 2,
@@ -200,7 +202,8 @@ export function wallBoxMesh(wall: Wall, opts?: WallMeshOptions): MeshBuffer {
   const dx = wall.p2.x - wall.p1.x;
   const dy = wall.p2.y - wall.p1.y;
   const length = Math.hypot(dx, dy);
-  if (length < MIN_WALL_LENGTH || wall.height <= 0 || wall.thickness <= 0) {
+  const height = wallMaxHeightOf(wall);
+  if (length < MIN_WALL_LENGTH || height <= 0 || wall.thickness <= 0) {
     return emptyMesh();
   }
 
@@ -210,7 +213,7 @@ export function wallBoxMesh(wall: Wall, opts?: WallMeshOptions): MeshBuffer {
   const ny = ux;
   const half = wall.thickness / 2;
   const z0 = Math.min(wall.p1.z, wall.p2.z);
-  const z1 = z0 + wall.height;
+  const z1 = z0 + height;
 
   const p1 = { x: wall.p1.x, y: wall.p1.y };
   const p2 = { x: wall.p2.x, y: wall.p2.y };

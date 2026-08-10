@@ -1,20 +1,19 @@
 /**
- * SK-replace — provisional profile → validate → delete sources + create new walls.
- * The host is never updated in place; Terminar materializes new element(s).
- * Contrato: docs/architecture/sketch-result-outline.md
+ * SK-profile / SK-wall-profile-v1 — provisional profile → commands.
+ * Surface/line single-host `result`: in-place `SetWallVerticalProfileCommand` (ADR 0018).
+ * Storey / multi-host / axes: delete+create replace (SK-profile-one).
  */
 import {
   CompositeCommand,
   CreateWallCommand,
   DeleteWallCommand,
+  SetWallVerticalProfileCommand,
   createWallId,
   type Command,
 } from "@axonbim/commands";
 import {
-  faceLineToWallAxis,
   insetRingToAxes,
   invertStoreyFootprint,
-  invertVerticalFaceOutline,
   isWallBoxFootprint,
   validateSketchProfileForHost,
 } from "@axonbim/geometry";
@@ -22,6 +21,8 @@ import {
   openingsOnWall,
   pointOnWorkplaneXY,
   resolveSpatialReference,
+  cloneWallVertical,
+  wallVerticalEquals,
   type Wall,
   type Workplane,
 } from "@axonbim/model";
@@ -30,6 +31,7 @@ import { profileToAxes, profileToPoints, type SketchProfile } from "@axonbim/too
 import { patchViewsAfterDocumentChange } from "./cameraViews.js";
 import { applyCommandToSession } from "./documentMutation.js";
 import type { SessionState } from "./sliceTypes.js";
+import { worldRingToWallVertical } from "./worldRingToWallVertical.js";
 
 type Get = () => SessionState;
 type Set = (partial: Partial<SessionState>) => void;
@@ -119,7 +121,7 @@ function proposedMatchesSources(
       if (
         sameEnds &&
         Math.abs(p.thickness - s.thickness) <= GEOM_EPS &&
-        Math.abs(p.height - s.height) <= GEOM_EPS &&
+        wallVerticalEquals(p.vertical, s.vertical, GEOM_EPS) &&
         p.storeyId === s.storeyId &&
         p.familyId === s.familyId
       ) {
@@ -144,7 +146,7 @@ function wallFromAxis(
     familyId: template.familyId,
     p1: pointOnWorkplaneXY(storeyWp, axis.p1.x, axis.p1.y),
     p2: pointOnWorkplaneXY(storeyWp, axis.p2.x, axis.p2.y),
-    height: template.height,
+    vertical: cloneWallVertical(template.vertical),
     thickness: template.thickness,
   };
 }
@@ -254,7 +256,7 @@ export function commitSketchProfile(get: Get, set: Set): CommitSketchProfileResu
         familyId: template.familyId,
         p1: pointOnWorkplaneXY(storeyWp, inv.p1.x, inv.p1.y),
         p2: pointOnWorkplaneXY(storeyWp, inv.p2.x, inv.p2.y),
-        height: template.height,
+        vertical: cloneWallVertical(template.vertical),
         thickness,
       };
       return replaceSourcesWithWalls(
@@ -265,10 +267,14 @@ export function commitSketchProfile(get: Get, set: Set): CommitSketchProfileResu
         "Perfil aplicado — huella → muro nuevo (reemplazo)",
       );
     }
-    // Non-rect free footprint: fall through to axes-from-edges.
+    set({
+      status:
+        "La huella no es un muro caja convertible — ajusta a rectángulo o redibuja con Rect/ejes",
+    });
+    return commitFail(sourceIds[0] ?? null);
   }
 
-  // --- Single host: vertical face / line silhouette → 1 new wall ---
+  // --- Single host on face/line: persist vertical profile in place (Bloque 6A) ---
   if (
     asResult &&
     sourceIds.length === 1 &&
@@ -276,35 +282,37 @@ export function commitSketchProfile(get: Get, set: Set): CommitSketchProfileResu
     (wp.kind === "surface" || wp.kind === "line") &&
     ring.length >= 3
   ) {
-    const face = invertVerticalFaceOutline(ring, wp);
-    if (face) {
-      const axis = faceLineToWallAxis(
-        face.p1,
-        face.p2,
-        wp,
-        template.thickness,
-      );
-      const p1 = pointOnWorkplaneXY(storeyWp, axis.p1.x, axis.p1.y);
-      const p2 = pointOnWorkplaneXY(storeyWp, axis.p2.x, axis.p2.y);
-      if (Math.hypot(p2.x - p1.x, p2.y - p1.y) >= MIN_WALL_LENGTH) {
-        const wall: Wall = {
-          id: createWallId(),
-          storeyId: spatial.storeyId,
-          familyId: template.familyId,
-          p1,
-          p2,
-          height: face.height,
-          thickness: template.thickness,
-        };
-        return replaceSourcesWithWalls(
-          get,
-          set,
-          sourceIds,
-          [wall],
-          "Perfil aplicado — cara/silueta → muro nuevo (reemplazo)",
-        );
-      }
+    const hostId = sourceIds[0]!;
+    const vertical = worldRingToWallVertical(template, ring);
+    if (!vertical) {
+      set({
+        status:
+          "Perfil vertical inválido — debe llegar a ambos extremos del muro (u=0 y u=L), sin autointersección",
+      });
+      return commitFail(hostId);
     }
+    if (wallVerticalEquals(template.vertical, vertical)) {
+      return commitOk(false, hostId);
+    }
+    const result = pushCommand(
+      get,
+      set,
+      new SetWallVerticalProfileCommand(hostId, vertical),
+      "Perfil vertical aplicado — mismo muro (in-place)",
+    );
+    if (result === "rejected") {
+      return commitFail(hostId);
+    }
+    return commitOk(result === "applied", hostId);
+  }
+
+  // SK-profile-one: never turn a single-host result silhouette into N walls.
+  if (asResult && sourceIds.length === 1) {
+    set({
+      status:
+        "El perfil no es convertible a un único muro — usa elevación/3D o cara, o redibuja con Rect/ejes",
+    });
+    return commitFail(sourceIds[0] ?? null);
   }
 
   // --- Closed loop outer ring on storey (N edges) → inset → N new walls ---
@@ -332,22 +340,27 @@ export function commitSketchProfile(get: Get, set: Set): CommitSketchProfileResu
     );
   }
 
-  // --- Free / axes rebuild: each usable edge → new wall; delete sources ---
-  const axes = profileToAxes(profile).filter((a) => {
-    const len = Math.hypot(a.p2.x - a.p1.x, a.p2.y - a.p1.y);
-    return len >= MIN_WALL_LENGTH;
-  });
-  if (axes.length === 0) {
-    set({ status: "Perfil vacío o segmentos demasiado cortos" });
-    return commitFail();
+  // --- Explicit axes rebuild (Rect/arco/redibujo): each usable edge → new wall ---
+  if (!asResult) {
+    const axes = profileToAxes(profile).filter((a) => {
+      const len = Math.hypot(a.p2.x - a.p1.x, a.p2.y - a.p1.y);
+      return len >= MIN_WALL_LENGTH;
+    });
+    if (axes.length === 0) {
+      set({ status: "Perfil vacío o segmentos demasiado cortos" });
+      return commitFail();
+    }
+
+    const newWalls = axes.map((axis) => wallFromAxis(axis, template, storeyWp));
+    return replaceSourcesWithWalls(
+      get,
+      set,
+      sourceIds,
+      newWalls,
+      `Perfil aplicado — ${axes.length} muros nuevos (reemplazo)`,
+    );
   }
 
-  const newWalls = axes.map((axis) => wallFromAxis(axis, template, storeyWp));
-  return replaceSourcesWithWalls(
-    get,
-    set,
-    sourceIds,
-    newWalls,
-    `Perfil aplicado — ${axes.length} muros nuevos (reemplazo)`,
-  );
+  set({ status: "No se pudo materializar el perfil como un único resultado" });
+  return commitFail(sourceIds[0] ?? null);
 }

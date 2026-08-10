@@ -44,6 +44,13 @@ export const createProjectSlice: SessionSliceCreator<{
 
   setActiveStoreyId: (id) => {
     const s = get();
+    if (s.sketchTarget) {
+      set({
+        status:
+          "Sketch activo — cancela o termina antes de cambiar el nivel / Workplane",
+      });
+      return;
+    }
     const next = reconcileActiveStoreyId(s.document, id);
     if (next !== id) {
       set({

@@ -1,5 +1,6 @@
 import {
   computeModelEnvelope,
+  wallMaxHeightOf,
   workplanePatchCorners,
   type AxonDocument,
   type CropCorner,
@@ -36,6 +37,12 @@ import {
   type ScreenCropFrame,
 } from "../session/cropScreenFrame";
 import type { OrbitPivotMode } from "../session/sessionTypes";
+import { previewWallFromSketchProfile } from "../session/sketchPreviewWall";
+import { routeSketchWallPointer } from "../session/sketchPointerRoute";
+import {
+  shouldReportWorkplanePickMiss,
+  WORKPLANE_PICK_MISS_STATUS,
+} from "../session/workplanePickFeedback";
 import { useSessionStore } from "../sessionStore";
 import { ViewOrientationGizmo } from "./ViewOrientationGizmo";
 
@@ -61,7 +68,7 @@ function resolveOrbitPivot(
       return {
         x: (w.p1.x + w.p2.x) / 2,
         y: (w.p1.y + w.p2.y) / 2,
-        z: w.height * 0.5,
+        z: wallMaxHeightOf(w) * 0.5,
       };
     }
   }
@@ -127,6 +134,7 @@ export function Viewport() {
   const activeTool = useSessionStore((s) => s.activeTool);
   const drawMode = useSessionStore((s) => s.drawMode);
   const sketchProfile = useSessionStore((s) => s.sketchProfile);
+  const sketchTarget = useSessionStore((s) => s.sketchTarget);
   const profileVertexIndex = useSessionStore((s) => s.profileVertexIndex);
   const activeWorkplane = useSessionStore((s) => s.activeWorkplane);
   const workplaneLinePending = useSessionStore((s) => s.workplaneLinePending);
@@ -244,21 +252,47 @@ export function Viewport() {
     if (cropDragMeta && !cropDragMeta.cameraId && cropDragLive) {
       sessionCrop = cropDragLive;
     }
-    // SK-profile on Workplane: hide host solids so the abstract perimeter is the focus.
+    // SK-profile: hide document host; H3 show derived solid from provisional (not SoT).
     const hide = new Set(sketchProfile?.sourceWallIds ?? []);
-    const wallsForSync =
+    let wallsForSync =
       hide.size > 0 ? walls.filter((w) => !hide.has(w.id)) : walls;
-    const doorsForSync =
+    let doorsForSync =
       hide.size > 0 ? doors.filter((d) => !hide.has(d.wallId)) : doors;
-    const windowsForSync =
+    let windowsForSync =
       hide.size > 0 ? windows.filter((w) => !hide.has(w.wallId)) : windows;
+    let selectedWallForSync = hide.has(selectedWallId ?? "")
+      ? null
+      : selectedWallId;
+
+    if (
+      sketchTarget?.kind === "wall" &&
+      sketchProfile &&
+      hide.has(sketchTarget.id)
+    ) {
+      const host = walls.find((w) => w.id === sketchTarget.id);
+      if (host) {
+        const preview = previewWallFromSketchProfile(host, sketchProfile);
+        if (preview) {
+          wallsForSync = [...wallsForSync, preview];
+          doorsForSync = [
+            ...doorsForSync,
+            ...doors.filter((d) => d.wallId === host.id),
+          ];
+          windowsForSync = [
+            ...windowsForSync,
+            ...windows.filter((w) => w.wallId === host.id),
+          ];
+          if (selectedWallId === host.id) selectedWallForSync = host.id;
+        }
+      }
+    }
 
     handleRef.current?.syncWalls(
       wallsForSync,
       doorsForSync,
       windowsForSync,
       camerasForSync,
-      hide.has(selectedWallId ?? "") ? null : selectedWallId,
+      selectedWallForSync,
       selectedDoorId,
       selectedWindowId,
       selectedCameraId,
@@ -282,6 +316,7 @@ export function Viewport() {
     cropDragMeta,
     cameraPoseDragLive,
     sketchProfile,
+    sketchTarget,
   ]);
 
   useEffect(() => {
@@ -375,10 +410,18 @@ export function Viewport() {
     if (sketchProfile && sketchProfile.edges.length > 0) {
       const pts = profileToPoints(sketchProfile);
       const verts = profileVertices(sketchProfile);
+      const frame = activeWorkplane
+        ? {
+            normal: activeWorkplane.normal,
+            axisU: activeWorkplane.axisU,
+            axisV: activeWorkplane.axisV,
+          }
+        : null;
       vp.setProfilePolyline(
         pts.length >= 2 ? pts : null,
         verts,
         profileVertexIndex,
+        frame,
       );
     } else {
       vp.setProfilePolyline(null);
@@ -423,6 +466,7 @@ export function Viewport() {
     drawPoints,
     sketchProfile,
     profileVertexIndex,
+    activeWorkplane,
   ]);
 
   useEffect(() => {
@@ -502,45 +546,106 @@ export function Viewport() {
         return;
       }
 
+      // H1: Modificar / sketch provisional before selection fallthrough
+      // (activeTool may briefly be "select" while sketchTarget is still set).
+      const sketchModifyLive =
+        !!s.sketchTarget &&
+        !!s.sketchProfile &&
+        s.sketchModifyMode !== "vertex" &&
+        s.sketchModifyMode !== "redraw";
+      const sketchWall =
+        !!s.sketchTarget && !!s.sketchProfile && s.activeTool === "wall";
+
+      /** H4: surface missed Workplane picks instead of silent return. */
+      const reportWpMiss = () => {
+        if (
+          shouldReportWorkplanePickMiss({
+            sketchTarget: !!s.sketchTarget,
+            sketchModifyLive,
+            activeTool: s.activeTool,
+          })
+        ) {
+          s.setStatus(WORKPLANE_PICK_MISS_STATUS);
+        }
+      };
+
       if (s.activeTool === "workplaneLine") {
         const p = pickOnWorkplane(vp, e.clientX, e.clientY, s.activeWorkplane);
         if (p) s.workplaneLineClick(p);
+        else reportWpMiss();
         return;
       }
 
-      if (s.activeTool === "wall") {
-        // Vertex edit on Workplane (default while sketchProfile + line/pick).
+      if (sketchModifyLive || sketchWall) {
         const rebuild =
           s.drawMode === "rectangle" ||
           s.drawMode === "arcSER" ||
           s.drawMode === "arcCE";
-        if (s.sketchProfile && !rebuild && s.drawMode !== "pickFace") {
+        if (!rebuild && s.drawMode !== "pickFace") {
           const p = pickOnWorkplane(vp, e.clientX, e.clientY, s.activeWorkplane);
-          if (p) {
-            // Second click: place the selected vertex (click–click edit).
-            if (s.profileVertexIndex != null) {
-              s.profileVertexClick(p, e.shiftKey);
-              profileDragging = false;
-              profileDragMoved = false;
-              return;
-            }
-            const hit = hitProfileVertex(s.sketchProfile, p);
-            if (hit >= 0) {
-              s.profileVertexClick(p, e.shiftKey);
-              profileDragging = true;
-              profileDragMoved = false;
-              host.setPointerCapture?.(e.pointerId);
-              return;
-            }
-            // Miss grip: Dibujar (línea / pick líneas) into provisional sketch.
-            if (s.drawMode === "line" || s.drawMode === "pickLines") {
-              s.wallClick(p, e.shiftKey);
-              return;
-            }
+          if (!p) {
+            reportWpMiss();
+            return;
+          }
+          const hit = hitProfileVertex(s.sketchProfile!, p);
+          const route = routeSketchWallPointer({
+            sketchModifyMode: s.sketchModifyMode,
+            profileVertexIndex: s.profileVertexIndex,
+            hitVertexIndex: hit,
+            drawMode: s.drawMode,
+          });
+          if (route === "wallClick") {
+            s.wallClick(p, e.shiftKey);
+            return;
+          }
+          if (route === "profileVertexPlace") {
             s.profileVertexClick(p, e.shiftKey);
+            profileDragging = false;
+            profileDragMoved = false;
+            return;
+          }
+          if (route === "profileVertexSelect") {
+            s.profileVertexClick(p, e.shiftKey);
+            profileDragging = true;
+            profileDragMoved = false;
+            host.setPointerCapture?.(e.pointerId);
+            return;
           }
           return;
         }
+        if (s.activeTool === "wall") {
+          if (s.drawMode === "pickLines" || s.drawMode === "pickFace") {
+            const wallId = vp.pickWallId(e.clientX, e.clientY);
+            if (wallId) {
+              const hint =
+                pickOnWorkplane(vp, e.clientX, e.clientY, s.activeWorkplane) ??
+                undefined;
+              s.wallPickClick(wallId, hint ?? undefined);
+              return;
+            }
+            if (s.drawMode === "pickLines" && s.wallPending) {
+              const p = pickOnWorkplane(
+                vp,
+                e.clientX,
+                e.clientY,
+                s.activeWorkplane,
+              );
+              if (p) s.wallClick(p, e.shiftKey);
+              else reportWpMiss();
+              return;
+            }
+            s.setStatus("Clic en un muro (modo pick)");
+            return;
+          }
+          const p = pickOnWorkplane(vp, e.clientX, e.clientY, s.activeWorkplane);
+          if (p) s.wallClick(p, e.shiftKey);
+          else reportWpMiss();
+          return;
+        }
+        return;
+      }
+
+      if (s.activeTool === "wall") {
         if (s.drawMode === "pickLines" || s.drawMode === "pickFace") {
           const wallId = vp.pickWallId(e.clientX, e.clientY);
           if (wallId) {
@@ -552,6 +657,7 @@ export function Viewport() {
           if (s.drawMode === "pickLines" && s.wallPending) {
             const p = pickOnWorkplane(vp, e.clientX, e.clientY, s.activeWorkplane);
             if (p) s.wallClick(p, e.shiftKey);
+            else reportWpMiss();
             return;
           }
           s.setStatus("Clic en un muro (modo pick)");
@@ -559,6 +665,7 @@ export function Viewport() {
         }
         const p = pickOnWorkplane(vp, e.clientX, e.clientY, s.activeWorkplane);
         if (p) s.wallClick(p, e.shiftKey);
+        else reportWpMiss();
         return;
       }
 
@@ -746,12 +853,15 @@ export function Viewport() {
     const vp = handleRef.current;
     const s = useSessionStore.getState();
 
-    // SK-sel: double-click parametric element → Sketch Mode (any view).
+    // SK-sel / ADR 0018: double-click wall face in elevación/3D → vertical profile sketch.
     if (vp) {
-      const wallId = vp.pickWallId(e.clientX, e.clientY);
-      if (wallId) {
+      const hit = vp.pickWallHit(e.clientX, e.clientY, s.document.walls);
+      if (hit) {
         e.preventDefault();
-        s.enterSketchOnElement("wall", wallId);
+        s.enterSketchOnElement("wall", hit.wallId, {
+          face: hit.face,
+          hitPoint: hit.point,
+        });
         return;
       }
       const doorId = vp.pickDoorId(e.clientX, e.clientY);

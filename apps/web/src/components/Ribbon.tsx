@@ -112,6 +112,12 @@ export function Ribbon() {
   const drawMode = useSessionStore((s) => s.drawMode);
   const editingParadigm = useSessionStore((s) => s.editingParadigm);
   const sketchTarget = useSessionStore((s) => s.sketchTarget);
+  const sketchModifyMode = useSessionStore((s) => s.sketchModifyMode);
+  const setSketchModifyMode = useSessionStore((s) => s.setSketchModifyMode);
+  const redrawSketchProfile = useSessionStore((s) => s.redrawSketchProfile);
+  const deleteSelectedProfileVertex = useSessionStore(
+    (s) => s.deleteSelectedProfileVertex,
+  );
   const setDrawMode = useSessionStore((s) => s.setDrawMode);
   const cancelWallDraw = useSessionStore((s) => s.cancelWallDraw);
   const enterSketchOnSelection = useSessionStore((s) => s.enterSketchOnSelection);
@@ -555,38 +561,113 @@ export function Ribbon() {
                 tips={tips}
                 icon="select"
                 label="Seleccionar"
-                tip="Seleccionar"
-                active={activeTool === "select" && !sketchTarget}
-                onClick={() => setTool("select")}
+                tip={
+                  sketchTarget
+                    ? "Volver a editar vértices del perfil"
+                    : "Seleccionar elementos"
+                }
+                active={
+                  sketchTarget
+                    ? sketchModifyMode === "vertex"
+                    : activeTool === "select"
+                }
+                onClick={() => {
+                  if (sketchTarget) setSketchModifyMode("vertex");
+                  else setTool("select");
+                }}
               />
               <Tool
                 tips={tips}
-                icon="pickFace"
+                icon="editProfile"
                 label="Editar perfil"
                 tip="Sketch Mode sobre el elemento seleccionado (doble clic también)"
                 active={sketchTarget != null}
                 onClick={() => enterSketchOnSelection()}
               />
-              <Stub tips={tips} icon="move" label="Mover" tip="Mover" />
-              <Stub tips={tips} icon="copy" label="Copiar" tip="Copiar" />
-              <Stub tips={tips} icon="rotate" label="Rotar" tip="Rotar" />
+              <Tool
+                tips={tips}
+                icon="move"
+                label="Mover"
+                tip="Mover perfil provisional (Workplane + snap)"
+                active={sketchModifyMode === "move"}
+                onClick={() => setSketchModifyMode("move")}
+              />
+              <Tool
+                tips={tips}
+                icon="copy"
+                label="Copiar"
+                tip="Desplazar copia del provisional en el plano"
+                active={sketchModifyMode === "copy"}
+                onClick={() => setSketchModifyMode("copy")}
+              />
+              <Tool
+                tips={tips}
+                icon="rotate"
+                label="Rotar"
+                tip="Rotar perfil en el Workplane"
+                active={sketchModifyMode === "rotate"}
+                onClick={() => setSketchModifyMode("rotate")}
+              />
               <Stub tips={tips} icon="tile" label="Matriz" tip="Matriz" />
               <Stub tips={tips} icon="mirror" label="Reflejar" tip="Reflejar" />
               <Stub tips={tips} icon="align" label="Alinear" tip="Alinear" />
-              <Stub tips={tips} icon="move" label="Desfase" tip="Desfase" />
+              <Tool
+                tips={tips}
+                icon="offset"
+                label="Desfase"
+                tip="Equidistancia del contorno en el Workplane (clic; Shift = contraer)"
+                active={sketchModifyMode === "offset"}
+                onClick={() => setSketchModifyMode("offset")}
+              />
               <Stub tips={tips} icon="trim" label="Recortar/Extender" tip="Recortar" />
-              <Stub tips={tips} icon="split" label="Dividir" tip="Dividir" />
+              <Tool
+                tips={tips}
+                icon="splitPoint"
+                label="Split point"
+                tip="Insertar vértice en arista"
+                active={sketchModifyMode === "splitPoint"}
+                onClick={() => setSketchModifyMode("splitPoint")}
+              />
+              <Tool
+                tips={tips}
+                icon="splitLine"
+                label="Split line"
+                tip="Dividir aristas con una traza"
+                active={sketchModifyMode === "splitLine"}
+                onClick={() => setSketchModifyMode("splitLine")}
+              />
+              <Tool
+                tips={tips}
+                icon="fillet"
+                label="Fillet"
+                tip="Empalme en vértice (radio 0,15 m)"
+                active={sketchModifyMode === "fillet"}
+                onClick={() => setSketchModifyMode("fillet")}
+              />
+              <Tool
+                tips={tips}
+                icon="redraw"
+                label="Redibujar"
+                tip="Vacía el provisional (no el documento)"
+                onClick={() => redrawSketchProfile()}
+              />
               <Stub tips={tips} icon="link" label="Anclar" tip="Anclar" />
-              <Stub tips={tips} icon="delete" label="Eliminar" tip="Eliminar" />
+              <Tool
+                tips={tips}
+                icon="delete"
+                label="Eliminar"
+                tip="Eliminar vértice seleccionado del perfil"
+                onClick={() => deleteSelectedProfileVertex()}
+              />
             </Group>
             <Group title="Portapapeles">
-              <Stub tips={tips} icon="trim" label="Cortar" tip="Cortar" />
+              <Stub tips={tips} icon="cut" label="Cortar" tip="Cortar" />
               <Stub tips={tips} icon="copy" label="Copiar" tip="Copiar" />
               <Stub tips={tips} icon="import" label="Pegar" tip="Pegar" />
             </Group>
             <Group title="Geometría">
               <Stub tips={tips} icon="join" label="Unir" tip="Unir" />
-              <Stub tips={tips} icon="split" label="Desunir" tip="Desunir" />
+              <Stub tips={tips} icon="unlink" label="Desunir" tip="Desunir" />
               <Stub tips={tips} icon="trim" label="Cortar" tip="Cortar geometría" />
             </Group>
           </>

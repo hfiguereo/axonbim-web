@@ -1,4 +1,5 @@
 import type { Wall } from "@axonbim/model";
+import { wallMaxHeightOf } from "@axonbim/model";
 import { Spherical, Vector3 } from "three";
 import {
   resolveCameraPresetPose,
@@ -108,7 +109,13 @@ export function createViewportCameraController(
   };
 
   const fitWalls = (walls: Wall[]) => {
-    const bounds = computeWallsFitBounds(walls);
+    const bounds = computeWallsFitBounds(
+      walls.map((w) => ({
+        p1: w.p1,
+        p2: w.p2,
+        height: wallMaxHeightOf(w),
+      })),
+    );
     if (!bounds) {
       fitEmpty();
       return;

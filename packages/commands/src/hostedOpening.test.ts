@@ -17,8 +17,8 @@ function wall(partial: Partial<Wall> = {}): Wall {
     familyId: "family.block-150",
     p1: { x: 0, y: 0, z: 0 },
     p2: { x: 6, y: 0, z: 0 },
-    height: 2.7,
     thickness: 0.15,
+    vertical: { kind: "uniform", height: 2.7 },
     ...partial,
   };
 }
@@ -105,7 +105,7 @@ describe("hosted opening commands (F9-E2)", () => {
 
   it("rejects a window family that does not fit vertically", () => {
     const doc = createEmptyDocument();
-    doc.walls = [wall({ height: 2.0 })];
+    doc.walls = [wall({ vertical: { kind: "uniform", height: 2.0 } })];
     doc.windows = [window({ sill: 0.9, height: 1.0 })];
     // 0.9 + 1.2 = 2.1 > 2.0 - 0.05
     const result = new SetWindowFamilyCommand(
