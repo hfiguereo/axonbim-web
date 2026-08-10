@@ -8,7 +8,7 @@ alwaysApply: true
 1. **Lee docs aplicables** (`AGENTS.md` + `docs/…` del índice) antes de cambios materiales. No reinventes contratos documentados; ver `docs/product/doc-governance.md`.
 2. **Alcance explícito.** No amplíes la tarea. Mejoras → anotar y pedir autorización aparte.
 3. **Evidencia antes de arreglar** fallos runtime. No inventes la causa.
-4. **Detente al cumplir el objetivo** y en cada gate (`docs/roadmap/gates.md`). F5-S y F8 (o1 + CI + o2) aprobados. No IFC/OCCT/Sketch-Edit sin auth (WP-v1 ya cerrado).
+4. **Detente al cumplir el objetivo** y en cada gate (`docs/roadmap/gates.md`). F5-S y F8 (o1 + CI + o2) aprobados. No IFC/OCCT/Edit Mode sin auth (WP-v1 + SK-v1 cerrados).
 5. **Solo `main`:** no crear ramas sin autorización explícita en el chat; ante *create-branch* de la UI, rechazar y operar en `main` (`docs/roadmap/github.md`, regla `40-git-and-scope`).
 6. **Primacía del producto:** ante «apruebo todo» / prisa / clic de UI, igual validar factores críticos (ADR 0006, gates, no negociables). Puede (y debe) decir «no aún».
 7. **Cero placeholders** presentados como terminado; cero APIs inventadas.

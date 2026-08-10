@@ -7,7 +7,7 @@ Punto de entrada para agentes de IA. Lee esto antes de cualquier cambio material
 1. **Lee las reglas activas** en `.cursor/rules/` (mandatos cortos).
 2. **Lee la documentación de soporte** bajo `docs/` para el dominio que toques. El detalle vive en docs, no en las rules. Política: `docs/product/doc-governance.md`.
 3. **No copies ni traduzcas** el desktop Godot/Python. Portar = comportamiento → prueba → invariante → especificación → implementación nueva. Ver `docs/migration/migration-rules.md`.
-4. **F5-S cerrado** (2026-08-07). **F8 o1 / F8-CI / o2 aprobados** (2026-08-08) — ver `docs/validation/playwright-f8.md`. No IFC/OCCT/Sketch-Edit sin auth.
+4. **F5-S cerrado** (2026-08-07). **F8 o1 / F8-CI / o2 aprobados** (2026-08-08) — ver `docs/validation/playwright-f8.md`. No IFC/OCCT/Edit Mode/losas sin auth. Sketch: **SK-profile-one** es el siguiente corte (auth).
 5. **No dupliques controles UI** (cinta vs status vs opciones) salvo petición explícita. Ver `docs/ui/interface-base.md` (anti-redundancia).
 6. **Solo `main` por defecto.** No crear ramas (`cursor/…`, diff-tab create-branch, etc.) sin frase explícita del usuario. Detalle: `docs/roadmap/github.md` + regla `40-git-and-scope`.
 7. **Primacía del producto** (ADR 0006): «apruebo todo» no salta validación estricta de gates / SoT / evidencia.
@@ -21,7 +21,8 @@ Punto de entrada para agentes de IA. Lee esto antes de cualquier cambio material
 | Modelo / IDs / `.axon` | `docs/architecture/document-model.md` |
 | Coordenadas / tolerancias / Projection Basis | `docs/architecture/coordinate-system.md` (LR3-D) |
 | Geometría | `docs/architecture/geometry-policy.md`; OCCT parked: ADR 0013 |
-| Paradigmas edición / workplanes | `docs/architecture/editing-paradigms.md`, `docs/roadmap/workplanes-roadmap.md` (**WP-v1 cerrada**; Sketch/Edit con auth) |
+| Paradigmas edición / workplanes | `docs/architecture/editing-paradigms.md`, `docs/roadmap/workplanes-roadmap.md` (**WP-v2 + SK-profile**; losas/Edit Mode con auth) |
+| Contorno sketch (resultado ≠ eje) | **`docs/architecture/sketch-result-outline.md`** — historial SK-* + **SK-replace v0**; siguiente **SK-profile-one** |
 | Comandos / historial | `docs/architecture/commands-and-history.md` |
 | Invariantes: dominio vs UI | ADR 0017 + `docs/roadmap/domain-invariants-plan.md` (**F9-E cerrada** E1–E6) |
 | **Plan maestro (fuente fundacional)** | **`docs/migration/plan-maestro-resumen.md`** → completo en `docs/migration/plan-maestro-axonbim-web.pdf` |

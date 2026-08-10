@@ -3,6 +3,7 @@ import {
   Group,
   LineSegments,
   Mesh,
+  Plane,
   Vector3,
 } from "three";
 import {
@@ -37,11 +38,22 @@ export type CropGripPick = {
   cameraId: string | null;
 };
 
+export type WorkplanePickSpec = {
+  origin: { x: number; y: number; z: number };
+  normal: { x: number; y: number; z: number };
+};
+
 export type ViewportPicking = {
   pickGround: (
     clientX: number,
     clientY: number,
     elevation?: number,
+  ) => { x: number; y: number; z: number } | null;
+  /** Ray ∩ arbitrary workplane (WP-v2). */
+  pickWorkplane: (
+    clientX: number,
+    clientY: number,
+    plane: WorkplanePickSpec,
   ) => { x: number; y: number; z: number } | null;
   pickWallId: (clientX: number, clientY: number) => string | null;
   pickDoorId: (clientX: number, clientY: number) => string | null;
@@ -133,6 +145,29 @@ export function createViewportPicking(ctx: ViewportContext): ViewportPicking {
     const ok = ctx.raycaster.ray.intersectPlane(ctx.groundPlane, ctx.hit);
     if (!ok) return null;
     return { x: ctx.hit.x, y: ctx.hit.y, z: elevation };
+  };
+
+  const pickWorkplane = (
+    clientX: number,
+    clientY: number,
+    plane: WorkplanePickSpec,
+  ): { x: number; y: number; z: number } | null => {
+    ctx.applyPickThreshold();
+    ctx.toNdc(clientX, clientY);
+    ctx.raycaster.setFromCamera(ctx.ndc, ctx.activeCamera());
+    const n = new Vector3(plane.normal.x, plane.normal.y, plane.normal.z);
+    if (n.lengthSq() < 1e-12) return null;
+    n.normalize();
+    // three.js Plane: normal · x + constant = 0 → constant = -normal · origin
+    const constant = -(
+      n.x * plane.origin.x +
+      n.y * plane.origin.y +
+      n.z * plane.origin.z
+    );
+    const pl = new Plane(n, constant);
+    const ok = ctx.raycaster.ray.intersectPlane(pl, ctx.hit);
+    if (!ok) return null;
+    return { x: ctx.hit.x, y: ctx.hit.y, z: ctx.hit.z };
   };
 
   const pickWallId = (clientX: number, clientY: number) =>
@@ -269,6 +304,7 @@ export function createViewportPicking(ctx: ViewportContext): ViewportPicking {
 
   return {
     pickGround,
+    pickWorkplane,
     pickWallId,
     pickDoorId,
     pickWindowId,

@@ -3,7 +3,7 @@
 **Fuente de verdad** para lo que queda por hacer. Si otro documento contradice este,
 **prevalece este** hasta que se actualice explícitamente.
 
-Última revisión: **2026-08-09** — hilo LR; **LR0–LR3 + WP-v1 cerradas**.
+Última revisión: **2026-08-10** — hilo LR; SK-* base cerradas; **SK-profile-one** siguiente (auth).
 
 Detalle de bloques LR: [`legacy-reuse-roadmap.md`](legacy-reuse-roadmap.md) ·
 resumen [`../migration/plan-integracion-selectiva-resumen.md`](../migration/plan-integracion-selectiva-resumen.md).
@@ -12,12 +12,12 @@ resumen [`../migration/plan-integracion-selectiva-resumen.md`](../migration/plan
 
 ## Hilo activo (solo adelante)
 
-Secuencia obligatoria. **No saltar** bloques ni abrir IFC/OCCT/Sketch-Edit antes de su
+Secuencia obligatoria. **No saltar** bloques ni abrir IFC/OCCT/Edit Mode antes de su
 prerrequisito. Cada bloque = frase explícita en chat + gate.
 
 ```
-LR0–LR3 + WP-v1 (hecho) → Sketch / Edit (auth)
-                      ↘ LR3-D → LR4… (parked)
+LR0–LR3 + WP + SK-* base → **SK-profile-one** (auth) → losas/terreno/barridos u Edit Mode (auth)
+                                                      ↘ LR3-D → LR4… (parked)
 ```
 
 | Orden | Bloque | Estado | Gate de cierre |
@@ -28,7 +28,13 @@ LR0–LR3 + WP-v1 (hecho) → Sketch / Edit (auth)
 | — | **LR2** Command Transactions | **cerrada** 2026-08-09 | `CompositeCommand` atómico + tests |
 | — | **LR3-A…D** Spatial Reference Context | **cerrada** 2026-08-09 | Active Storey · Datum · Envelope · Projection Basis |
 | — | **WP-v1** Workplane compartido | **cerrada** 2026-08-09 | [`workplanes-roadmap.md`](workplanes-roadmap.md) |
-| **1** | **Sketch / Edit Mode** | **siguiente** (auth) | Paradigmas; no Family Editor / Push&Pull sin auth |
+| — | **WP-v2** Planos tangibles | **cerrada** 2026-08-09 | Nivel · superficie · línea; overlay; sesión |
+| — | **SK-v1** Sketch Mode (rectángulo) | **cerrada** 2026-08-09 | [`editing-paradigms.md`](../architecture/editing-paradigms.md) |
+| — | **SK-sel** Sketch sobre selección | **cerrada** 2026-08-09 | Entrada UX; carga perfil (SK-profile) |
+| — | **SK-draw** Dibujar completo | **cerrada** 2026-08-09 | Builders globales; commit muro = adaptador crear |
+| — | **SK-profile** + **SK-replace v0** | **cerrada** 2026-08-09 | Provisional libre; replace Delete+Create; **deuda: N muros por arista de silueta** |
+| **1** | **SK-profile-one** | **siguiente** (auth) | Un único perfil materializado; sin solape silueta→N muros. Contrato: [`sketch-result-outline.md`](../architecture/sketch-result-outline.md) |
+| **2** | **Sketch → losas / terreno / barridos** u **Edit Mode** | auth | Tras SK-profile-one (o en paralelo solo con auth explícita) |
 
 ### Parked (no son el hilo actual)
 
@@ -53,8 +59,12 @@ qué **no** se reutiliza · tests. Tras: archivos · tests · Undo/Redo si aplic
 
 ### Próximo paso
 
-Autorizar **Sketch Mode** o un corte concreto de edición (p. ej. «autorizo Sketch Mode»).
-Sin frase, no implementar. Family Editor / Push&Pull / LR1-C / LR4+ siguen parked.
+Autorizar **SK-profile-one** (un único perfil al Terminar; sin silueta→N muros).
+Frase p. ej. «autorizo SK-profile-one». Detalle:
+[`../architecture/sketch-result-outline.md`](../architecture/sketch-result-outline.md).
+
+Losas / terreno / barridos / Edit Mode: auth aparte **después** (o con frase explícita).
+Family Editor / Push&Pull / LR1-C / LR4+ parked.
 
 ---
 
@@ -72,6 +82,12 @@ Sin frase, no implementar. Family Editor / Push&Pull / LR1-C / LR4+ siguen parke
 | **LR2** CompositeCommand | **cerrada** | Transacción atómica en history |
 | **LR3-A…D** Spatial Reference | **cerrada** | `getActiveStorey` · datums · envelope · projection basis |
 | **WP-v1** Workplane | **cerrada** | `resolveSpatialReference`; tools sin acoplar a cámara |
+| **WP-v2** Planos tangibles | **cerrada** | Nivel · superficie · línea; `activeWorkplane` sesión |
+| **SK-v1** Sketch Mode | **cerrada** | Rectángulo → 4 muros / CompositeCommand; arcos stub |
+| **SK-sel** Sketch selección | **cerrada** | Doble clic / Editar perfil; `sketchTarget` |
+| **SK-draw** Dibujar | **cerrada** | Arcos tessellados; pickLines/pickFace; preview polilínea |
+| **SK-profile** + SK-replace v0 | **cerrada** | Provisional libre; replace; **deuda** silueta→N muros |
+| **SK-profile-one** | **siguiente** | Un perfil materializado; ver `sketch-result-outline.md` |
 
 ### Checklists humanas cerradas (referencia)
 
@@ -86,6 +102,12 @@ Sin frase, no implementar. Family Editor / Push&Pull / LR1-C / LR4+ siguen parke
 | LR2 CompositeCommand | OK 2026-08-09 — undo/redo atómico; fallo = rollback |
 | LR3 Spatial Reference | OK 2026-08-09 — A–D en `@axonbim/model` + session; tests verdes |
 | WP-v1 Workplane | OK 2026-08-09 — plano storey derivado; muro/Viewport; sin persistir |
+| WP-v2 Planos tangibles | OK 2026-08-09 — select/línea/nivel; overlay; tests |
+| SK-v1 Sketch Mode | OK 2026-08-09 — rectángulo en Workplane; undo atómico de 4 muros |
+| SK-sel Sketch selección | OK 2026-08-09 — muro; Dibujar reutilizado |
+| SK-draw Dibujar | OK 2026-08-09 — 6 modos; tests tools + session |
+| SK-profile / SK-replace v0 | OK código 2026-08-09 — deuda producto: silueta libre → N muros (solape) |
+| SK-profile-one | **pendiente auth** — un único perfil al Terminar |
 
 ### Bugs de checklist (cerrados / aceptados)
 

@@ -7,8 +7,16 @@ import type {
   DoorSwing,
   ViewCrop,
   Window,
+  Workplane,
 } from "@axonbim/model";
-import type { DrawMode, ToolId } from "@axonbim/tools";
+import type {
+  DrawMode,
+  EditingParadigm,
+  SketchPoint,
+  SketchProfile,
+  SketchTarget,
+  ToolId,
+} from "@axonbim/tools";
 import type { CameraPreset } from "@axonbim/viewer";
 import type { CropDragMeta } from "./viewCropDrag.js";
 import type {
@@ -32,6 +40,14 @@ export type SessionState = {
   ribbonTab: RibbonTab;
   activeTool: ToolId;
   drawMode: DrawMode;
+  /** SK-v1 — parametric vs sketch; session only. */
+  editingParadigm: EditingParadigm;
+  /** SK-sel — host element for Sketch-on-selection; session only. */
+  sketchTarget: SketchTarget | null;
+  /** SK-profile — abstract perimeter on Workplane; session only. */
+  sketchProfile: SketchProfile | null;
+  sketchProfileStroke: boolean;
+  profileVertexIndex: number | null;
   wallChain: boolean;
   activeFamilyId: string;
   wallHeight: number;
@@ -54,6 +70,7 @@ export type SessionState = {
   wallPending: { x: number; y: number; z: number } | null;
   wallChainOrigin: { x: number; y: number; z: number } | null;
   wallHover: { x: number; y: number; z: number } | null;
+  drawPoints: SketchPoint[];
   lastSnapKind: import("@axonbim/tools").SnapKind;
   /** LR1 ortho axis lock — session only, never in document/history. */
   snapSession: import("@axonbim/tools").SnapSession;
@@ -62,6 +79,25 @@ export type SessionState = {
   /** LR3-A — active storey for creation / elevation context. */
   activeStoreyId: string;
   setActiveStoreyId: (id: string) => void;
+  /** WP-v2 — tangible workplane (session only). */
+  activeWorkplane: Workplane;
+  workplaneLock: "auto-level" | "manual";
+  workplaneLinePending: { x: number; y: number; z: number } | null;
+  resetWorkplaneToLevel: () => void;
+  setWorkplaneFromSurface: (
+    wallId: string,
+    face?: "front" | "back",
+    hint?: { x: number; y: number; z: number },
+  ) => void;
+  setWorkplaneFromLine: (
+    p1: { x: number; y: number; z: number },
+    p2: { x: number; y: number; z: number },
+  ) => void;
+  workplaneSelectClick: (
+    wallId: string | null,
+    hint?: { x: number; y: number; z: number },
+  ) => void;
+  workplaneLineClick: (p: { x: number; y: number; z: number }) => void;
   status: string;
   visualStyle: VisualStyle;
   detailLevel: DetailLevel;
@@ -96,6 +132,19 @@ export type SessionState = {
   setRibbonTab: (tab: RibbonTab) => void;
   setTool: (tool: ToolId) => void;
   setDrawMode: (mode: DrawMode) => void;
+  enterSketchOnSelection: () => void;
+  enterSketchOnElement: (kind: SketchTarget["kind"], id: string) => void;
+  finishSketchOnSelection: () => void;
+  exitSketchOnSelection: () => void;
+  profileVertexClick: (
+    p: { x: number; y: number; z: number },
+    forceOrtho?: boolean,
+  ) => void;
+  profileVertexDragTo: (
+    p: { x: number; y: number; z: number },
+    forceOrtho?: boolean,
+  ) => void;
+  endProfileVertexDrag: () => void;
   setWallChain: (chained: boolean) => void;
   setSnapEnabled: (enabled: boolean) => void;
   splitWallChain: () => void;
@@ -114,6 +163,7 @@ export type SessionState = {
   placeWindowOnWall: (wallId: string, world: { x: number; y: number }) => void;
   setWallHover: (p: { x: number; y: number; z: number } | null, forceOrtho?: boolean) => void;
   wallClick: (p: { x: number; y: number; z: number }, forceOrtho?: boolean) => void;
+  wallPickClick: (wallId: string, hint?: { x: number; y: number; z: number }) => void;
   cameraClick: (p: { x: number; y: number; z: number }) => void;
   cancelWallDraw: () => void;
   runUndo: () => void;

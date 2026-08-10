@@ -2,6 +2,56 @@
 
 ## Unreleased
 
+### WP-v2 — planos de trabajo tangibles (2026-08-09)
+
+- Kinds: `storey` | `surface` | `line` (sesión; no `.axon`)
+- UI: **Arquitectura** Seleccionar / Dibujar / Nivel; **Modificar** Seleccionar / Nivel (si hay geometría)
+- Overlay parche + ejes; pick `pickWorkplane` sobre el plano activo
+- Sketch Mode edita el perímetro sobre `activeWorkplane` (surface/line, no solo storey)
+- APIs: `workplaneFromWallFace`, `workplaneFromLineTrace`, `intersectRayWorkplane`
+
+### SK-profile-one — un único perfil (siguiente; auth)
+
+- Objetivo: Terminar materializa **un** resultado coherente (sin silueta del sólido → N muros)
+- Deuda v0 documentada: `docs/architecture/sketch-result-outline.md`
+- No implementar sin frase «autorizo SK-profile-one»
+
+### SK-replace — provisional libre → muros nuevos (2026-08-09, v0)
+
+- Vértices/aristas del provisional **independientes** (sin corner constricted)
+- **Terminar** = validar → **delete** hosts + **create** muros nuevos (no update in-place)
+- Huella caja → 1 muro nuevo; huella libre → N muros (aristas); openings bloquean replace
+- APIs: `isWallBoxFootprint`, `commitSketchProfile` (replace), `validateSketchProfileForHost`
+- Contrato: `docs/architecture/sketch-result-outline.md`
+
+### SK-profile — perímetro en Workplane (2026-08-09)
+
+- Contorno del **sólido resultante** en `activeWorkplane` (huella / cara / silueta), no el eje
+- Semilla + overlay provisional; muro intacto hasta Terminar
+- APIs: `outlineOnWorkplane`, `profileFromClosedRing`, `validateSketchProfileForHost`
+
+### SK-draw — herramientas Dibujar completas (2026-08-09)
+
+- Línea · rectángulo · arco I-F-R · arco centro · pick líneas · pick cara
+- Arcos → polilínea tessellada (12 segs) → muros vía `CompositeCommand`
+- APIs reutilizables en `@axonbim/tools` (`sampleArc*`, `wallAxesFromPolyline`)
+- Preview polilínea en viewer; pick cara fija Workplane del storey del muro
+
+### SK-sel — Sketch sobre selección (2026-08-09)
+
+- Doble clic en muro o **Modificar → Editar perfil** entra en Sketch del elemento
+- `sketchTarget` en sesión; Workplane = storey del muro; mismas herramientas Dibujar
+- Terminar / Cancelar / Esc salen a Paramétrico y conservan la selección
+
+### SK-v1 — Sketch Mode rectángulo (2026-08-09)
+
+- Invariante: Sketch Mode **solo** con elementos paramétricos sobre Workplane definido
+- Destino de producto: pisos/losas, terreno, perfiles para barridos (SK-v1 = prueba de patrón)
+- Sketch reutiliza las herramientas Dibujar del muro (sin segunda barra)
+- `editingParadigm` en sesión (`parametric` \| `sketch`); no en `.axon`
+- Modo **Rectángulo**: 2 clics → 4 muros vía `CompositeCommand` (1 undo)
+- Preview de contorno; losas/terreno/barridos y arcos/pick parked hasta auth
+
 ### WP-v1 — Workplane compartido (2026-08-09)
 
 - `Workplane` / `SpatialReferenceContext` en `@axonbim/model` (derivado del storey activo)

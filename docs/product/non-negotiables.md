@@ -7,7 +7,7 @@ Fuente: Plan Maestro §58. Aplican a producto y a agentes.
 3. React no modifica directamente el documento.
 4. Toda mutación confirmada pasa por comandos.
 5. Las previsualizaciones no entran al historial.
-6. El trazado trabaja sobre un plano matemático (Workplane derivado del storey activo; no SoT en `.axon`).
+6. El trazado trabaja sobre un plano matemático (**Workplane** de sesión: nivel por defecto, u override superficie/línea; **no** SoT en `.axon`). Sketch Mode solo produce **elementos paramétricos** sobre ese Workplane (nunca malla libre ni plano de cámara); su uso principal de producto es perfiles para **pisos/losas, terreno y barridos**, no el modelado habitual muro/puerta/ventana.
 7. Cambiar de vista no modifica el modelo ni el Workplane.
 8. IFC es un adaptador (futuro), no el runtime del gesto.
 9. OpenCascade no entra en el MVP.

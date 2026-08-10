@@ -1,11 +1,9 @@
 import {
   CreateCameraCommand,
   CreateDoorCommand,
-  CreateWallCommand,
   CreateWindowCommand,
   createCameraId,
   createDoorId,
-  createWallId,
   createWindowId,
 } from "@axonbim/commands";
 import {
@@ -15,37 +13,328 @@ import {
   findDoorFamily,
   findWallFamily,
   findWindowFamily,
-  pointOnWorkplaneXY,
-  resolveSpatialReference,
+  getActiveStorey,
+  projectPointOntoWorkplane,
+  reconcileActiveStoreyId,
   openingsOnWall,
   validateHostedOpening,
+  workplaneFromStorey,
   type Camera,
   type Door,
   type Wall,
   type Window,
+  type Workplane,
 } from "@axonbim/model";
 import { MIN_WALL_LENGTH } from "@axonbim/shared";
-import type { DrawMode, ToolId } from "@axonbim/tools";
+import type {
+  DrawMode,
+  EditingParadigm,
+  RectWallAxis,
+  SketchPoint,
+  SketchProfile,
+  SketchTarget,
+  ToolId,
+} from "@axonbim/tools";
 import {
+  appendProfileEdge,
+  canEnterSketchOnKind,
   clearSnapSession,
+  closerEndpoint,
   collectEndpoints,
   emptySnapSession,
+  hitProfileVertex,
   isCameraTool,
   isSketchTool,
+  isWorkplaneTool,
+  mapProfilePoints,
+  moveProfileVertex,
+  paradigmForDrawMode,
+  profileFromAxes,
+  profileFromClosedRing,
+  profileVertices,
   restartChainAt,
+  sampleArcCE,
+  sampleArcSER,
   snapWallPoint,
+  wallAxesFromPolyline,
+  wallAxesFromRectangle,
+  type SnapKind,
   type SnapSession,
 } from "@axonbim/tools";
-import { projectPointOnWall } from "@axonbim/geometry";
+import { outlineOnWorkplane, projectPointOnWall } from "@axonbim/geometry";
 import { cameraViewId } from "./cameraViews.js";
+import { commitSketchProfile } from "./commitSketchProfile.js";
+import { commitWallAxes } from "./commitWallAxes.js";
 import { rejectionStatus } from "./documentMutation.js";
 import { DEFAULT_CAMERA_EYE_Z, DEFAULT_CAMERA_FOV } from "./sessionTypes.js";
 import { applyCommand } from "./sliceContracts.js";
 import type { SessionSliceCreator } from "./sliceTypes.js";
 
+function drawModeStatus(mode: DrawMode, onSelection: boolean): string {
+  const prefix = onSelection ? "Sketch · Workplane · " : "";
+  switch (mode) {
+    case "line":
+      return onSelection
+        ? "Sketch · Workplane · clic vértice del perímetro → nueva posición"
+        : "Paramétrico — línea (muro)";
+    case "rectangle":
+      return onSelection
+        ? `${prefix}Rectángulo → reemplaza el perímetro en el plano`
+        : "Rectángulo: esquina 1 → esquina 2";
+    case "arcSER":
+      return onSelection
+        ? `${prefix}Arco I-F-R → reemplaza perímetro en el plano`
+        : "Arco I-F-R: inicio → fin → punto en arco";
+    case "arcCE":
+      return onSelection
+        ? `${prefix}Arco centro → reemplaza perímetro en el plano`
+        : "Arco centro: centro → inicio → fin";
+    case "pickLines":
+      return onSelection
+        ? `${prefix}clic vértice del perímetro (mismo que línea)`
+        : "Pick líneas: clic en un muro (P1 en extremo)";
+    case "pickFace":
+      return `${prefix}Pick cara: clic en un muro (fija nivel / Workplane)`;
+    default:
+      return `${prefix}Dibujo: ${mode}`;
+  }
+}
+
+/** Modes that rebuild the whole profile (vs vertex edit on Workplane). */
+function isProfileRebuildMode(mode: DrawMode): boolean {
+  return mode === "rectangle" || mode === "arcSER" || mode === "arcCE";
+}
+
+function clearDrawGesture(): Partial<{
+  drawPoints: SketchPoint[];
+  wallPending: null;
+  wallChainOrigin: null;
+  wallHover: null;
+  lastSnapKind: "none";
+  snapSession: ReturnType<typeof clearSnapSession>;
+}> {
+  return {
+    drawPoints: [],
+    wallPending: null,
+    wallChainOrigin: null,
+    wallHover: null,
+    lastSnapKind: "none",
+    snapSession: clearSnapSession(),
+  };
+}
+
+type GetSet = {
+  get: () => {
+    sketchTarget: SketchTarget | null;
+    sketchProfile: SketchProfile | null;
+    sketchProfileStroke: boolean;
+    wallChain: boolean;
+    activeWorkplane: Workplane;
+  };
+  set: (partial: Record<string, unknown>) => void;
+};
+
+/** Keep sketch points on the session Workplane (storey / surface / line). */
+function ontoSessionWorkplane(wp: Workplane, p: SketchPoint): SketchPoint {
+  return projectPointOntoWorkplane(wp, p);
+}
+
+function profileOntoSessionWorkplane(
+  profile: SketchProfile,
+  wp: Workplane,
+): SketchProfile {
+  return mapProfilePoints(profile, (p) => ontoSessionWorkplane(wp, p));
+}
+
+/** Contorno del sólido resultante en el Workplane (no el eje). */
+function seedResultOutlineProfile(
+  walls: Wall[],
+  seedWallId: string,
+  wp: Workplane,
+): SketchProfile | null {
+  const outline = outlineOnWorkplane(walls, seedWallId, wp);
+  if (!outline || outline.points.length === 0) return null;
+  return profileFromClosedRing(
+    outline.points,
+    outline.sourceWallIds,
+    outline.closed,
+  );
+}
+
+type SketchEditSession = {
+  sketchProfile: SketchProfile | null;
+  document: { walls: Wall[] };
+  activeWorkplane: Workplane;
+  snapEnabled: boolean;
+  snapSession: SnapSession;
+};
+
+/** Snap + project onto active Workplane for provisional vertex edits. */
+function resolveSketchEditPoint(
+  s: SketchEditSession,
+  raw: SketchPoint,
+  forceOrtho: boolean,
+  pending: SketchPoint | null,
+): { point: SketchPoint; kind: SnapKind; session: SnapSession } {
+  const onPlane = ontoSessionWorkplane(s.activeWorkplane, raw);
+  const verts = s.sketchProfile ? profileVertices(s.sketchProfile) : [];
+
+  // Plan snap (endpoint/ortho) is XY-based — use it only on storey planes.
+  // On surface/line, keep 3D motion on the plane; snap to profile verts in 3D.
+  if (s.activeWorkplane.kind !== "storey") {
+    if (!s.snapEnabled) {
+      return { point: onPlane, kind: "none", session: clearSnapSession() };
+    }
+    const tol = 0.2;
+    let best = onPlane;
+    let kind: SnapKind = "none";
+    let bestD = tol;
+    for (const ep of verts) {
+      if (pending && nearSketch(ep, pending)) continue;
+      const d = Math.hypot(
+        onPlane.x - ep.x,
+        onPlane.y - ep.y,
+        onPlane.z - ep.z,
+      );
+      if (d <= bestD) {
+        bestD = d;
+        best = ontoSessionWorkplane(s.activeWorkplane, ep);
+        kind = "endpoint";
+      }
+    }
+    return { point: best, kind, session: clearSnapSession() };
+  }
+
+  const hide = new Set(s.sketchProfile?.sourceWallIds ?? []);
+  const visibleWalls = s.document.walls.filter((w) => !hide.has(w.id));
+  const endpoints = collectEndpoints(visibleWalls, verts);
+  const snap = s.snapEnabled
+    ? snapWallPoint({
+        raw: onPlane,
+        pending: pending
+          ? ontoSessionWorkplane(s.activeWorkplane, pending)
+          : null,
+        chainOrigin: null,
+        endpoints,
+        forceOrtho,
+        session: s.snapSession,
+      })
+    : {
+        point: onPlane,
+        kind: "none" as const,
+        session: clearSnapSession(),
+      };
+  return {
+    point: ontoSessionWorkplane(s.activeWorkplane, snap.point),
+    kind: snap.kind,
+    session: snap.session,
+  };
+}
+
+function nearSketch(a: SketchPoint, b: SketchPoint, tol = 1e-6): boolean {
+  return Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z) <= tol;
+}
+
+/**
+ * Move a provisional vertex independently (SK-replace: no corner constricted).
+ * The host stays untouched until Terminar replaces it with new wall(s).
+ */
+function moveProvisionalVertex(
+  s: SketchEditSession,
+  vertexIndex: number,
+  to: SketchPoint,
+): SketchProfile | null {
+  const profile = s.sketchProfile;
+  if (!profile) return null;
+  return moveProfileVertex(profile, vertexIndex, to);
+}
+
+/** Create walls, or edit abstract profile when sketchTarget is set. */
+function applyGestureAxes(
+  get: GetSet["get"],
+  set: GetSet["set"],
+  axes: RectWallAxis[],
+  opts: {
+    replace: boolean;
+    closed?: boolean;
+    statusCreate: string;
+    statusProfile: string;
+    /** When chaining lines into the profile, keep pending at this point. */
+    chainTo?: SketchPoint | null;
+  },
+): boolean {
+  const s = get();
+  if (s.sketchTarget && s.sketchProfile) {
+    if (axes.length === 0) {
+      set({ status: "Trazo demasiado corto o inválido" });
+      return false;
+    }
+    // Provisional: Rect/arco replace; Línea siempre añade (no borra el seed).
+    let next: SketchProfile;
+    if (opts.replace) {
+      next = profileFromAxes(
+        axes,
+        s.sketchProfile.sourceWallIds,
+        opts.closed ?? false,
+      );
+    } else {
+      next = s.sketchProfile;
+      for (const a of axes) {
+        next = appendProfileEdge(next, a.p1, a.p2, opts.closed ?? false);
+      }
+    }
+    const wp = s.activeWorkplane;
+    next = profileOntoSessionWorkplane(next, wp);
+    const chaining =
+      !opts.replace &&
+      Boolean(opts.chainTo) &&
+      s.wallChain &&
+      !(opts.closed ?? false);
+    if (chaining) {
+      const chainTo = opts.chainTo
+        ? ontoSessionWorkplane(wp, opts.chainTo)
+        : null;
+      set({
+        sketchProfile: next,
+        sketchProfileStroke: true,
+        profileVertexIndex: null,
+        wallPending: chainTo,
+        wallHover: chainTo,
+        drawPoints: [],
+        lastSnapKind: "none",
+        snapSession: clearSnapSession(),
+        status: opts.statusProfile,
+      });
+    } else {
+      set({
+        sketchProfile: next,
+        sketchProfileStroke: false,
+        profileVertexIndex: null,
+        ...clearDrawGesture(),
+        status: opts.statusProfile,
+      });
+    }
+    return true;
+  }
+  const ok = commitWallAxes(get as never, set as never, axes, opts.statusCreate);
+  // Rect/arc create: clear gesture here. Line create chains outside.
+  if (ok && opts.replace) set({ ...clearDrawGesture() });
+  return ok;
+}
+
 export const createSketchToolSlice: SessionSliceCreator<{
   activeTool: ToolId;
   drawMode: DrawMode;
+  /** SK-v1 / SK-sel — sketch when drawMode sketch or sketchTarget set; not persisted. */
+  editingParadigm: EditingParadigm;
+  /** SK-sel — parametric element hosting Sketch Mode; session only. */
+  sketchTarget: SketchTarget | null;
+  /** SK-profile — abstract perimeter on active Workplane; session only. */
+  sketchProfile: SketchProfile | null;
+  /** True while a rebuild stroke (rect/arc/chain) is accumulating. */
+  sketchProfileStroke: boolean;
+  /** Selected profile vertex index (`profileVertices`), or null. */
+  profileVertexIndex: number | null;
   wallChain: boolean;
   activeFamilyId: string;
   wallHeight: number;
@@ -54,6 +343,8 @@ export const createSketchToolSlice: SessionSliceCreator<{
   wallPending: { x: number; y: number; z: number } | null;
   wallChainOrigin: { x: number; y: number; z: number } | null;
   wallHover: { x: number; y: number; z: number } | null;
+  /** SK-draw — accumulated clicks for multi-step gestures (arcs). */
+  drawPoints: SketchPoint[];
   lastSnapKind: import("@axonbim/tools").SnapKind;
   /** LR1 — ortho axis lock for current segment; never in AxonDocument. */
   snapSession: SnapSession;
@@ -74,11 +365,38 @@ export const createSketchToolSlice: SessionSliceCreator<{
   placeWindowOnWall: (wallId: string, world: { x: number; y: number }) => void;
   setWallHover: (p: { x: number; y: number; z: number } | null, forceOrtho?: boolean) => void;
   wallClick: (p: { x: number; y: number; z: number }, forceOrtho?: boolean) => void;
+  /** SK-draw pick modes — click on an existing wall. */
+  wallPickClick: (wallId: string, hint?: { x: number; y: number; z: number }) => void;
+  /** SK-profile — pick/move a perimeter vertex on the Workplane. */
+  profileVertexClick: (
+    p: { x: number; y: number; z: number },
+    forceOrtho?: boolean,
+  ) => void;
+  /** SK-profile — live drag of a selected vertex on the Workplane. */
+  profileVertexDragTo: (
+    p: { x: number; y: number; z: number },
+    forceOrtho?: boolean,
+  ) => void;
+  /** SK-profile — release vertex grip after drag. */
+  endProfileVertexDrag: () => void;
   cameraClick: (p: { x: number; y: number; z: number }) => void;
   cancelWallDraw: () => void;
+  /** SK-sel — enter Sketch on current selection (Modify button). */
+  enterSketchOnSelection: () => void;
+  /** SK-sel — enter Sketch on a picked element (double-click). */
+  enterSketchOnElement: (kind: SketchTarget["kind"], id: string) => void;
+  /** SK-profile — apply profile then leave Sketch → Parametric. */
+  finishSketchOnSelection: () => void;
+  /** SK-sel — discard profile and leave Sketch → Parametric. */
+  exitSketchOnSelection: () => void;
 }> = (set, get) => ({
   activeTool: "none",
   drawMode: "line",
+  editingParadigm: "parametric",
+  sketchTarget: null,
+  sketchProfile: null,
+  sketchProfileStroke: false,
+  profileVertexIndex: null,
   wallChain: true,
   activeFamilyId: "family.block-150",
   wallHeight: 2.7,
@@ -87,6 +405,7 @@ export const createSketchToolSlice: SessionSliceCreator<{
   wallPending: null,
   wallChainOrigin: null,
   wallHover: null,
+  drawPoints: [],
   lastSnapKind: "none",
   snapSession: emptySnapSession(),
   snapEnabled: true,
@@ -96,12 +415,13 @@ export const createSketchToolSlice: SessionSliceCreator<{
       set({
         activeTool,
         drawMode: "line",
+        editingParadigm: "parametric",
+        sketchTarget: null,
+        sketchProfile: null,
+        sketchProfileStroke: false,
+        profileVertexIndex: null,
         ribbonTab: "modify",
-        wallPending: null,
-        wallChainOrigin: null,
-        wallHover: null,
-        lastSnapKind: "none",
-        snapSession: clearSnapSession(),
+        ...clearDrawGesture(),
         status: "Herramienta: ninguna",
       });
       return;
@@ -109,14 +429,16 @@ export const createSketchToolSlice: SessionSliceCreator<{
     if (activeTool === "door") {
       set({
         activeTool,
+        sketchTarget: null,
+        sketchProfile: null,
+        sketchProfileStroke: false,
+        profileVertexIndex: null,
+        editingParadigm: "parametric",
         ribbonTab: "modify",
         selectedWallId: null,
         selectedDoorId: null,
         selectedWindowId: null,
-        wallPending: null,
-        wallChainOrigin: null,
-        wallHover: null,
-        snapSession: clearSnapSession(),
+        ...clearDrawGesture(),
         status: "Colocar puerta — clic en un muro",
       });
       return;
@@ -124,15 +446,17 @@ export const createSketchToolSlice: SessionSliceCreator<{
     if (activeTool === "window") {
       set({
         activeTool,
+        sketchTarget: null,
+        sketchProfile: null,
+        sketchProfileStroke: false,
+        profileVertexIndex: null,
+        editingParadigm: "parametric",
         ribbonTab: "modify",
         selectedWallId: null,
         selectedDoorId: null,
         selectedWindowId: null,
         selectedCameraId: null,
-        wallPending: null,
-        wallChainOrigin: null,
-        wallHover: null,
-        snapSession: clearSnapSession(),
+        ...clearDrawGesture(),
         status: "Colocar ventana — clic en un muro",
       });
       return;
@@ -140,17 +464,37 @@ export const createSketchToolSlice: SessionSliceCreator<{
     if (isCameraTool(activeTool)) {
       set({
         activeTool,
+        sketchTarget: null,
+        sketchProfile: null,
+        sketchProfileStroke: false,
+        profileVertexIndex: null,
+        editingParadigm: "parametric",
         ribbonTab: "view",
         selectedWallId: null,
         selectedDoorId: null,
         selectedWindowId: null,
         selectedCameraId: null,
-        wallPending: null,
-        wallChainOrigin: null,
-        wallHover: null,
-        lastSnapKind: "none",
-        snapSession: clearSnapSession(),
+        ...clearDrawGesture(),
         status: "Cámara — clic 1: ojo · clic 2: mira (en planta)",
+      });
+      return;
+    }
+    if (isWorkplaneTool(activeTool)) {
+      set({
+        activeTool,
+        sketchTarget: null,
+        sketchProfile: null,
+        sketchProfileStroke: false,
+        profileVertexIndex: null,
+        editingParadigm: "parametric",
+        // Dibujar plano → Arquitectura; Seleccionar puede usarse desde ambas cintas.
+        ribbonTab: activeTool === "workplaneLine" ? "architecture" : get().ribbonTab,
+        workplaneLinePending: null,
+        ...clearDrawGesture(),
+        status:
+          activeTool === "workplaneSelect"
+            ? "Seleccionar plano — clic cara de muro o vacío = nivel"
+            : "Dibujar plano — clic 1: inicio de la traza (vertical en XYZ)",
       });
       return;
     }
@@ -158,43 +502,41 @@ export const createSketchToolSlice: SessionSliceCreator<{
       set({
         activeTool,
         drawMode: "line",
+        editingParadigm: "parametric",
+        sketchTarget: null,
+        sketchProfile: null,
+        sketchProfileStroke: false,
+        profileVertexIndex: null,
         wallChain: true,
         ribbonTab: "modify",
         selectedWallId: null,
         selectedDoorId: null,
         selectedWindowId: null,
         selectedCameraId: null,
-        wallPending: null,
-        wallChainOrigin: null,
-        wallHover: null,
-        lastSnapKind: "none",
-        snapSession: clearSnapSession(),
-        status:
-          activeTool === "wall"
-            ? "Colocar muro — snap extremos/orto/cierre (Shift = orto)"
-            : `Trazar: ${activeTool}`,
+        ...clearDrawGesture(),
+        status: "Colocar muro — Dibujar: línea / rectángulo / arcos / pick",
       });
       return;
     }
     set({
       activeTool,
       ribbonTab: "modify",
-      wallPending: null,
-      wallChainOrigin: null,
-      wallHover: null,
-      lastSnapKind: "none",
-      snapSession: clearSnapSession(),
+      ...clearDrawGesture(),
       status: `Herramienta: ${activeTool}`,
     });
   },
 
   setDrawMode: (drawMode) => {
-    const tool = get().activeTool;
+    const s = get();
+    const onSelection = s.sketchTarget != null;
+    const editingParadigm = onSelection ? "sketch" : paradigmForDrawMode(drawMode);
     set({
       drawMode,
-      status: isSketchTool(tool)
-        ? `Dibujo: ${drawMode}${tool === "wall" ? " (muro)" : ""}`
-        : `Dibujo: ${drawMode}`,
+      editingParadigm,
+      sketchProfileStroke: false,
+      profileVertexIndex: null,
+      ...clearDrawGesture(),
+      status: drawModeStatus(drawMode, onSelection),
     });
   },
 
@@ -380,17 +722,49 @@ export const createSketchToolSlice: SessionSliceCreator<{
   wallClick: (raw, forceOrtho = false) => {
     const s = get();
     if (s.activeTool !== "wall") return;
-    if (s.drawMode !== "line") {
-      set({ status: "Solo modo Línea está activo en el MVP" });
-      return;
+
+    // SK-provisional: grips if hit/selected; otherwise fall through to Dibujar.
+    if (s.sketchTarget && s.sketchProfile && !isProfileRebuildMode(s.drawMode)) {
+      if (s.drawMode === "pickFace") {
+        set({ status: "Clic en un muro (modo pick cara)" });
+        return;
+      }
+      if (s.profileVertexIndex != null) {
+        get().profileVertexClick(raw, forceOrtho);
+        return;
+      }
+      const pick = ontoSessionWorkplane(s.activeWorkplane, raw);
+      if (hitProfileVertex(s.sketchProfile, pick) >= 0) {
+        get().profileVertexClick(raw, forceOrtho);
+        return;
+      }
+      // Miss grip → line / pickLines draw into the provisional profile.
+      if (s.drawMode !== "line" && s.drawMode !== "pickLines") {
+        get().profileVertexClick(raw, forceOrtho);
+        return;
+      }
     }
 
+    if (s.drawMode === "pickLines" || s.drawMode === "pickFace") {
+      // Completing a pickLines segment after P1 was set from a wall.
+      if (s.drawMode === "pickLines" && s.wallPending) {
+        // fall through to line-style commit below via snap
+      } else {
+        set({ status: "Clic en un muro (modo pick)" });
+        return;
+      }
+    }
+
+    const profilePts = s.sketchProfile ? profileVertices(s.sketchProfile) : [];
     const snap = s.snapEnabled
       ? snapWallPoint({
           raw,
           pending: s.wallPending,
-          chainOrigin: s.wallChainOrigin,
-          endpoints: collectEndpoints(s.document.walls),
+          chainOrigin:
+            s.drawMode === "line" || (s.drawMode === "pickLines" && s.wallPending)
+              ? s.wallChainOrigin
+              : null,
+          endpoints: collectEndpoints(s.document.walls, profilePts),
           forceOrtho,
           session: s.snapSession,
         })
@@ -400,8 +774,103 @@ export const createSketchToolSlice: SessionSliceCreator<{
           closed: false,
           session: clearSnapSession(),
         };
-    const p = snap.point;
+    // Viewport picks on activeWorkplane; re-project after snap so sketch stays on plane.
+    const p = ontoSessionWorkplane(s.activeWorkplane, snap.point);
 
+    if (s.drawMode === "rectangle") {
+      if (!s.wallPending) {
+        set({
+          wallPending: p,
+          wallHover: p,
+          lastSnapKind: snap.kind,
+          snapSession: clearSnapSession(),
+          status: "Rectángulo — clic esquina opuesta",
+        });
+        return;
+      }
+      const axes = wallAxesFromRectangle(s.wallPending, p);
+      const w = Math.abs(p.x - s.wallPending.x);
+      const d = Math.abs(p.y - s.wallPending.y);
+      applyGestureAxes(get, set, axes, {
+        replace: true,
+        closed: true,
+        statusCreate: `Rectángulo ${w.toFixed(2)}×${d.toFixed(2)} m (${axes.length} muros)`,
+        statusProfile: `Perfil ← rectángulo ${w.toFixed(2)}×${d.toFixed(2)} m · Terminar aplica`,
+      });
+      return;
+    }
+
+    if (s.drawMode === "arcSER") {
+      const pts = [...s.drawPoints, p];
+      if (pts.length < 3) {
+        set({
+          drawPoints: pts,
+          wallHover: p,
+          lastSnapKind: snap.kind,
+          snapSession: clearSnapSession(),
+          status:
+            pts.length === 1
+              ? "Arco I-F-R — clic fin del arco"
+              : "Arco I-F-R — clic punto en el arco",
+        });
+        return;
+      }
+      const poly = sampleArcSER(pts[0]!, pts[1]!, pts[2]!);
+      const axes = wallAxesFromPolyline(poly);
+      if (
+        !applyGestureAxes(get, set, axes, {
+          replace: true,
+          closed: false,
+          statusCreate: `Arco I-F-R (${axes.length} segmentos)`,
+          statusProfile: `Perfil ← arco I-F-R (${axes.length} segs) · Terminar aplica`,
+        })
+      ) {
+        set({
+          drawPoints: [],
+          wallHover: null,
+          lastSnapKind: "none",
+          snapSession: clearSnapSession(),
+        });
+      }
+      return;
+    }
+
+    if (s.drawMode === "arcCE") {
+      const pts = [...s.drawPoints, p];
+      if (pts.length < 3) {
+        set({
+          drawPoints: pts,
+          wallHover: p,
+          lastSnapKind: snap.kind,
+          snapSession: clearSnapSession(),
+          status:
+            pts.length === 1
+              ? "Arco centro — clic inicio (radio)"
+              : "Arco centro — clic fin (ángulo)",
+        });
+        return;
+      }
+      const poly = sampleArcCE(pts[0]!, pts[1]!, pts[2]!);
+      const axes = wallAxesFromPolyline(poly);
+      if (
+        !applyGestureAxes(get, set, axes, {
+          replace: true,
+          closed: false,
+          statusCreate: `Arco centro (${axes.length} segmentos)`,
+          statusProfile: `Perfil ← arco centro (${axes.length} segs) · Terminar aplica`,
+        })
+      ) {
+        set({
+          drawPoints: [],
+          wallHover: null,
+          lastSnapKind: "none",
+          snapSession: clearSnapSession(),
+        });
+      }
+      return;
+    }
+
+    // line + pickLines (after P1)
     if (!s.wallPending) {
       set({
         wallPending: p,
@@ -417,29 +886,15 @@ export const createSketchToolSlice: SessionSliceCreator<{
       return;
     }
 
-    const p1 = s.wallPending;
-    const len = Math.hypot(p.x - p1.x, p.y - p1.y);
+    const p1 = ontoSessionWorkplane(s.activeWorkplane, s.wallPending);
+    const onProfile = s.sketchTarget != null;
+    const len = onProfile
+      ? Math.hypot(p.x - p1.x, p.y - p1.y, p.z - p1.z)
+      : Math.hypot(p.x - p1.x, p.y - p1.y);
     if (len < MIN_WALL_LENGTH) {
       set({ status: "Segmento demasiado corto", lastSnapKind: snap.kind });
       return;
     }
-
-    const fam = findWallFamily(s.document.families, s.activeFamilyId);
-    if (!fam) {
-      set({ status: "Esa familia de muro no existe en el documento", lastSnapKind: snap.kind });
-      return;
-    }
-    const spatial = resolveSpatialReference(s.document, s.activeStoreyId);
-    const wp = spatial.workplane;
-    const wall: Wall = {
-      id: createWallId(),
-      storeyId: spatial.storeyId,
-      familyId: fam.id,
-      p1: pointOnWorkplaneXY(wp, p1.x, p1.y),
-      p2: pointOnWorkplaneXY(wp, p.x, p.y),
-      height: s.wallHeight,
-      thickness: fam.thickness,
-    };
 
     const snapLabel =
       snap.kind === "close"
@@ -449,34 +904,166 @@ export const createSketchToolSlice: SessionSliceCreator<{
           : snap.kind === "ortho"
             ? "orto"
             : "libre";
-    applyCommand(
-      get,
-      set,
-      new CreateWallCommand(wall),
-      `Muro ${len.toFixed(2)} m (${snapLabel})`,
-    );
+    const onPlane = ontoSessionWorkplane(s.activeWorkplane, p);
+    const continueChain =
+      !snap.closed && s.wallChain && s.drawMode !== "pickLines";
 
-    const onPlane = pointOnWorkplaneXY(wp, p.x, p.y);
-    if (snap.closed || !s.wallChain) {
-      set({
-        wallPending: null,
-        wallChainOrigin: null,
-        wallHover: null,
-        lastSnapKind: "none",
-        snapSession: clearSnapSession(),
-        status: snap.closed
-          ? "Espacio cerrado — clic para nuevo trazo"
-          : "Segmento colocado",
-      });
-    } else {
-      set({
-        wallPending: onPlane,
-        wallHover: onPlane,
-        lastSnapKind: snap.kind,
-        snapSession: clearSnapSession(),
-        status: "Cadena — siguiente segmento (cierre cerca del origen)",
-      });
+    const ok = applyGestureAxes(get, set, [{ p1, p2: p }], {
+      replace: false,
+      closed: Boolean(snap.closed),
+      statusCreate: `Muro ${len.toFixed(2)} m (${snapLabel})`,
+      statusProfile: snap.closed
+        ? "Perfil cerrado · Terminar aplica al host"
+        : continueChain
+          ? "Perfil · cadena — siguiente segmento · Terminar aplica"
+          : "Perfil actualizado · Terminar aplica",
+      chainTo: onProfile && continueChain ? onPlane : null,
+    });
+    if (!ok) return;
+
+    if (!onProfile) {
+      if (snap.closed || !s.wallChain || s.drawMode === "pickLines") {
+        set({
+          ...clearDrawGesture(),
+          status: snap.closed
+            ? "Espacio cerrado — clic para nuevo trazo"
+            : s.drawMode === "pickLines"
+              ? "Pick líneas — clic en un muro para otro P1"
+              : "Segmento colocado",
+        });
+      } else {
+        set({
+          wallPending: onPlane,
+          wallHover: onPlane,
+          drawPoints: [],
+          lastSnapKind: snap.kind,
+          snapSession: clearSnapSession(),
+          status: "Cadena — siguiente segmento (cierre cerca del origen)",
+        });
+      }
     }
+  },
+
+  profileVertexClick: (raw, forceOrtho = false) => {
+    const s = get();
+    if (!s.sketchTarget || !s.sketchProfile) return;
+
+    if (s.profileVertexIndex == null) {
+      const pick = ontoSessionWorkplane(s.activeWorkplane, raw);
+      const hit = hitProfileVertex(s.sketchProfile, pick);
+      if (hit < 0) {
+        set({
+          status:
+            "Sketch provisional — clic un vértice (snap activo) o Rectángulo/arco para redibujar",
+        });
+        return;
+      }
+      set({
+        profileVertexIndex: hit,
+        wallHover: pick,
+        status: `Vértice ${hit + 1} — clic o arrastra (snap/orto) · Terminar valida`,
+      });
+      return;
+    }
+
+    const from = profileVertices(s.sketchProfile)[s.profileVertexIndex] ?? null;
+    const resolved = resolveSketchEditPoint(s, raw, forceOrtho, from);
+    const moved = moveProvisionalVertex(
+      s,
+      s.profileVertexIndex,
+      resolved.point,
+    );
+    if (!moved) {
+      set({ profileVertexIndex: null, status: "No se pudo mover el vértice" });
+      return;
+    }
+    set({
+      sketchProfile: moved,
+      profileVertexIndex: null,
+      wallHover: resolved.point,
+      lastSnapKind: resolved.kind,
+      snapSession: resolved.session,
+      status: "Sketch provisional actualizado · Terminar valida y aplica",
+    });
+  },
+
+  profileVertexDragTo: (raw, forceOrtho = false) => {
+    const s = get();
+    if (!s.sketchTarget || !s.sketchProfile || s.profileVertexIndex == null) return;
+    const from = profileVertices(s.sketchProfile)[s.profileVertexIndex] ?? null;
+    const resolved = resolveSketchEditPoint(s, raw, forceOrtho, from);
+    const moved = moveProvisionalVertex(
+      s,
+      s.profileVertexIndex,
+      resolved.point,
+    );
+    if (!moved) return;
+    set({
+      sketchProfile: moved,
+      wallHover: resolved.point,
+      lastSnapKind: resolved.kind,
+      snapSession: resolved.session,
+    });
+  },
+
+  endProfileVertexDrag: () => {
+    const s = get();
+    if (!s.sketchTarget) return;
+    set({
+      profileVertexIndex: null,
+      status: "Sketch provisional actualizado · Terminar valida y aplica",
+    });
+  },
+
+  wallPickClick: (wallId, hint) => {
+    const s = get();
+    if (s.activeTool !== "wall") return;
+
+    // While editing a profile on Workplane, pick modes that hit walls still
+    // resolve to workplane vertex edit (host solids may be hidden).
+    if (s.sketchTarget && s.sketchProfile && s.drawMode !== "pickFace") {
+      const hintPt = hint ?? s.activeWorkplane.origin;
+      get().profileVertexClick(ontoSessionWorkplane(s.activeWorkplane, hintPt));
+      return;
+    }
+
+    const wall = s.document.walls.find((w) => w.id === wallId);
+    if (!wall) {
+      set({ status: "Ese muro ya no está en el documento" });
+      return;
+    }
+
+    if (s.drawMode === "pickFace") {
+      const hintPt = hint ?? {
+        x: (wall.p1.x + wall.p2.x) / 2,
+        y: (wall.p1.y + wall.p2.y) / 2,
+        z: wall.p1.z,
+      };
+      get().setWorkplaneFromSurface(wallId, undefined, hintPt);
+      return;
+    }
+
+    if (s.drawMode === "pickLines") {
+      const hintPt = hint ?? {
+        x: (wall.p1.x + wall.p2.x) / 2,
+        y: (wall.p1.y + wall.p2.y) / 2,
+        z: wall.p1.z,
+      };
+      const p1 = closerEndpoint(wall, hintPt);
+      set({
+        wallPending: p1,
+        wallChainOrigin: null,
+        wallHover: p1,
+        drawPoints: [],
+        lastSnapKind: "endpoint",
+        snapSession: clearSnapSession(),
+        selectedWallId: wallId,
+        status: "Pick líneas — P1 en extremo · clic P2 en el plano",
+      });
+      return;
+    }
+
+    set({ status: "Cambia a Pick líneas o Pick cara para usar clic en muro" });
   },
 
   cameraClick: (p) => {
@@ -528,18 +1115,169 @@ export const createSketchToolSlice: SessionSliceCreator<{
   },
 
   cancelWallDraw: () => {
-    const tool = get().activeTool;
+    const s = get();
+    const tool = s.activeTool;
     if (tool !== "wall" && tool !== "camera") return;
+    if (s.sketchTarget && tool === "wall") {
+      if (s.profileVertexIndex != null) {
+        set({
+          profileVertexIndex: null,
+          ...clearDrawGesture(),
+          status: "Sketch · Workplane — vértice liberado · clic otro vértice",
+        });
+        return;
+      }
+      const seeded = seedResultOutlineProfile(
+        s.document.walls,
+        s.sketchTarget.id,
+        s.activeWorkplane,
+      );
+      const reseeds = seeded
+        ? profileOntoSessionWorkplane(seeded, s.activeWorkplane)
+        : s.sketchProfile;
+      set({
+        sketchProfile: reseeds,
+        sketchProfileStroke: false,
+        profileVertexIndex: null,
+        ...clearDrawGesture(),
+        status:
+          "Sketch · Workplane — perímetro restaurado · Terminar aplica · Cancelar descarta",
+      });
+      return;
+    }
+    const sketch = tool === "wall" && s.editingParadigm === "sketch";
     set({
-      wallPending: null,
-      wallChainOrigin: null,
-      wallHover: null,
-      lastSnapKind: "none",
-      snapSession: clearSnapSession(),
+      ...clearDrawGesture(),
       status:
         tool === "camera"
           ? "Cámara cancelada — clic 1 para ojo"
-          : "Trazado cancelado — clic para nuevo P1",
+          : sketch
+            ? "Sketch cancelado — listo para nuevo trazo"
+            : "Trazado cancelado — clic para nuevo P1",
+    });
+  },
+
+  enterSketchOnElement: (kind, id) => {
+    if (!canEnterSketchOnKind(kind)) {
+      set({
+        status: "Sketch sobre selección: este tipo aún no tiene perfil editable",
+      });
+      return;
+    }
+    const s = get();
+    const wall = s.document.walls.find((w) => w.id === id);
+    if (!wall) {
+      set({ status: "Sketch: el elemento ya no está en el documento" });
+      return;
+    }
+    const storeyId = reconcileActiveStoreyId(s.document, wall.storeyId);
+    const storey = getActiveStorey(s.document, storeyId);
+    // Keep a user-selected surface/line plane; only sync storey → host level.
+    const wp =
+      s.activeWorkplane.kind === "storey"
+        ? workplaneFromStorey(storey)
+        : s.activeWorkplane;
+    const seeded = seedResultOutlineProfile(s.document.walls, id, wp);
+    if (!seeded) {
+      set({ status: "Sketch: no se pudo cargar el contorno del muro" });
+      return;
+    }
+    const profile = profileOntoSessionWorkplane(seeded, wp);
+    const loopNote = profile.closed
+      ? `contorno resultante (${profile.edges.length} aristas)`
+      : `contorno (${profile.edges.length} aristas)`;
+    set({
+      sketchTarget: { kind: "wall", id },
+      sketchProfile: profile,
+      sketchProfileStroke: false,
+      profileVertexIndex: null,
+      selectedWallId: id,
+      selectedDoorId: null,
+      selectedWindowId: null,
+      selectedCameraId: null,
+      activeStoreyId: storeyId,
+      activeWorkplane: wp,
+      editingParadigm: "sketch",
+      activeTool: "wall",
+      drawMode: "line",
+      ribbonTab: "modify",
+      ...clearDrawGesture(),
+      status: `Sketch · Workplane «${wp.label}» — ${loopNote} · clic vértices · Terminar aplica`,
+    });
+  },
+
+  enterSketchOnSelection: () => {
+    const s = get();
+    if (s.selectedWallId) {
+      get().enterSketchOnElement("wall", s.selectedWallId);
+      return;
+    }
+    if (s.selectedDoorId || s.selectedWindowId || s.selectedCameraId) {
+      set({
+        status:
+          "Sketch sobre selección: puertas/ventanas/cámaras no tienen perfil sketch (losas/terreno próximamente)",
+      });
+      return;
+    }
+    set({ status: "Selecciona un elemento paramétrico para Sketch (doble clic o Editar perfil)" });
+  },
+
+  finishSketchOnSelection: () => {
+    const s = get();
+    if (!s.sketchTarget) {
+      get().cancelWallDraw();
+      return;
+    }
+    const hostId = s.sketchTarget.id;
+    const result = commitSketchProfile(get, set);
+    if (!result.ok) {
+      // Error status already set — stay in Sketch with profile.
+      return;
+    }
+    if (!result.mutated) {
+      // Do NOT clear sketchProfile — that looked like “Terminar descartó el edit”.
+      set({
+        status:
+          "Sin cambios — edita vértices/aristas del provisional o redibuja · Terminar / Cancelar",
+      });
+      return;
+    }
+    set({
+      sketchTarget: null,
+      sketchProfile: null,
+      sketchProfileStroke: false,
+      profileVertexIndex: null,
+      editingParadigm: "parametric",
+      activeTool: "select",
+      drawMode: "line",
+      ribbonTab: "modify",
+      selectedWallId: result.wallId ?? hostId,
+      // Force viewer resync after un-hiding host solids.
+      documentRev: get().documentRev + 1,
+      ...clearDrawGesture(),
+      status: "Paramétrico — provisional materializado (muros nuevos)",
+    });
+  },
+
+  exitSketchOnSelection: () => {
+    const s = get();
+    if (!s.sketchTarget) {
+      get().cancelWallDraw();
+      return;
+    }
+    const keepId = s.sketchTarget.id;
+    set({
+      sketchTarget: null,
+      sketchProfile: null,
+      sketchProfileStroke: false,
+      profileVertexIndex: null,
+      editingParadigm: "parametric",
+      activeTool: "select",
+      drawMode: "line",
+      ribbonTab: "modify",
+      selectedWallId: keepId,
+      ...clearDrawGesture(),
+      status: "Paramétrico — Sketch cancelado (perfil no aplicado)",
     });
   },
 });

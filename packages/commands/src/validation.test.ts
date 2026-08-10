@@ -11,6 +11,7 @@ import {
   HistoryStack,
   SetCameraFovCommand,
   SetDoorHingeCommand,
+  SetWallEndpointsCommand,
   SetWallFamilyCommand,
   SetWallHeightCommand,
   SetWallThicknessCommand,
@@ -109,6 +110,19 @@ describe("setters validate the resulting entity", () => {
     if (result.ok) return;
     expect(result.code).toBe("wall.height.min");
     expect(doc.walls[0]!.height).toBe(2.7);
+  });
+
+  it("SetWallEndpointsCommand updates axis and undoes", () => {
+    const doc = docWithWall();
+    const cmd = new SetWallEndpointsCommand(
+      "wall.1",
+      { x: 0, y: 0, z: 0 },
+      { x: 5, y: 0, z: 0 },
+    );
+    expect(cmd.execute(doc).ok).toBe(true);
+    expect(doc.walls[0]!.p2.x).toBe(5);
+    cmd.undo(doc);
+    expect(doc.walls[0]!.p2.x).toBe(3);
   });
 
   it("rejects a non-finite thickness", () => {

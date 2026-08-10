@@ -1,6 +1,18 @@
-/** Interaction tools — wall draw, snapping (MVP + LR1 SnapSession). */
+/** Interaction tools — wall draw, snapping, SK-draw (line/rect/arc/pick). */
 
-export type ToolId = "select" | "wall" | "door" | "window" | "camera" | "none";
+export type ToolId =
+  | "select"
+  | "wall"
+  | "door"
+  | "window"
+  | "camera"
+  | "workplaneSelect"
+  | "workplaneLine"
+  | "none";
+
+export function isWorkplaneTool(tool: ToolId): boolean {
+  return tool === "workplaneSelect" || tool === "workplaneLine";
+}
 
 /** Draw panel modes while a sketch/placement tool is active. */
 export type DrawMode =
@@ -16,10 +28,55 @@ export type ToolSession = {
   drawMode: DrawMode;
 };
 
-/** Tools that sketch geometry (open Modify + Draw), not one-click insert. */
+/** Tools that open Modify + Draw (UI), not the EditingParadigm “Sketch Mode”. */
 export function isSketchTool(tool: ToolId): boolean {
   return tool === "wall";
 }
+
+export {
+  isSketchDrawMode,
+  isSketchDrawModeReady,
+  paradigmForDrawMode,
+  type EditingParadigm,
+} from "./editingParadigm.js";
+
+export {
+  rectangleCorners,
+  wallAxesFromRectangle,
+  type RectWallAxis,
+  type SketchPoint,
+} from "./sketchRect.js";
+
+export { wallAxesFromPolyline } from "./drawPolyline.js";
+
+export {
+  ARC_SEGMENTS,
+  closerEndpoint,
+  sampleArcCE,
+  sampleArcSER,
+} from "./drawArc.js";
+
+export { canEnterSketchOnKind, type SketchTarget, type SketchTargetKind } from "./sketchTarget.js";
+
+export {
+  appendProfileEdge,
+  findWallLoop,
+  hitProfileVertex,
+  mapProfilePoints,
+  moveProfileVertex,
+  profileFromAxes,
+  profileFromClosedRing,
+  profileFromWallAxis,
+  profileFromWallLoop,
+  profileToAxes,
+  profileToPoints,
+  profileVertices,
+  projectProfileToWorkplaneZ,
+  seedProfileFromWall,
+  type SketchProfile,
+  type SketchProfileEdge,
+  type WallAxisLike,
+} from "./sketchProfile.js";
 
 /** Two-click placement on plan (eye → target). */
 export function isCameraTool(tool: ToolId): boolean {

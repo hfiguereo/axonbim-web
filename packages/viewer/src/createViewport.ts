@@ -67,6 +67,33 @@ export type ViewportHandle = {
     p1: { x: number; y: number; z: number } | null,
     p2: { x: number; y: number; z: number } | null,
   ) => void;
+  setPreviewRect: (
+    a: { x: number; y: number; z: number } | null,
+    b: { x: number; y: number; z: number } | null,
+  ) => void;
+  setPreviewPolyline: (
+    points: { x: number; y: number; z: number }[] | null,
+  ) => void;
+  setProfilePolyline: (
+    points: { x: number; y: number; z: number }[] | null,
+    vertices?: { x: number; y: number; z: number }[] | null,
+    selectedVertex?: number | null,
+  ) => void;
+  setWorkplaneOverlay: (
+    corners: [
+      { x: number; y: number; z: number },
+      { x: number; y: number; z: number },
+      { x: number; y: number; z: number },
+      { x: number; y: number; z: number },
+    ] | null,
+    origin?: { x: number; y: number; z: number } | null,
+    axisU?: { x: number; y: number; z: number } | null,
+    axisV?: { x: number; y: number; z: number } | null,
+  ) => void;
+  setWorkplaneTrace: (
+    p1: { x: number; y: number; z: number } | null,
+    p2: { x: number; y: number; z: number } | null,
+  ) => void;
   /** Snap marker + optional ortho guides while drawing. */
   setSnapCue: (
     point: { x: number; y: number; z: number } | null,
@@ -78,6 +105,14 @@ export type ViewportHandle = {
     clientX: number,
     clientY: number,
     elevation?: number,
+  ) => { x: number; y: number; z: number } | null;
+  pickWorkplane: (
+    clientX: number,
+    clientY: number,
+    plane: {
+      origin: { x: number; y: number; z: number };
+      normal: { x: number; y: number; z: number };
+    },
   ) => { x: number; y: number; z: number } | null;
   pickWallId: (clientX: number, clientY: number) => string | null;
   pickDoorId: (clientX: number, clientY: number) => string | null;
@@ -210,8 +245,14 @@ export function createViewport(options: CreateViewportOptions): ViewportHandle {
     syncWalls: sceneSync.syncWalls,
     setClippingCrop: cropLayer.setClippingCrop,
     setPreviewSegment: sceneSync.setPreviewSegment,
+    setPreviewRect: sceneSync.setPreviewRect,
+    setPreviewPolyline: sceneSync.setPreviewPolyline,
+    setProfilePolyline: sceneSync.setProfilePolyline,
+    setWorkplaneOverlay: sceneSync.setWorkplaneOverlay,
+    setWorkplaneTrace: sceneSync.setWorkplaneTrace,
     setSnapCue: sceneSync.setSnapCue,
     pickGround: picking.pickGround,
+    pickWorkplane: picking.pickWorkplane,
     pickWallId: picking.pickWallId,
     pickDoorId: picking.pickDoorId,
     pickWindowId: picking.pickWindowId,

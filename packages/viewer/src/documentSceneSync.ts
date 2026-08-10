@@ -57,6 +57,33 @@ export type DocumentSceneSync = {
     p1: { x: number; y: number; z: number } | null,
     p2: { x: number; y: number; z: number } | null,
   ) => void;
+  /** SK-v1 — rectangle outline preview (four edges). */
+  setPreviewRect: (
+    a: { x: number; y: number; z: number } | null,
+    b: { x: number; y: number; z: number } | null,
+  ) => void;
+  /** SK-draw — consecutive polyline segments (arcs, etc.). */
+  setPreviewPolyline: (
+    points: { x: number; y: number; z: number }[] | null,
+  ) => void;
+  /** SK-profile — perimeter on Workplane + optional vertex grips. */
+  setProfilePolyline: (
+    points: { x: number; y: number; z: number }[] | null,
+    vertices?: { x: number; y: number; z: number }[] | null,
+    selectedVertex?: number | null,
+  ) => void;
+  /** WP-v2 — tangible workplane patch + U/V axes. */
+  setWorkplaneOverlay: (
+    corners: [{ x: number; y: number; z: number }, { x: number; y: number; z: number }, { x: number; y: number; z: number }, { x: number; y: number; z: number }] | null,
+    origin?: { x: number; y: number; z: number } | null,
+    axisU?: { x: number; y: number; z: number } | null,
+    axisV?: { x: number; y: number; z: number } | null,
+  ) => void;
+  /** WP-v2 — dashed trace while defining a line workplane. */
+  setWorkplaneTrace: (
+    p1: { x: number; y: number; z: number } | null,
+    p2: { x: number; y: number; z: number } | null,
+  ) => void;
   setSnapCue: (
     point: { x: number; y: number; z: number } | null,
     kind: "none" | "endpoint" | "ortho" | "close",
@@ -106,14 +133,64 @@ export function createDocumentSceneSync(
   } = ctx.sg;
 
   const previewGeom = new BufferGeometry();
+  // Up to 32 segments × 2 endpoints × 3 floats (arcs tessellated).
+  const PREVIEW_MAX_SEGMENTS = 32;
   previewGeom.setAttribute(
     "position",
-    new BufferAttribute(new Float32Array(6), 3),
+    new BufferAttribute(new Float32Array(PREVIEW_MAX_SEGMENTS * 2 * 3), 3),
   );
   const previewMat = new LineBasicMaterial({ color: 0xd4a15a });
   const previewLine = new LineSegments(previewGeom, previewMat);
   previewLine.visible = false;
   scene.add(previewLine);
+
+  const profileGeom = new BufferGeometry();
+  const PROFILE_MAX_SEGMENTS = 64;
+  profileGeom.setAttribute(
+    "position",
+    new BufferAttribute(new Float32Array(PROFILE_MAX_SEGMENTS * 2 * 3), 3),
+  );
+  const profileMat = new LineBasicMaterial({ color: 0xffb000 });
+  const profileLine = new LineSegments(profileGeom, profileMat);
+  profileLine.renderOrder = 2;
+  profileLine.visible = false;
+  scene.add(profileLine);
+
+  const profileGripGeom = new BufferGeometry();
+  const PROFILE_MAX_GRIPS = 32;
+  // 4 endpoints per cross × 3 floats
+  profileGripGeom.setAttribute(
+    "position",
+    new BufferAttribute(new Float32Array(PROFILE_MAX_GRIPS * 4 * 3), 3),
+  );
+  const profileGripMat = new LineBasicMaterial({ color: 0xffb000 });
+  const profileGrips = new LineSegments(profileGripGeom, profileGripMat);
+  profileGrips.renderOrder = 3;
+  profileGrips.visible = false;
+  scene.add(profileGrips);
+
+  // WP-v2: patch = 4 edges; axes = 2 segments from origin
+  const wpOverlayGeom = new BufferGeometry();
+  wpOverlayGeom.setAttribute(
+    "position",
+    new BufferAttribute(new Float32Array((4 + 2) * 2 * 3), 3),
+  );
+  const wpOverlayMat = new LineBasicMaterial({ color: 0x5b9fd4 });
+  const wpOverlay = new LineSegments(wpOverlayGeom, wpOverlayMat);
+  wpOverlay.renderOrder = 1;
+  wpOverlay.visible = false;
+  scene.add(wpOverlay);
+
+  const wpTraceGeom = new BufferGeometry();
+  wpTraceGeom.setAttribute(
+    "position",
+    new BufferAttribute(new Float32Array(6), 3),
+  );
+  const wpTraceMat = new LineBasicMaterial({ color: 0x5b9fd4 });
+  const wpTrace = new LineSegments(wpTraceGeom, wpTraceMat);
+  wpTrace.renderOrder = 2;
+  wpTrace.visible = false;
+  scene.add(wpTrace);
 
   const snapMarkerGeom = new BufferGeometry();
   snapMarkerGeom.setAttribute(
@@ -362,13 +439,194 @@ export function createDocumentSceneSync(
   ) => {
     if (!p1 || !p2) {
       previewLine.visible = false;
+      previewGeom.setDrawRange(0, 0);
       return;
     }
     const arr = previewGeom.getAttribute("position") as BufferAttribute;
-    arr.setXYZ(0, p1.x, p1.y, p1.z + 0.05);
-    arr.setXYZ(1, p2.x, p2.y, p2.z + 0.05);
+    const z = 0.05;
+    arr.setXYZ(0, p1.x, p1.y, p1.z + z);
+    arr.setXYZ(1, p2.x, p2.y, p2.z + z);
     arr.needsUpdate = true;
+    previewGeom.setDrawRange(0, 2);
     previewLine.visible = true;
+  };
+
+  const setPreviewRect = (
+    a: { x: number; y: number; z: number } | null,
+    b: { x: number; y: number; z: number } | null,
+  ) => {
+    if (!a || !b) {
+      previewLine.visible = false;
+      previewGeom.setDrawRange(0, 0);
+      return;
+    }
+    const minX = Math.min(a.x, b.x);
+    const maxX = Math.max(a.x, b.x);
+    const minY = Math.min(a.y, b.y);
+    const maxY = Math.max(a.y, b.y);
+    const z = a.z + 0.05;
+    const corners = [
+      { x: minX, y: minY, z },
+      { x: maxX, y: minY, z },
+      { x: maxX, y: maxY, z },
+      { x: minX, y: maxY, z },
+    ];
+    const arr = previewGeom.getAttribute("position") as BufferAttribute;
+    for (let i = 0; i < 4; i++) {
+      const c0 = corners[i]!;
+      const c1 = corners[(i + 1) % 4]!;
+      arr.setXYZ(i * 2, c0.x, c0.y, c0.z);
+      arr.setXYZ(i * 2 + 1, c1.x, c1.y, c1.z);
+    }
+    arr.needsUpdate = true;
+    previewGeom.setDrawRange(0, 8);
+    previewLine.visible = true;
+  };
+
+  const setPreviewPolyline = (
+    points: { x: number; y: number; z: number }[] | null,
+  ) => {
+    if (!points || points.length < 2) {
+      previewLine.visible = false;
+      previewGeom.setDrawRange(0, 0);
+      return;
+    }
+    const arr = previewGeom.getAttribute("position") as BufferAttribute;
+    const zOff = 0.05;
+    const maxSeg = PREVIEW_MAX_SEGMENTS;
+    let seg = 0;
+    for (let i = 0; i < points.length - 1 && seg < maxSeg; i++) {
+      const a = points[i]!;
+      const b = points[i + 1]!;
+      arr.setXYZ(seg * 2, a.x, a.y, a.z + zOff);
+      arr.setXYZ(seg * 2 + 1, b.x, b.y, b.z + zOff);
+      seg++;
+    }
+    arr.needsUpdate = true;
+    previewGeom.setDrawRange(0, seg * 2);
+    previewLine.visible = seg > 0;
+  };
+
+  const setProfilePolyline = (
+    points: { x: number; y: number; z: number }[] | null,
+    vertices: { x: number; y: number; z: number }[] | null = null,
+    selectedVertex: number | null = null,
+  ) => {
+    if (!points || points.length < 2) {
+      profileLine.visible = false;
+      profileGeom.setDrawRange(0, 0);
+      profileGrips.visible = false;
+      profileGripGeom.setDrawRange(0, 0);
+      return;
+    }
+    const arr = profileGeom.getAttribute("position") as BufferAttribute;
+    const zOff = 0.12;
+    let seg = 0;
+    for (let i = 0; i < points.length - 1 && seg < PROFILE_MAX_SEGMENTS; i++) {
+      const a = points[i]!;
+      const b = points[i + 1]!;
+      arr.setXYZ(seg * 2, a.x, a.y, a.z + zOff);
+      arr.setXYZ(seg * 2 + 1, b.x, b.y, b.z + zOff);
+      seg++;
+    }
+    arr.needsUpdate = true;
+    profileGeom.setDrawRange(0, seg * 2);
+    profileLine.visible = seg > 0;
+
+    const grips = vertices && vertices.length > 0 ? vertices : [];
+    if (grips.length === 0) {
+      profileGrips.visible = false;
+      profileGripGeom.setDrawRange(0, 0);
+      return;
+    }
+    const garr = profileGripGeom.getAttribute("position") as BufferAttribute;
+    let gi = 0;
+    for (let i = 0; i < grips.length && i < PROFILE_MAX_GRIPS; i++) {
+      const v = grips[i]!;
+      const s = i === selectedVertex ? 0.28 : 0.16;
+      const z = v.z + zOff + 0.02;
+      const base = gi * 4;
+      garr.setXYZ(base + 0, v.x - s, v.y, z);
+      garr.setXYZ(base + 1, v.x + s, v.y, z);
+      garr.setXYZ(base + 2, v.x, v.y - s, z);
+      garr.setXYZ(base + 3, v.x, v.y + s, z);
+      gi++;
+    }
+    garr.needsUpdate = true;
+    profileGripGeom.setDrawRange(0, gi * 4);
+    profileGripMat.color.setHex(
+      selectedVertex != null && selectedVertex >= 0 ? 0xff6a00 : 0xffb000,
+    );
+    profileGrips.visible = gi > 0;
+  };
+
+  const setWorkplaneOverlay = (
+    corners:
+      | [
+          { x: number; y: number; z: number },
+          { x: number; y: number; z: number },
+          { x: number; y: number; z: number },
+          { x: number; y: number; z: number },
+        ]
+      | null,
+    origin: { x: number; y: number; z: number } | null = null,
+    axisU: { x: number; y: number; z: number } | null = null,
+    axisV: { x: number; y: number; z: number } | null = null,
+  ) => {
+    if (!corners) {
+      wpOverlay.visible = false;
+      wpOverlayGeom.setDrawRange(0, 0);
+      return;
+    }
+    const arr = wpOverlayGeom.getAttribute("position") as BufferAttribute;
+    const lift = 0.04;
+    const ring = [corners[0], corners[1], corners[2], corners[3], corners[0]];
+    let i = 0;
+    for (let e = 0; e < 4; e++) {
+      const a = ring[e]!;
+      const b = ring[e + 1]!;
+      arr.setXYZ(i++, a.x, a.y, a.z + lift);
+      arr.setXYZ(i++, b.x, b.y, b.z + lift);
+    }
+    if (origin && axisU && axisV) {
+      const au = 1.2;
+      const av = 1.2;
+      arr.setXYZ(i++, origin.x, origin.y, origin.z + lift);
+      arr.setXYZ(
+        i++,
+        origin.x + axisU.x * au,
+        origin.y + axisU.y * au,
+        origin.z + axisU.z * au + lift,
+      );
+      arr.setXYZ(i++, origin.x, origin.y, origin.z + lift);
+      arr.setXYZ(
+        i++,
+        origin.x + axisV.x * av,
+        origin.y + axisV.y * av,
+        origin.z + axisV.z * av + lift,
+      );
+    }
+    arr.needsUpdate = true;
+    wpOverlayGeom.setDrawRange(0, i);
+    wpOverlay.visible = i > 0;
+  };
+
+  const setWorkplaneTrace = (
+    p1: { x: number; y: number; z: number } | null,
+    p2: { x: number; y: number; z: number } | null,
+  ) => {
+    if (!p1 || !p2) {
+      wpTrace.visible = false;
+      wpTraceGeom.setDrawRange(0, 0);
+      return;
+    }
+    const arr = wpTraceGeom.getAttribute("position") as BufferAttribute;
+    const z = Math.max(p1.z, p2.z) + 0.06;
+    arr.setXYZ(0, p1.x, p1.y, z);
+    arr.setXYZ(1, p2.x, p2.y, z);
+    arr.needsUpdate = true;
+    wpTraceGeom.setDrawRange(0, 2);
+    wpTrace.visible = true;
   };
 
   const setSnapCue = (
@@ -426,6 +684,14 @@ export function createDocumentSceneSync(
   const disposeOverlays = () => {
     previewGeom.dispose();
     previewMat.dispose();
+    profileGeom.dispose();
+    profileMat.dispose();
+    profileGripGeom.dispose();
+    profileGripMat.dispose();
+    wpOverlayGeom.dispose();
+    wpOverlayMat.dispose();
+    wpTraceGeom.dispose();
+    wpTraceMat.dispose();
     snapMarkerGeom.dispose();
     snapMarkerMat.dispose();
     snapGuideGeom.dispose();
@@ -435,6 +701,11 @@ export function createDocumentSceneSync(
   return {
     syncWalls,
     setPreviewSegment,
+    setPreviewRect,
+    setPreviewPolyline,
+    setProfilePolyline,
+    setWorkplaneOverlay,
+    setWorkplaneTrace,
     setSnapCue,
     disposeOverlays,
   };

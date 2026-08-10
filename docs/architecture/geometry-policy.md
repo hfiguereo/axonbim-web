@@ -59,6 +59,13 @@ Sí se exige (tolerancias en [coordinate-system.md](coordinate-system.md)):
 
 Los tests nuevos en Vitest deben expresar estos oráculos; no portar archivos pytest.
 
+## Contorno resultante (Sketch)
+
+La silueta editable en Sketch Mode se deriva del **prisma muro caja** (no del eje solo)
+y se proyecta sobre el Workplane activo. Contrato reutilizable:
+[`sketch-result-outline.md`](sketch-result-outline.md). API: `outlineOnWorkplane` en
+`@axonbim/geometry`.
+
 ## Preview vs confirmado
 
 - Preview de herramienta: geometría temporal **fuera** del documento y del historial.
@@ -72,6 +79,7 @@ El trazado usa un **Workplane** derivado del storey activo (`resolveSpatialRefer
 
 ## Parked / no implementar sin autorización
 
-Losas, extrusión de cara (Push/Pull), booleanas de sólido, IFC operativo, Sketch/Edit Mode,
-planos custom / workplanes inclinados — requieren ficha + ADR + frase explícita en chat. Ver
+Losas, extrusión de cara (Push/Pull), booleanas de sólido, IFC operativo, Edit Mode,
+arcos/pick sketch, planos custom / workplanes inclinados — requieren ficha + ADR + frase
+explícita en chat. SK-v1 (rectángulo) ya cerrado. Ver
 [../roadmap/pending-work.md](../roadmap/pending-work.md).

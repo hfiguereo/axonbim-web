@@ -733,10 +733,9 @@ No encontré en este código una mutación de malla Three.js convertida en fuent
 
 ## Workplanes / referencias espaciales
 
-> **Nota 2026-08-09:** WP-v1 cerró la abstracción compartida (`SpatialReferenceContext` /
-> `Workplane` derivado del storey). Sketch/Edit Mode siguen parked. Ver
-> [`workplanes-roadmap.md`](../roadmap/workplanes-roadmap.md). El texto siguiente es el
-> diagnóstico original de la auditoría (2026-08-08).
+> **Nota 2026-08-09:** WP-v1 + SK-v1 cerrados (Workplane + Sketch rectángulo → muros).
+> Edit Mode / Push&Pull siguen parked. Ver workplanes-roadmap + editing-paradigms.
+> El texto siguiente es el diagnóstico original de la auditoría (2026-08-08).
 
 La hoja de ruta mantiene workplanes como trabajo futuro. La arquitectura actual todavía no introduce una abstracción común de referencia espacial, lo cual es aceptable si no se implementan todavía los distintos modos de edición. Cuando se abra esa fase, debe hacerse como abstracción compartida de referencia, **no fusionando las reglas de Parametric Edit, Sketch Mode y Edit Mode**.
 

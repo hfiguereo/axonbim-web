@@ -18,9 +18,8 @@ ejercer **desde la interfaz** (salvo evidencia solo automatizada marcada como ta
 
 - Solape puerta↔ventana: mensaje UI «Hay otro hueco demasiado cerca» (código `opening.overlap`).
 - Recuperar copia no sustituye Abrir: es vía B explícita (menú **Recuperar copia…**).
-- Filas nuevas (IFC, OCCT, Sketch/Edit Mode, …) **prohibidas** aquí hasta ADR + autorización en chat.
-- **WP-v1** (Workplane storey): infraestructura de dominio/sesión — ver
-  [`workplanes-roadmap.md`](../roadmap/workplanes-roadmap.md); no abre Sketch/Edit.
+- Filas nuevas (IFC, OCCT, Edit Mode, …) **prohibidas** aquí hasta ADR + autorización en chat.
+- **WP-v1** / **SK-v1**: ver workplanes-roadmap + editing-paradigms (rectángulo usable en UI).
 
 **Gate documental F9-E6:** esta matriz + docs de arquitectura coinciden con el código en la
 fecha de cierre E6.

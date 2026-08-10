@@ -86,7 +86,7 @@ Humo A + capturas B (canvas mask). Local. Ver `docs/validation/playwright-f8.md`
 Avance operativo en [`pending-work.md`](pending-work.md) y
 [`legacy-reuse-roadmap.md`](legacy-reuse-roadmap.md):
 
-`LR0–LR3 + WP-v1 (hecho) → Sketch/Edit`
+`LR0–LR3 + WP-v1 + SK-v1 (hecho) → Edit Mode / expansiones`
 
 ## Parked (fuera del hilo hasta auth + prerreq.)
 

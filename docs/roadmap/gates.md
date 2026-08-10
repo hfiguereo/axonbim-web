@@ -25,7 +25,7 @@ El agente y el desarrollo humano **se detienen** en cada gate. “Continúa con 
 - **Crop Region (ADR 0016):** **aprobado** 2026-08-08 — clip por vista; planta vs cámara independientes
 - **Parked:** OCCT (ADR 0013), LR1-C / LR4–LR7 / IFC sin auth
 - **Refactor session/viewer:** desacople real Fases 0–3 **cerradas** (2026-08-08); checklist humana OK; ver `refactor-session-viewer.md`
-- **Hilo activo:** **línea LR** — LR0–LR3 + **WP-v1** cerradas; siguiente **Sketch/Edit** con auth (`pending-work.md`)
+- **Hilo activo:** **línea LR** — LR0–LR3 + WP-v1/**v2** + SK-* cerradas; siguiente losas/terreno/barridos u Edit Mode (`pending-work.md`)
 - **F9-E integridad (ADR 0017):** **cerrada** 2026-08-09 (E1–E6) — `domain-invariants-plan.md`
 - **C3 crop cámara:** **cerrada** 2026-08-09
 - **Auditoría externa:** `docs/validation/external-audit-2026-08-08.md` — base arquitectónica aprobada

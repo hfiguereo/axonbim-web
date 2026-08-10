@@ -48,15 +48,36 @@ No duplicar el mismo control en cinta/opciones y barra de estado (u otras zonas)
 Al activar **Muro** (y futuros sketch tools):
 
 1. Pestaña → **Modificar \| Colocar muro**
-2. Grupos **Modo** (Terminar / Cancelar) + **Dibujar** (línea, rectángulo, arcos, pick…)
-3. Grupo **Cadena**: Encadenar (default) · Soltar · Dividir
+2. Grupos **Modo** (Terminar / Cancelar) + **Dibujar** (línea, rectángulo, arcos, pick) — **SK-draw** implementado
+3. Grupo **Cadena**: Encadenar (default) · Soltar · Dividir (solo modo línea)
 4. Barra de opciones: altura, espesor, checkbox Cadena, modo de dibujo
+
+**Plano de trabajo (WP-v2):**
+- **Arquitectura → Plano de trabajo**: **Seleccionar**, **Dibujar** (línea →
+  plano vertical XYZ), **Nivel** — disponibles de forma general (base para
+  futuro model-in-place).
+- **Modificar → Plano de trabajo**: **Seleccionar** + **Nivel** solo cuando hay
+  geometría o trazo activo (no duplicar «Dibujar» aquí).
+- Overlay del parche activo; status bar muestra el Workplane.
+
+**Sketch sobre elemento activo (SK-sel + SK-profile):** doble clic en muro o
+**Modificar → Editar perfil**. En el Workplane activo oculta el sólido y muestra
+el **contorno resultante** (huella/cara/silueta, no el eje) en líneas + vértices.
+Rectángulo/arco redibujan; **Terminar** aplica; **Cancelar** descarta. Contrato:
+[`sketch-result-outline.md`](../architecture/sketch-result-outline.md).
+
+**Reutilización de dibujo:** losas / terreno / barridos / sketch de perfil usan
+las **mismas** herramientas del grupo Dibujar (+ Terminar/Cancelar) que se abren
+con Muro — no una segunda cinta de dibujo. Detalle:
+[`editing-paradigms.md`](../architecture/editing-paradigms.md).
 
 Mostrar/ocultar UI: **Gestionar → Interfaz**.
 
 ## Arquitectura — herramientas activas
 
-En **Arquitectura → Construir**: **Muro**, **Puerta**, **Ventana** (colocación en muro; familia en Propiedades). Resto de iconos = stubs de maqueta.
+En **Arquitectura → Construir**: **Muro**, **Puerta**, **Ventana** (colocación en muro; familia en Propiedades).
+En **Arquitectura → Plano de trabajo**: **Seleccionar**, **Dibujar**, **Nivel**.
+Resto de iconos = stubs de maqueta.
 
 ## Qué queda fuera de Etapa 0–1 (aunque esté en la maqueta)
 

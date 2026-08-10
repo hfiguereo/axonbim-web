@@ -40,7 +40,8 @@ Desktop → extraer comportamiento → invariantes → contrato Web → tests We
 | LR2 CompositeCommand | **Cerrada** 2026-08-09 |
 | LR3-A…D Spatial Reference | **Cerrada** 2026-08-09 |
 | WP-v1 Workplane | **Cerrada** 2026-08-09 |
-| Sketch / Edit Mode | **Siguiente** (auth) |
+| SK-v1 Sketch Mode | **Cerrada** 2026-08-09 (rectángulo) |
+| Edit Mode / expansiones | **Siguiente** (auth) |
 
 Hilo operativo único: [`../roadmap/pending-work.md`](../roadmap/pending-work.md).
 
@@ -78,7 +79,8 @@ Hilo operativo único: [`../roadmap/pending-work.md`](../roadmap/pending-work.md
 | C | LR1 (+ LR1-B) | Hecho |
 | D | LR2 + LR3-A…D | Hecho |
 | E | Workplanes (WP-v1) | Hecho |
-| F–G | Sketch / Edit Mode | Auth explícita |
+| F | Sketch Mode (SK-v1) | Hecho (rectángulo) |
+| G | Edit Mode / expansiones | Auth explícita |
 | H | LR4 Technical Views | Auth doc 2D |
 | I | LR5 rendimiento | Con evidencia |
 | J | LR6 → IFC | Auth IFC |

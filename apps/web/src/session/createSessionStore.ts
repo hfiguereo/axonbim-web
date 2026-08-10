@@ -5,6 +5,7 @@ import { createShellSlice, createViewportBridgeSlice } from "./shellSlice.js";
 import { createSketchToolSlice } from "./sketchToolSlice.js";
 import type { SessionState } from "./sliceTypes.js";
 import { createViewCropSlice } from "./viewCropSlice.js";
+import { createWorkplaneSlice } from "./workplaneSlice.js";
 
 /**
  * Composes the session store from vertical slices. Each slice owns state +
@@ -17,4 +18,5 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
   ...createSelectionSlice(set, get),
   ...createViewCropSlice(set, get),
   ...createSketchToolSlice(set, get),
+  ...createWorkplaneSlice(set, get),
 }));

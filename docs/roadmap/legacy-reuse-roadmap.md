@@ -31,7 +31,9 @@ Fuente: [`../migration/plan-integracion-selectiva-resumen.md`](../migration/plan
 | **LR3-C** Model Envelope | **cerrada** 2026-08-09 | `computeModelEnvelope` regenerable 100% |
 | **LR3-D** Projection Basis | **cerrada** 2026-08-09 | `getProjectionBasis` TOP/N/S/E/W; Project North = +Y |
 | **WP-v1** Workplane | **cerrada** 2026-08-09 | Storey → Workplane; tools vía `resolveSpatialReference` |
-| **Sketch / Edit** | **siguiente** (auth) | [`editing-paradigms.md`](../architecture/editing-paradigms.md) |
+| **SK-v1** Sketch Mode | **cerrada** 2026-08-09 | Rectángulo → muros paramétricos (CompositeCommand) |
+| **SK-sel** Sketch selección | **cerrada** 2026-08-09 | Doble clic / Editar perfil → contexto + Dibujar |
+| **Edit Mode** / losas·terreno·barridos | **siguiente** (auth) | [`editing-paradigms.md`](../architecture/editing-paradigms.md) |
 | **LR4** Technical View Core | parked | Representación técnica sin depender de Three.js/DXF |
 | **LR5** Render invalidation | parked | Optimización sin cambiar semántica BIM |
 | **LR6** IFC Recognition Policy | parked (doc) | ADR IFC actualizado antes del importador |
@@ -57,7 +59,7 @@ umbrales Web propios (no copiar Desktop).
 ## Dependencias
 
 ```
-F9-E + C3 + LR0–LR3 + WP-v1 (hecho) ──► Sketch / Edit
+F9-E + C3 + LR0–LR3 + WP-v1 + SK-v1 (hecho) ──► Edit Mode / expansiones
 LR1 ──► LR1-C (parked)
 LR3-D ──► LR4 (Technical Views)
 Multivista / coste ──► LR5

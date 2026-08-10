@@ -1,3 +1,4 @@
+import { workplaneStatusLabel } from "@axonbim/model";
 import { useSessionStore } from "../sessionStore";
 
 export function StatusBar() {
@@ -10,6 +11,7 @@ export function StatusBar() {
   const snap = useSessionStore((s) => s.lastSnapKind);
   const snapEnabled = useSessionStore((s) => s.snapEnabled);
   const setSnapEnabled = useSessionStore((s) => s.setSnapEnabled);
+  const activeWorkplane = useSessionStore((s) => s.activeWorkplane);
 
   return (
     <footer className="statusbar">
@@ -17,6 +19,13 @@ export function StatusBar() {
         {status}
       </span>
       <div className="statusbar__right">
+        <span
+          className="statusbar__meta"
+          data-testid="status-workplane"
+          title="Plano de trabajo activo (sesión)"
+        >
+          WP: {workplaneStatusLabel(activeWorkplane)}
+        </span>
         <label className="statusbar__switch" title="Snap: extremos, ortogonal y cierre">
           <span>Snap</span>
           <button

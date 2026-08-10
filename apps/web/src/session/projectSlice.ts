@@ -2,8 +2,10 @@ import { HistoryStack } from "@axonbim/commands";
 import {
   createDemoDocument,
   createEmptyDocument,
-  getActiveWorkplane,
+  getActiveStorey,
   reconcileActiveStoreyId,
+  workplaneFromStorey,
+  workplaneStatusLabel,
 } from "@axonbim/model";
 import { parseDocument, parseDocumentRecover, serializeDocument } from "@axonbim/persistence";
 import { patchViewsAfterDocumentChange } from "./cameraViews.js";
@@ -50,10 +52,15 @@ export const createProjectSlice: SessionSliceCreator<{
       });
       return;
     }
-    const wp = getActiveWorkplane(s.document, next);
+    // Changing level always restores the level workplane (WP-v2).
+    const storey = getActiveStorey(s.document, next);
+    const wp = workplaneFromStorey(storey);
     set({
       activeStoreyId: next,
-      status: `Plano de trabajo: ${wp.label} (z=${wp.origin.z.toFixed(2)} m)`,
+      activeWorkplane: wp,
+      workplaneLock: "auto-level",
+      workplaneLinePending: null,
+      status: `Workplane: ${workplaneStatusLabel(wp)}`,
     });
   },
 

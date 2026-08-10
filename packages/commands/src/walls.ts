@@ -1,5 +1,11 @@
 import type { AxonDocument, Wall } from "@axonbim/model";
-import { documentRefs, validateWall } from "@axonbim/model";
+import {
+  asOpeningSpec,
+  documentRefs,
+  openingsOnWall,
+  validateHostedOpening,
+  validateWall,
+} from "@axonbim/model";
 import { CHANGED, NOOP, rejected, type Command, type CommandResult } from "./types";
 
 export type { Command } from "./types";
@@ -92,6 +98,65 @@ export class DeleteWallCommand implements Command {
     });
     for (const d of this.doorSnapshots) doc.doors.push({ ...d });
     for (const w of this.windowSnapshots) doc.windows.push({ ...w });
+    doc.meta.updatedAt = new Date().toISOString();
+  }
+}
+
+/** SK-profile — update wall axis in place (preserves id / openings when they still fit). */
+export class SetWallEndpointsCommand implements Command {
+  readonly id: string;
+  readonly type = "wall.setEndpoints";
+  private prev: { p1: Wall["p1"]; p2: Wall["p2"] } | null = null;
+
+  constructor(
+    private readonly wallId: string,
+    private readonly p1: Wall["p1"],
+    private readonly p2: Wall["p2"],
+  ) {
+    this.id = `cmd.endpoints.${wallId}`;
+  }
+
+  execute(doc: AxonDocument): CommandResult {
+    const w = doc.walls.find((x) => x.id === this.wallId);
+    if (!w) return notFound(this.wallId);
+    if (
+      w.p1.x === this.p1.x &&
+      w.p1.y === this.p1.y &&
+      w.p1.z === this.p1.z &&
+      w.p2.x === this.p2.x &&
+      w.p2.y === this.p2.y &&
+      w.p2.z === this.p2.z
+    ) {
+      return NOOP;
+    }
+    const candidate: Wall = {
+      ...w,
+      p1: { ...this.p1 },
+      p2: { ...this.p2 },
+    };
+    const invalid = checkWall(doc, candidate);
+    if (invalid) return invalid;
+    const hosted = [
+      ...doc.doors.filter((d) => d.wallId === w.id),
+      ...doc.windows.filter((win) => win.wallId === w.id),
+    ];
+    for (const h of hosted) {
+      const others = openingsOnWall(w.id, doc.doors, doc.windows, h.id);
+      const fit = validateHostedOpening(asOpeningSpec(h), candidate, others);
+      if (fit) return rejected(fit);
+    }
+    this.prev = { p1: { ...w.p1 }, p2: { ...w.p2 } };
+    w.p1 = { ...this.p1 };
+    w.p2 = { ...this.p2 };
+    doc.meta.updatedAt = new Date().toISOString();
+    return CHANGED;
+  }
+
+  undo(doc: AxonDocument): void {
+    const w = doc.walls.find((x) => x.id === this.wallId);
+    if (!w || !this.prev) return;
+    w.p1 = { ...this.prev.p1 };
+    w.p2 = { ...this.prev.p2 };
     doc.meta.updatedAt = new Date().toISOString();
   }
 }

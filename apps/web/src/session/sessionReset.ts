@@ -3,8 +3,10 @@
  */
 import { HistoryStack, syncIdSequencesFromDocument } from "@axonbim/commands";
 import {
+  getActiveStorey,
   reconcileActiveFamilyIds,
   reconcileActiveStoreyId,
+  workplaneFromStorey,
   type AxonDocument,
 } from "@axonbim/model";
 import { clearSnapSession } from "@axonbim/tools";
@@ -30,18 +32,30 @@ export function resetSessionForDocument(
     mergeViewsWithDocument(defaultViews(), document.cameras),
     document.presentation,
   );
+  const activeStoreyId = reconcileActiveStoreyId(document, prefs.activeStoreyId);
+  const storey = getActiveStorey(document, activeStoreyId);
   return {
     document,
     history: new HistoryStack(),
     views,
     activeViewId: "view.plan.level1",
     activeTool: "none",
+    drawMode: "line",
+    editingParadigm: "parametric",
+    sketchTarget: null,
+    sketchProfile: null,
+    sketchProfileStroke: false,
+    profileVertexIndex: null,
     ribbonTab: "architecture",
-    activeStoreyId: reconcileActiveStoreyId(document, prefs.activeStoreyId),
+    activeStoreyId,
+    activeWorkplane: workplaneFromStorey(storey),
+    workplaneLock: "auto-level",
+    workplaneLinePending: null,
     ...clearElementSelection(),
     wallPending: null,
     wallChainOrigin: null,
     wallHover: null,
+    drawPoints: [],
     lastSnapKind: "none",
     snapSession: clearSnapSession(),
     cropDragMeta: null,

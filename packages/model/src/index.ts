@@ -74,10 +74,22 @@ export {
 export type { ProjectionBasis, ProjectionBasisId } from "./projectionBasis.js";
 export {
   getActiveWorkplane,
+  intersectRayWorkplane,
   pointOnWorkplaneXY,
   projectPointOntoWorkplane,
   resolveSpatialReference,
+  wallFaceTowardPoint,
+  workplaneFromLineTrace,
   workplaneFromStorey,
+  workplaneFromWallFace,
+  workplanePatchCorners,
   workplanePointFromUV,
+  workplaneStatusLabel,
+  worldToWorkplaneUV,
 } from "./workplane.js";
-export type { SpatialReferenceContext, Workplane, WorkplaneKind } from "./workplane.js";
+export type {
+  SpatialReferenceContext,
+  Workplane,
+  WorkplaneHost,
+  WorkplaneKind,
+} from "./workplane.js";

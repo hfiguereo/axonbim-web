@@ -8,6 +8,31 @@ export {
 } from "./wallBox";
 export type { WallMetrics, WallMeshOptions, WallJoinDirs, Vec2 } from "./wallBox";
 export {
+  faceLineToWallAxis,
+  findWallLoop,
+  insetRingToAxes,
+  invertStoreyFootprint,
+  invertVerticalFaceOutline,
+  isWallBoxFootprint,
+  outlineOnWorkplane,
+  wallBoxCorners3,
+  wallBoxPlanCorners,
+} from "./wallResultOutline";
+export type { ResultOutline } from "./wallResultOutline";
+export {
+  footprintCornersToEdges,
+  moveFootprintCornerConstrained,
+} from "./wallFootprintEdit";
+export type { Vec2 as FootprintAxis2 } from "./wallFootprintEdit";
+export {
+  validateSketchProfileForHost,
+} from "./sketchProfileValidate";
+export type {
+  SketchProfileValidateCtx,
+  SketchProfileValidateResult,
+  ValidatableProfile,
+} from "./sketchProfileValidate";
+export {
   wallMeshWithOpenings,
   openingsFromDoors,
   openingsFromWindows,

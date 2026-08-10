@@ -1,6 +1,6 @@
 import { useCallback, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { isSketchTool, type DrawMode } from "@axonbim/tools";
+import { isSketchDrawMode, isSketchTool, type DrawMode } from "@axonbim/tools";
 import type { RibbonTab } from "../session/sessionTypes";
 import { useSessionStore } from "../sessionStore";
 import { Icon } from "./RibbonIcons";
@@ -110,7 +110,16 @@ export function Ribbon() {
   const setTool = useSessionStore((s) => s.setTool);
   const activeTool = useSessionStore((s) => s.activeTool);
   const drawMode = useSessionStore((s) => s.drawMode);
+  const editingParadigm = useSessionStore((s) => s.editingParadigm);
+  const sketchTarget = useSessionStore((s) => s.sketchTarget);
   const setDrawMode = useSessionStore((s) => s.setDrawMode);
+  const cancelWallDraw = useSessionStore((s) => s.cancelWallDraw);
+  const enterSketchOnSelection = useSessionStore((s) => s.enterSketchOnSelection);
+  const finishSketchOnSelection = useSessionStore((s) => s.finishSketchOnSelection);
+  const exitSketchOnSelection = useSessionStore((s) => s.exitSketchOnSelection);
+  const resetWorkplaneToLevel = useSessionStore((s) => s.resetWorkplaneToLevel);
+  const activeWorkplane = useSessionStore((s) => s.activeWorkplane);
+  const wallCount = useSessionStore((s) => s.document.walls.length);
   const wallChain = useSessionStore((s) => s.wallChain);
   const setWallChain = useSessionStore((s) => s.setWallChain);
   const splitWallChain = useSessionStore((s) => s.splitWallChain);
@@ -145,7 +154,9 @@ export function Ribbon() {
   const hide = useCallback(() => setTip(null), []);
   const tips: TipHandlers = { show, hide };
 
-  const sketching = isSketchTool(activeTool);
+  const sketching = isSketchTool(activeTool) || sketchTarget != null;
+  /** Modificar: seleccionar plano con geometría o trazo (precursor model-in-place). */
+  const modifyWorkplaneSelect = wallCount > 0 || sketching;
   const modifyTabLabel =
     activeTool === "door"
       ? "Modificar | Colocar puerta"
@@ -189,6 +200,32 @@ export function Ribbon() {
               <Stub tips={tips} icon="ceiling" label="Techo" tip="Techo" />
               <Stub tips={tips} icon="floor" label="Suelo" tip="Suelo" />
               <Stub tips={tips} icon="curtain" label="Muro cortina" tip="Muro cortina" />
+            </Group>
+            <Group title="Plano de trabajo">
+              <Tool
+                tips={tips}
+                icon="pickFace"
+                label="Seleccionar"
+                tip="Seleccionar plano — cara de muro o vacío = nivel (base para model-in-place)"
+                active={activeTool === "workplaneSelect"}
+                onClick={() => setTool("workplaneSelect")}
+              />
+              <Tool
+                tips={tips}
+                icon="line"
+                label="Dibujar"
+                tip="Dibujar plano de trabajo — 2 clics → plano vertical en XYZ"
+                active={activeTool === "workplaneLine"}
+                onClick={() => setTool("workplaneLine")}
+              />
+              <Tool
+                tips={tips}
+                icon="finish"
+                label="Nivel"
+                tip={`Volver al plano del nivel (${activeWorkplane?.label ?? "—"})`}
+                active={activeWorkplane?.kind === "storey"}
+                onClick={() => resetWorkplaneToLevel()}
+              />
             </Group>
             <Group title="Circulación">
               <Stub tips={tips} icon="rail" label="Barandilla" tip="Barandilla" />
@@ -402,29 +439,58 @@ export function Ribbon() {
             {sketching && (
               <>
                 <Group title="Modo">
-                  <Stub tips={tips} icon="finish" label="Terminar" tip="Terminar (Etapa 1)" />
+                  <Tool
+                    tips={tips}
+                    icon="finish"
+                    label="Terminar"
+                    tip={
+                      sketchTarget
+                        ? "Aplicar perfil abstracto al host → Paramétrico"
+                        : "Terminar trazo actual (sin salir de la herramienta)"
+                    }
+                    onClick={() =>
+                      sketchTarget ? finishSketchOnSelection() : cancelWallDraw()
+                    }
+                  />
                   <Tool
                     tips={tips}
                     icon="cancel"
                     label="Cancelar"
-                    tip="Cancelar"
-                    onClick={() => setTool("none")}
+                    tip={
+                      sketchTarget
+                        ? "Descartar perfil y salir de Sketch"
+                        : "Cancelar herramienta"
+                    }
+                    onClick={() =>
+                      sketchTarget ? exitSketchOnSelection() : setTool("none")
+                    }
                   />
                 </Group>
                 <Group title="Dibujar">
-                  {DRAW_MODES.map((m) => (
-                    <Tool
-                      key={m.id}
-                      tips={tips}
-                      icon={m.icon}
-                      label={m.tip}
-                      tip={m.tip}
-                      active={drawMode === m.id}
-                      onClick={() => setDrawMode(m.id)}
-                    />
-                  ))}
+                  {DRAW_MODES.map((m) => {
+                    const tip =
+                      sketchTarget && m.id === "line"
+                        ? "Editar vértices del perímetro (Workplane)"
+                        : sketchTarget &&
+                            (m.id === "rectangle" ||
+                              m.id === "arcSER" ||
+                              m.id === "arcCE")
+                          ? `${m.tip} — redibuja el perímetro en el plano`
+                          : m.tip;
+                    return (
+                      <Tool
+                        key={m.id}
+                        tips={tips}
+                        icon={m.icon}
+                        label={sketchTarget && m.id === "line" ? "Vértices" : m.tip}
+                        tip={tip}
+                        active={drawMode === m.id}
+                        onClick={() => setDrawMode(m.id)}
+                      />
+                    );
+                  })}
                 </Group>
-                {activeTool === "wall" && (
+                {activeTool === "wall" && !isSketchDrawMode(drawMode) && (
                   <Group title="Cadena">
                     <Tool
                       tips={tips}
@@ -464,14 +530,42 @@ export function Ribbon() {
                 )}
               </>
             )}
+            {modifyWorkplaneSelect && (
+              <Group title="Plano de trabajo">
+                <Tool
+                  tips={tips}
+                  icon="pickFace"
+                  label="Seleccionar"
+                  tip="Seleccionar plano de trabajo — cara de muro o vacío = nivel"
+                  active={activeTool === "workplaneSelect"}
+                  onClick={() => setTool("workplaneSelect")}
+                />
+                <Tool
+                  tips={tips}
+                  icon="finish"
+                  label="Nivel"
+                  tip={`Volver al plano del nivel (${activeWorkplane?.label ?? "—"})`}
+                  active={activeWorkplane?.kind === "storey"}
+                  onClick={() => resetWorkplaneToLevel()}
+                />
+              </Group>
+            )}
             <Group title="Modificar">
               <Tool
                 tips={tips}
                 icon="select"
                 label="Seleccionar"
                 tip="Seleccionar"
-                active={activeTool === "select"}
+                active={activeTool === "select" && !sketchTarget}
                 onClick={() => setTool("select")}
+              />
+              <Tool
+                tips={tips}
+                icon="pickFace"
+                label="Editar perfil"
+                tip="Sketch Mode sobre el elemento seleccionado (doble clic también)"
+                active={sketchTarget != null}
+                onClick={() => enterSketchOnSelection()}
               />
               <Stub tips={tips} icon="move" label="Mover" tip="Mover" />
               <Stub tips={tips} icon="copy" label="Copiar" tip="Copiar" />
@@ -531,7 +625,12 @@ export function Ribbon() {
               {activeTool === "wall" && (
                 <>
                   <span className="ribbon__options-hint">
-                    Dibujar:{" "}
+                    {sketchTarget
+                      ? "Sketch · elemento activo"
+                      : editingParadigm === "sketch"
+                        ? "Sketch Mode"
+                        : "Paramétrico"}
+                    {" · "}
                     {DRAW_MODES.find((m) => m.id === drawMode)?.tip ?? drawMode}
                   </span>
                   <label className="ribbon__opt">

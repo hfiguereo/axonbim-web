@@ -158,7 +158,7 @@ El inventario es **documentación de consulta**, no fuente de código para copia
 - **Web:** `workplaneFromStorey`, `resolveSpatialReference`, `projectPointOntoWorkplane`
 - **Invariantes:** derivado del storey; no persistido; tools no acoplan a cámara; modos no mezclan reglas
 - **Clasificación LR:** CONSERVAR COMO REFERENCIA; Web cerrado
-- **Parked tras WP-v1:** Sketch/Edit Mode, planos custom, Push&Pull
+- **Parked tras WP-v1 / SK-v1:** Edit Mode, planos custom, Push&Pull, arcos sketch
 
 ### Technical View Core (LR4)
 

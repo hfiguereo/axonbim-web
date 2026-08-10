@@ -5,6 +5,7 @@ export { CompositeCommand } from "./composite";
 export {
   CreateWallCommand,
   DeleteWallCommand,
+  SetWallEndpointsCommand,
   SetWallFamilyCommand,
   SetWallHeightCommand,
   SetWallThicknessCommand,

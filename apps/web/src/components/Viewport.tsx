@@ -1,10 +1,33 @@
 import {
   computeModelEnvelope,
-  getActiveWorkplane,
+  workplanePatchCorners,
   type AxonDocument,
   type CropCorner,
+  type Workplane,
 } from "@axonbim/model";
+import {
+  hitProfileVertex,
+  profileToPoints,
+  profileVertices,
+  sampleArcCE,
+  sampleArcSER,
+} from "@axonbim/tools";
 import { createViewport, type ViewportHandle } from "@axonbim/viewer";
+
+function pickOnWorkplane(
+  vp: ViewportHandle,
+  clientX: number,
+  clientY: number,
+  wp: Workplane,
+) {
+  if (wp.kind === "storey") {
+    return vp.pickGround(clientX, clientY, wp.origin.z);
+  }
+  return vp.pickWorkplane(clientX, clientY, {
+    origin: wp.origin,
+    normal: wp.normal,
+  });
+}
 import { useEffect, useRef, useState } from "react";
 import { isInsideCameraViewFrame } from "../session/cameraViewNav";
 import {
@@ -102,12 +125,16 @@ export function Viewport() {
   const cameraPoseDragLive = useSessionStore((s) => s.cameraPoseDragLive);
   const cameraViewNavEdit = useSessionStore((s) => s.cameraViewNavEdit);
   const activeTool = useSessionStore((s) => s.activeTool);
+  const drawMode = useSessionStore((s) => s.drawMode);
+  const sketchProfile = useSessionStore((s) => s.sketchProfile);
+  const profileVertexIndex = useSessionStore((s) => s.profileVertexIndex);
+  const activeWorkplane = useSessionStore((s) => s.activeWorkplane);
+  const workplaneLinePending = useSessionStore((s) => s.workplaneLinePending);
   const wallPending = useSessionStore((s) => s.wallPending);
   const wallHover = useSessionStore((s) => s.wallHover);
+  const drawPoints = useSessionStore((s) => s.drawPoints);
   const lastSnapKind = useSessionStore((s) => s.lastSnapKind);
-  const elevation = useSessionStore(
-    (s) => getActiveWorkplane(s.document, s.activeStoreyId).origin.z,
-  );
+  const elevation = activeWorkplane?.origin.z ?? 0;
   const activeCameraEntity = useSessionStore((s) => {
     const v = s.views.find((x) => x.id === s.activeViewId);
     if (v?.kind !== "camera" || !v.cameraId) return null;
@@ -217,12 +244,21 @@ export function Viewport() {
     if (cropDragMeta && !cropDragMeta.cameraId && cropDragLive) {
       sessionCrop = cropDragLive;
     }
+    // SK-profile on Workplane: hide host solids so the abstract perimeter is the focus.
+    const hide = new Set(sketchProfile?.sourceWallIds ?? []);
+    const wallsForSync =
+      hide.size > 0 ? walls.filter((w) => !hide.has(w.id)) : walls;
+    const doorsForSync =
+      hide.size > 0 ? doors.filter((d) => !hide.has(d.wallId)) : doors;
+    const windowsForSync =
+      hide.size > 0 ? windows.filter((w) => !hide.has(w.wallId)) : windows;
+
     handleRef.current?.syncWalls(
-      walls,
-      doors,
-      windows,
+      wallsForSync,
+      doorsForSync,
+      windowsForSync,
       camerasForSync,
-      selectedWallId,
+      hide.has(selectedWallId ?? "") ? null : selectedWallId,
       selectedDoorId,
       selectedWindowId,
       selectedCameraId,
@@ -245,6 +281,7 @@ export function Viewport() {
     cropDragLive,
     cropDragMeta,
     cameraPoseDragLive,
+    sketchProfile,
   ]);
 
   useEffect(() => {
@@ -304,7 +341,7 @@ export function Viewport() {
       view?.kind === "camera" && view.cameraId
         ? s.document.cameras.find((c) => c.id === view.cameraId)
         : undefined;
-      const activeElev = getActiveWorkplane(s.document, s.activeStoreyId).origin.z;
+      const activeElev = s.activeWorkplane.origin.z;
       const z = cam ? (cam.eye.z + cam.target.z) / 2 : activeElev + 0.04;
     const hr = host.getBoundingClientRect();
     setScreenCrop(
@@ -313,13 +350,80 @@ export function Viewport() {
   }, [showCropFrame, activeViewId, documentRev]);
 
   useEffect(() => {
-    handleRef.current?.setPreviewSegment(wallPending, wallHover);
-    if (activeTool === "wall" && wallHover) {
-      handleRef.current?.setSnapCue(wallHover, lastSnapKind, wallPending);
+    const vp = handleRef.current;
+    if (!vp || !activeWorkplane) return;
+    const corners = workplanePatchCorners(activeWorkplane);
+    vp.setWorkplaneOverlay(
+      corners,
+      activeWorkplane.origin,
+      activeWorkplane.axisU,
+      activeWorkplane.axisV,
+    );
+    if (workplaneLinePending && wallHover) {
+      vp.setWorkplaneTrace(workplaneLinePending, wallHover);
     } else {
-      handleRef.current?.setSnapCue(null, "none", null);
+      vp.setWorkplaneTrace(null, null);
     }
-  }, [wallPending, wallHover, lastSnapKind, activeTool]);
+  }, [activeWorkplane, workplaneLinePending, wallHover, documentRev]);
+
+  useEffect(() => {
+    const vp = handleRef.current;
+    if (!vp) return;
+    vp.setPreviewSegment(null, null);
+    vp.setPreviewRect(null, null);
+    vp.setPreviewPolyline(null);
+    if (sketchProfile && sketchProfile.edges.length > 0) {
+      const pts = profileToPoints(sketchProfile);
+      const verts = profileVertices(sketchProfile);
+      vp.setProfilePolyline(
+        pts.length >= 2 ? pts : null,
+        verts,
+        profileVertexIndex,
+      );
+    } else {
+      vp.setProfilePolyline(null);
+    }
+
+    // Rebuild previews only when redrawing the profile (rect/arc), not vertex edit.
+    const rebuild =
+      drawMode === "rectangle" || drawMode === "arcSER" || drawMode === "arcCE";
+    if (activeTool === "wall" && (!sketchProfile || rebuild)) {
+      if (drawMode === "rectangle") {
+        vp.setPreviewRect(wallPending, wallHover);
+      } else if (drawMode === "arcSER" && drawPoints.length >= 1 && wallHover) {
+        if (drawPoints.length === 1) {
+          vp.setPreviewSegment(drawPoints[0]!, wallHover);
+        } else {
+          const poly = sampleArcSER(drawPoints[0]!, drawPoints[1]!, wallHover);
+          vp.setPreviewPolyline(poly.length >= 2 ? poly : null);
+        }
+      } else if (drawMode === "arcCE" && drawPoints.length >= 1 && wallHover) {
+        if (drawPoints.length === 1) {
+          vp.setPreviewSegment(drawPoints[0]!, wallHover);
+        } else {
+          const poly = sampleArcCE(drawPoints[0]!, drawPoints[1]!, wallHover);
+          vp.setPreviewPolyline(poly.length >= 2 ? poly : null);
+        }
+      } else if (!sketchProfile) {
+        vp.setPreviewSegment(wallPending, wallHover);
+      }
+    }
+
+    if (activeTool === "wall" && wallHover && (!sketchProfile || rebuild)) {
+      vp.setSnapCue(wallHover, lastSnapKind, wallPending ?? drawPoints[drawPoints.length - 1] ?? null);
+    } else {
+      vp.setSnapCue(null, "none", null);
+    }
+  }, [
+    wallPending,
+    wallHover,
+    lastSnapKind,
+    activeTool,
+    drawMode,
+    drawPoints,
+    sketchProfile,
+    profileVertexIndex,
+  ]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -327,6 +431,10 @@ export function Viewport() {
     if (!host || !canvas) return;
 
     let cropDragging = false;
+
+    let profileDragging = false;
+    /** True only after pointer moved while dragging a profile vertex. */
+    let profileDragMoved = false;
 
     const onPointerMove = (e: PointerEvent) => {
       const s = useSessionStore.getState();
@@ -339,12 +447,43 @@ export function Viewport() {
         }
         return;
       }
-      if (s.activeTool !== "wall" && s.activeTool !== "camera") return;
-      const p = handleRef.current?.pickGround(e.clientX, e.clientY, elevation);
+      if (profileDragging && s.sketchProfile && s.profileVertexIndex != null) {
+        const vpDrag = handleRef.current;
+        if (!vpDrag) return;
+        const p = pickOnWorkplane(vpDrag, e.clientX, e.clientY, s.activeWorkplane);
+        if (p) {
+          profileDragMoved = true;
+          s.profileVertexDragTo(p, e.shiftKey);
+        }
+        return;
+      }
+      if (
+        s.activeTool !== "wall" &&
+        s.activeTool !== "camera" &&
+        s.activeTool !== "workplaneLine"
+      ) {
+        return;
+      }
+      const vpMove = handleRef.current;
+      if (!vpMove) return;
+      const p =
+        s.activeTool === "workplaneLine" || s.activeTool === "wall"
+          ? pickOnWorkplane(vpMove, e.clientX, e.clientY, s.activeWorkplane)
+          : vpMove.pickGround(e.clientX, e.clientY, elevation);
       if (p) s.setWallHover(p, e.shiftKey);
     };
 
     const onPointerUp = () => {
+      if (profileDragging) {
+        profileDragging = false;
+        // Click (no move) keeps the vertex selected for a second click-to-place.
+        // Drag-move commits the vertex and clears the grip selection.
+        if (profileDragMoved) {
+          useSessionStore.getState().endProfileVertexDrag();
+        }
+        profileDragMoved = false;
+        return;
+      }
       if (!cropDragging && !useSessionStore.getState().cropDragMeta) return;
       cropDragging = false;
       useSessionStore.getState().commitCropDrag();
@@ -356,8 +495,69 @@ export function Viewport() {
       const vp = handleRef.current;
       if (!vp) return;
 
+      if (s.activeTool === "workplaneSelect") {
+        const wallId = vp.pickWallId(e.clientX, e.clientY);
+        const hint = pickOnWorkplane(vp, e.clientX, e.clientY, s.activeWorkplane) ?? undefined;
+        s.workplaneSelectClick(wallId, hint);
+        return;
+      }
+
+      if (s.activeTool === "workplaneLine") {
+        const p = pickOnWorkplane(vp, e.clientX, e.clientY, s.activeWorkplane);
+        if (p) s.workplaneLineClick(p);
+        return;
+      }
+
       if (s.activeTool === "wall") {
-        const p = vp.pickGround(e.clientX, e.clientY, elevation);
+        // Vertex edit on Workplane (default while sketchProfile + line/pick).
+        const rebuild =
+          s.drawMode === "rectangle" ||
+          s.drawMode === "arcSER" ||
+          s.drawMode === "arcCE";
+        if (s.sketchProfile && !rebuild && s.drawMode !== "pickFace") {
+          const p = pickOnWorkplane(vp, e.clientX, e.clientY, s.activeWorkplane);
+          if (p) {
+            // Second click: place the selected vertex (click–click edit).
+            if (s.profileVertexIndex != null) {
+              s.profileVertexClick(p, e.shiftKey);
+              profileDragging = false;
+              profileDragMoved = false;
+              return;
+            }
+            const hit = hitProfileVertex(s.sketchProfile, p);
+            if (hit >= 0) {
+              s.profileVertexClick(p, e.shiftKey);
+              profileDragging = true;
+              profileDragMoved = false;
+              host.setPointerCapture?.(e.pointerId);
+              return;
+            }
+            // Miss grip: Dibujar (línea / pick líneas) into provisional sketch.
+            if (s.drawMode === "line" || s.drawMode === "pickLines") {
+              s.wallClick(p, e.shiftKey);
+              return;
+            }
+            s.profileVertexClick(p, e.shiftKey);
+          }
+          return;
+        }
+        if (s.drawMode === "pickLines" || s.drawMode === "pickFace") {
+          const wallId = vp.pickWallId(e.clientX, e.clientY);
+          if (wallId) {
+            const hint =
+              pickOnWorkplane(vp, e.clientX, e.clientY, s.activeWorkplane) ?? undefined;
+            s.wallPickClick(wallId, hint ?? undefined);
+            return;
+          }
+          if (s.drawMode === "pickLines" && s.wallPending) {
+            const p = pickOnWorkplane(vp, e.clientX, e.clientY, s.activeWorkplane);
+            if (p) s.wallClick(p, e.shiftKey);
+            return;
+          }
+          s.setStatus("Clic en un muro (modo pick)");
+          return;
+        }
+        const p = pickOnWorkplane(vp, e.clientX, e.clientY, s.activeWorkplane);
         if (p) s.wallClick(p, e.shiftKey);
         return;
       }
@@ -477,6 +677,11 @@ export function Viewport() {
           s.setCameraViewNavEdit(false);
           return;
         }
+        if (s.sketchTarget) {
+          if (s.wallPending) s.cancelWallDraw();
+          else s.exitSketchOnSelection();
+          return;
+        }
         s.cancelWallDraw();
         return;
       }
@@ -537,8 +742,36 @@ export function Viewport() {
     clientY: number;
     preventDefault: () => void;
   }) => {
-    if (activeViewKind !== "camera") return;
     const host = hostRef.current;
+    const vp = handleRef.current;
+    const s = useSessionStore.getState();
+
+    // SK-sel: double-click parametric element → Sketch Mode (any view).
+    if (vp) {
+      const wallId = vp.pickWallId(e.clientX, e.clientY);
+      if (wallId) {
+        e.preventDefault();
+        s.enterSketchOnElement("wall", wallId);
+        return;
+      }
+      const doorId = vp.pickDoorId(e.clientX, e.clientY);
+      if (doorId) {
+        e.preventDefault();
+        s.setSelectedDoorId(doorId);
+        s.enterSketchOnSelection();
+        return;
+      }
+      const windowId = vp.pickWindowId(e.clientX, e.clientY);
+      if (windowId) {
+        e.preventDefault();
+        s.setSelectedWindowId(windowId);
+        s.enterSketchOnSelection();
+        return;
+      }
+    }
+
+    // Camera view: double-click toggles temporary nav edit (existing C3 behavior).
+    if (activeViewKind !== "camera") return;
     if (!host) return;
     const hr = host.getBoundingClientRect();
     const lx = e.clientX - hr.left;
@@ -551,7 +784,7 @@ export function Viewport() {
       : isInsideCameraViewFrame(lx, ly, hr.width, hr.height, showCropFrame);
     if (!inside) return;
     e.preventDefault();
-    useSessionStore.getState().setCameraViewNavEdit(!cameraViewNavEdit);
+    s.setCameraViewNavEdit(!cameraViewNavEdit);
   };
 
   // Grips only while camera nav is locked (not in temporary zoom/orbit edit).
